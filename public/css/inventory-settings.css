@@ -1,0 +1,557 @@
+/* ===================================
+   INVENTORY SETTINGS STYLESHEET
+   =================================== */
+
+/* General Styles */
+body {
+    background-color: #f5f7fa;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    color: #2c3e50;
+}
+
+.container-fluid {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* ===================================
+   HEADER SECTION
+   =================================== */
+.d-flex.align-items-center.mb-4 h2 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #2c3e50;
+    letter-spacing: -0.5px;
+}
+
+.btn-link {
+    text-decoration: none;
+    transition: opacity 0.2s ease;
+}
+
+.btn-link:hover {
+    opacity: 0.7;
+}
+
+.btn-link i {
+    font-size: 1.5rem;
+}
+
+.ms-auto a {
+    transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.ms-auto a:hover {
+    transform: scale(1.15);
+    color: #4a90e2 !important;
+}
+
+/* ===================================
+   CARD COMPONENTS
+   =================================== */
+.card {
+    border: 1px solid #e3e6ef;
+    border-radius: 12px;
+    background-color: #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+.card-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #f0f3f7;
+}
+
+/* ===================================
+   FORM ELEMENTS
+   =================================== */
+.form-label {
+    color: #495057;
+    font-weight: 600;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+.form-select {
+    border: 2px solid #e3e6ef;
+    border-radius: 8px;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.9rem;
+    color: #495057;
+    background-color: #ffffff;
+    transition: all 0.2s ease;
+}
+
+.form-select:focus {
+    border-color: #4a90e2;
+    box-shadow: 0 0 0 0.2rem rgba(74, 144, 226, 0.15);
+    outline: none;
+}
+
+.form-select:hover {
+    border-color: #c5ccd6;
+}
+
+/* ===================================
+   TOGGLE SWITCHES
+   =================================== */
+.form-switch {
+    padding-left: 0;
+}
+
+.form-switch .form-check-input {
+    width: 3.5em;
+    height: 1.8em;
+    cursor: pointer;
+    border: 2px solid #cbd5e0;
+    background-color: #e2e8f0;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.form-switch .form-check-input:checked {
+    background-color: #4a90e2;
+    border-color: #4a90e2;
+    box-shadow: 0 2px 8px rgba(74, 144, 226, 0.4);
+}
+
+.form-switch .form-check-input:focus {
+    box-shadow: 0 0 0 0.2rem rgba(74, 144, 226, 0.25);
+    outline: none;
+}
+
+.form-switch .form-check-input:hover {
+    border-color: #4a90e2;
+}
+
+/* ===================================
+   TABLES
+   =================================== */
+.table {
+    margin-bottom: 0;
+}
+
+.table-sm td {
+    padding: 0.875rem 0.5rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f0f3f7;
+    color: #555;
+    font-size: 0.9rem;
+}
+
+.table-sm tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.table-sm tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.table-sm tbody tr:hover {
+    background-color: #f8f9fb;
+}
+
+/* User Account Requests Table */
+.table-hover tbody tr {
+    transition: all 0.2s ease;
+}
+
+.table-hover tbody tr:hover {
+    background-color: #f8f9fb;
+    transform: scale(1.005);
+}
+
+.table thead th {
+    background-color: #f8f9fb;
+    color: #495057;
+    font-weight: 600;
+    font-size: 0.875rem;
+    border-bottom: 2px solid #e3e6ef;
+    padding: 1rem 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.table tbody td {
+    padding: 1rem 0.75rem;
+    color: #555;
+    font-size: 0.9rem;
+}
+
+/* ===================================
+   BUTTONS
+   =================================== */
+.btn-sm {
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+}
+
+.btn-outline-primary {
+    color: #4a90e2;
+    border: 2px solid #4a90e2;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-outline-primary:hover {
+    background-color: #4a90e2;
+    border-color: #4a90e2;
+    color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
+}
+
+.btn-outline-primary:active {
+    transform: translateY(0);
+}
+
+.btn-link {
+    padding: 0;
+    border: none;
+    background: none;
+}
+
+/* ===================================
+   ICONS
+   =================================== */
+.bi-pencil,
+.bi-trash,
+.bi-plus-circle {
+    font-size: 1.1rem;
+    transition: all 0.2s ease;
+}
+
+.bi-pencil:hover {
+    color: #2980b9 !important;
+    transform: scale(1.2);
+}
+
+.bi-trash:hover {
+    color: #e74c3c !important;
+    transform: scale(1.2);
+}
+
+.bi-plus-circle {
+    font-size: 1rem;
+}
+
+/* ===================================
+   ROLE CARDS
+   =================================== */
+.role-card {
+    border: 2px solid #e9ecef !important;
+    border-radius: 12px !important;
+    background-color: #ffffff;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.role-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #4a90e2, #357abd);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.role-card:hover::before {
+    transform: scaleX(1);
+}
+
+.role-card:hover {
+    border-color: #4a90e2 !important;
+    box-shadow: 0 6px 20px rgba(74, 144, 226, 0.15);
+    transform: translateY(-4px);
+}
+
+.role-card h6 {
+    color: #2c3e50;
+    font-size: 1.05rem;
+    font-weight: 700;
+    border-bottom: 2px solid #f0f3f7;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.role-card ul {
+    line-height: 1.8;
+    color: #555;
+    margin-bottom: 1.5rem;
+}
+
+.role-card ul li {
+    margin-bottom: 0.5rem;
+    padding-left: 0.25rem;
+}
+
+/* ===================================
+   ACCESS SCOPE
+   =================================== */
+.access-badge {
+    background-color: #f0f6ff !important;
+    border: 2px solid #e3efff;
+    font-weight: 700;
+    color: #4a90e2;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Checkboxes */
+.form-check {
+    padding-left: 1.75rem;
+    margin-bottom: 0.65rem;
+}
+
+.form-check-input {
+    width: 1.25em;
+    height: 1.25em;
+    margin-top: 0.15em;
+    cursor: pointer;
+    border: 2px solid #cbd5e0;
+    transition: all 0.2s ease;
+}
+
+.form-check-input:checked {
+    background-color: #4a90e2;
+    border-color: #4a90e2;
+    box-shadow: 0 2px 6px rgba(74, 144, 226, 0.3);
+}
+
+.form-check-input:focus {
+    box-shadow: 0 0 0 0.2rem rgba(74, 144, 226, 0.25);
+    border-color: #4a90e2;
+    outline: none;
+}
+
+.form-check-input:hover {
+    border-color: #4a90e2;
+}
+
+.form-check-label {
+    cursor: pointer;
+    color: #555;
+    font-size: 0.875rem;
+    transition: color 0.2s ease;
+}
+
+.form-check-label:hover {
+    color: #2c3e50;
+}
+
+/* ===================================
+   LIST GROUPS
+   =================================== */
+.list-group-item {
+    border: 1px solid #e9ecef;
+    border-radius: 8px !important;
+    margin-bottom: 0.5rem;
+    padding: 0.875rem 1rem;
+    background-color: #ffffff;
+    transition: all 0.2s ease;
+}
+
+.list-group-item:hover {
+    background-color: #f8f9fb;
+    border-color: #4a90e2;
+    box-shadow: 0 2px 8px rgba(74, 144, 226, 0.1);
+}
+
+.list-group-item span {
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+/* ===================================
+   UTILITY CLASSES
+   =================================== */
+.small {
+    font-size: 0.875rem;
+    line-height: 1.6;
+}
+
+.text-primary.small {
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.text-primary.small:hover {
+    color: #2980b9 !important;
+    text-decoration: underline;
+}
+
+/* ===================================
+   RESPONSIVE DESIGN
+   =================================== */
+@media (max-width: 992px) {
+    .col-md-4 {
+        margin-bottom: 1.5rem;
+    }
+
+    .role-card {
+        margin-bottom: 1rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .container-fluid {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .d-flex.align-items-center.mb-4 h2 {
+        font-size: 1.5rem;
+    }
+
+    .card-body {
+        padding: 1rem;
+    }
+
+    .table-responsive {
+        font-size: 0.85rem;
+    }
+}
+
+/* ===================================
+   ANIMATIONS
+   =================================== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card {
+    animation: fadeIn 0.4s ease-out;
+}
+
+/* ===================================
+   SCROLLBAR CUSTOMIZATION
+   =================================== */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #4a90e2;
+}
+
+/* ===================================
+   ACTION BUTTONS (APPROVE / DECLINE) ICON-ONLY
+   =================================== */
+.table-hover tbody td button {
+    padding: 0.4rem;           /* tight padding */
+    font-size: 1.1rem;          /* icon size */
+    border: none;
+    background: none;           /* icon-only button */
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease, color 0.2s ease;
+}
+
+/* remove extra spacing from <i> */
+.table-hover tbody td button i {
+    margin: 0;
+}
+
+/* ================================
+   ACTION BUTTONS (Approve / Reject)
+   ================================ */
+.action-btn {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    border: none;
+    transition: all 0.2s ease;
+}
+
+.btn-approve {
+    background-color: #4caf50;
+    color: white;
+}
+
+.btn-approve:hover {
+    background-color: #43a047;
+    transform: scale(1.08);
+}
+
+.btn-reject {
+    background-color: #e53935;
+    color: white;
+}
+
+.btn-reject:hover {
+    background-color: #d32f2f;
+    transform: scale(1.08);
+}
+
+.action-buttons {
+    display: flex;
+    gap: 6px;         /* space between check and x */
+    align-items: center; /* vertically center icons */
+}
+
+.action-buttons .btn {
+    padding: 4px 10px;   /* small buttons */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Reduce spacing between Approve and Reject buttons */
+.action-btn {
+    padding: 4px 8px !important;
+}
+
+.btn-approve,
+.btn-reject {
+    margin-right: 4px !important; /* make the gap smaller */
+}
+
+td .action-btn i {
+    font-size: 14px;
+}
