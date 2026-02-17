@@ -14,10 +14,10 @@ class InventoryController extends Controller
             ->select('property_no', 'item_name', 'quantity', 'unit_cost')
             ->get();
 
-        $totalTools     = DB::table('items')->count();
+        $totalTools = DB::table('items')->count();
         $availableItems = DB::table('items')->where('status', 'Available')->count();
-        $issuedItems    = DB::table('items')->where('status', 'Borrowed')->count();
-        $forRepair      = DB::table('items')->whereIn('status', ['For Repair', 'Damaged'])->count();
+        $issuedItems = DB::table('items')->where('status', 'Borrowed')->count();
+        $forRepair = DB::table('items')->whereIn('status', ['For Repair', 'Damaged'])->count();
 
         return view('dashboard', compact('inventory', 'totalTools', 'availableItems', 'issuedItems', 'forRepair'));
     }
@@ -41,10 +41,10 @@ class InventoryController extends Controller
             return response()->json([
                 'exists' => true,
                 'data' => [
-                    'item_name'      => $tool->item_name,
+                    'item_name' => $tool->item_name,
                     'classification' => $tool->classification,
                     'source_of_fund' => $tool->source_of_fund,
-                    'unit_cost'      => $inventory->unit_cost ?? 0
+                    'unit_cost' => $inventory->unit_cost ?? 0
                 ]
             ]);
         }
@@ -56,17 +56,17 @@ class InventoryController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'item_name'        => 'required|string',
-            'classification'   => 'required|string',
-            'source_of_fund'   => 'required|string',
-            'date_acquired'    => 'required|date',
-            'property_no'      => 'required|string',
-            'quantity'         => 'required|integer|min:1',
-            'unit_cost'        => 'required|numeric|min:0',
-            'remarks'          => 'nullable|string',
-            'maintenance_interval_days'   => 'nullable|integer|min:0',
+            'item_name' => 'required|string',
+            'classification' => 'required|string',
+            'source_of_fund' => 'required|string',
+            'date_acquired' => 'required|date',
+            'property_no' => 'required|string',
+            'quantity' => 'required|integer|min:1',
+            'unit_cost' => 'required|numeric|min:0',
+            'remarks' => 'nullable|string',
+            'maintenance_interval_days' => 'nullable|integer|min:0',
             'maintenance_threshold_usage' => 'nullable|integer|min:0',
-            'expected_life_hours'         => 'nullable|integer|min:0',
+            'expected_life_hours' => 'nullable|integer|min:0',
         ]);
 
         $quantity = $validated['quantity'];
@@ -92,22 +92,22 @@ class InventoryController extends Controller
                 } while ($exists);
 
                 DB::table('items')->insert([
-                    'item_name'                    => $validated['item_name'],
-                    'classification'               => $validated['classification'],
-                    'source_of_fund'               => $validated['source_of_fund'],
-                    'date_acquired'                => $validated['date_acquired'],
-                    'property_no'                  => $validated['property_no'],
-                    'serial_no'                    => $serial_no,
-                    'stock'                         => 1,
-                    'remarks'                       => $validated['remarks'] ?? null,
-                    'status'                        => 'Available',
-                    'created_at'                    => now(),
-                    'updated_at'                    => now(),
-                    'last_maintenance_date'         => null,
-                    'maintenance_interval_days'     => $validated['maintenance_interval_days'] ?? null,
-                    'maintenance_threshold_usage'   => $validated['maintenance_threshold_usage'] ?? null,
-                    'expected_life_hours'           => $validated['expected_life_hours'] ?? null,
-                    'total_usage_hours'             => 0,
+                    'item_name' => $validated['item_name'],
+                    'classification' => $validated['classification'],
+                    'source_of_fund' => $validated['source_of_fund'],
+                    'date_acquired' => $validated['date_acquired'],
+                    'property_no' => $validated['property_no'],
+                    'serial_no' => $serial_no,
+                    'stock' => 1,
+                    'remarks' => $validated['remarks'] ?? null,
+                    'status' => 'Available',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                    'last_maintenance_date' => null,
+                    'maintenance_interval_days' => $validated['maintenance_interval_days'] ?? null,
+                    'maintenance_threshold_usage' => $validated['maintenance_threshold_usage'] ?? null,
+                    'expected_life_hours' => $validated['expected_life_hours'] ?? null,
+                    'total_usage_hours' => 0,
                 ]);
             }
 
@@ -123,26 +123,84 @@ class InventoryController extends Controller
                 DB::table('propertyinventory')
                     ->where('property_no', $validated['property_no'])
                     ->update([
-                        'quantity'   => DB::raw("quantity + $quantity"),
+                        'quantity' => DB::raw("quantity + $quantity"),
                         'updated_at' => now(),
                     ]);
             } else {
                 // Insert new property
                 DB::table('propertyinventory')->insert([
-                    'property_no'     => $validated['property_no'],
-                    'item_name'       => $validated['item_name'],
-                    'quantity'        => $quantity,
-                    'unit_cost'       => $validated['unit_cost'],
+                    'property_no' => $validated['property_no'],
+                    'item_name' => $validated['item_name'],
+                    'quantity' => $quantity,
+                    'unit_cost' => $validated['unit_cost'],
                     'sources_of_fund' => $validated['source_of_fund'],
-                    'classification'  => $validated['classification'],
-                    'date_acquired'   => $validated['date_acquired'],
-                    'status'          => 'Available',
-                    'created_at'      => now(),
-                    'updated_at'      => now(),
+                    'classification' => $validated['classification'],
+                    'date_acquired' => $validated['date_acquired'],
+                    'status' => 'Available',
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
             }
         });
 
         return redirect()->back()->with('success', "✅ Added {$quantity} item(s) successfully!");
+    }
+
+    // ✅ Scan item by serial number (API)
+    public function scanItem($serial_no)
+    {
+        // 1️⃣ Find the item by serial_no
+        $item = DB::table('items')->where('serial_no', $serial_no)->first();
+
+        if (!$item) {
+            return response()->json(['success' => false, 'message' => 'Item not found']);
+        }
+
+        // 2️⃣ If the item is not yet marked as Available, update it
+        if ($item->status !== 'Available') {
+            DB::table('items')->where('serial_no', $serial_no)->update([
+                'status' => 'Available',
+                'updated_at' => now(),
+            ]);
+
+            // Optional: increment the propertyinventory quantity
+            DB::table('propertyinventory')
+                ->where('property_no', $item->property_no)
+                ->increment('quantity', 1);
+        }
+
+        // 3️⃣ Return item details
+        return response()->json([
+            'success' => true,
+            'item' => [
+                'name' => $item->item_name,
+                'serial_no' => $item->serial_no,
+                'status' => 'Available', // updated status
+                'property_no' => $item->property_no,
+                'date_acquired' => $item->date_acquired,
+            ]
+        ]);
+    }
+
+    public function receiveBatch(Request $request)
+    {
+        $serials = $request->input('serial_numbers', []);
+
+        DB::transaction(function () use ($serials) {
+            foreach ($serials as $serial_no) {
+                $item = DB::table('items')->where('serial_no', $serial_no)->first();
+                if ($item && $item->status !== 'Available') {
+                    DB::table('items')->where('serial_no', $serial_no)->update([
+                        'status' => 'Available',
+                        'updated_at' => now(),
+                    ]);
+                    DB::table('propertyinventory')
+                        ->where('property_no', $item->property_no)
+                        ->increment('quantity', 1);
+                }
+            }
+        });
+
+        return response()->json(['success' => true]);
     }
 }

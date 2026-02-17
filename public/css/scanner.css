@@ -1,0 +1,84 @@
+/* ==========================
+   SCANNER MODAL (ISOLATED)
+========================== */
+
+.scanner-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+}
+
+.scanner-modal.hidden {
+    display: none;
+}
+
+.scanner-modal__box {
+    width: 420px;
+    max-width: 95%;
+    background: #111;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* HEADER */
+.scanner-modal__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    background: #1f2937;
+    color: #fff;
+}
+
+.scanner-modal__close {
+    background: none;
+    border: none;
+    font-size: 22px;
+    color: #fff;
+    cursor: pointer;
+}
+
+/* BODY */
+.scanner-modal__body {
+    padding: 15px;
+    text-align: center;
+}
+
+/* VIDEO */
+#scannerVideo {
+    width: 100%;
+    border-radius: 10px;
+    background: black;
+}
+
+/* TEXT */
+.scanner-instruction {
+    margin-top: 10px;
+    color: #ccc;
+    font-size: 14px;
+}
+
+/* FOOTER */
+.scanner-modal__footer {
+    padding: 12px;
+    text-align: right;
+    background: #1f2937;
+}
+
+/* BUTTON */
+.scanner-btn {
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+}
+
+.scanner-btn--cancel {
+    background: #ef4444;
+    color: #fff;
+}

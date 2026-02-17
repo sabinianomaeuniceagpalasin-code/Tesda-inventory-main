@@ -74,14 +74,14 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/issued/store', [IssuedLogController::class, 'store'])->name('issued.store');
     Route::patch('/forms/{id}/update-status', [DashboardController::class, 'updateStatus'])->name('forms.updateStatus');
     Route::post('/issued/return/{id}', [IssuedReturnController::class, 'returnItem'])->name('issued.return');
-    Route::get('/maintenance/show/{id}', [MaintenanceController::class, 'show']);
+    // Route::get('/maintenance/show/{id}', [MaintenanceController::class, 'show']);
     Route::post('/chatbot/message', [ChatbotController::class, 'chat'])->name('chatbot.message');
 
     /* ✅ ADD THIS HERE */
-        Route::post(
-            '/item-approval/request',
-            [ItemApprovalRequestController::class, 'store']
-        )->name('item-approval.request');
+    Route::post(
+        '/item-approval/request',
+        [ItemApprovalRequestController::class, 'store']
+    )->name('item-approval.request');
 
     // --------------------
     // ADMIN ROUTES
@@ -93,11 +93,15 @@ Route::middleware(['auth'])->group(function () {
 
         //Item Approval
 
-        Route::post('/item-approval/{request_id}/approve',[InventorySettingsController::class, 'approveItem']
-            )->name('item.approve');
+        Route::post(
+            '/item-approval/{request_id}/approve',
+            [InventorySettingsController::class, 'approveItem']
+        )->name('item.approve');
 
-            Route::post('/item-approval/{request_id}/reject',[InventorySettingsController::class, 'rejectItem']
-            )->name('item.reject');
+        Route::post(
+            '/item-approval/{request_id}/reject',
+            [InventorySettingsController::class, 'rejectItem']
+        )->name('item.reject');
 
         // Subpages
         Route::get('/dashboard/summary/{type}', [DashboardController::class, 'getDashboardSummary']);
@@ -110,6 +114,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
         Route::get('/inventory/settings', [InventorySettingsController::class, 'index'])->name('inventory.settings');
         Route::post('/inventory/store', [InventoryController::class, 'store'])->name('inventory.store');
+        Route::get('/items/scan/{serial_no}', [InventoryController::class, 'scanItem']);
+        Route::post('/inventory/receive-batch', [InventoryController::class, 'receiveBatch']);
         Route::get('/inventory/get-tool/{tool_name}', [InventoryController::class, 'getTool']);
         Route::get('/check-property-no/{property_no}', [InventoryController::class, 'checkPropertyNo']);
         Route::get('/check-serial-no/{serial_no}', function ($serial_no) {

@@ -198,27 +198,27 @@
                                     <h6 class="fw-semibold small mb-2">Access Scope</h6>
                                     <div class="small">
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="pc1" checked>
+                                            <input class="form-check-input" type="checkbox" id="pc1" checked disabled>
                                             <label class="form-check-label" for="pc1">View dashboard</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="pc2" checked>
+                                            <input class="form-check-input" type="checkbox" id="pc2" checked disabled>
                                             <label class="form-check-label" for="pc2">Manage inventory items</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="pc3" checked>
+                                            <input class="form-check-input" type="checkbox" id="pc3" checked disabled>
                                             <label class="form-check-label" for="pc3">Mark items</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="pc4" checked>
+                                            <input class="form-check-input" type="checkbox" id="pc4" checked disabled>
                                             <label class="form-check-label" for="pc4">Generate ICS/PAR forms</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="pc5" checked>
+                                            <input class="form-check-input" type="checkbox" id="pc5" checked disabled>
                                             <label class="form-check-label" for="pc5">Update repair status</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="pc6" checked>
+                                            <input class="form-check-input" type="checkbox" id="pc6" checked disabled>
                                             <label class="form-check-label" for="pc6">Export inventory reports</label>
                                         </div>
                                     </div>
@@ -239,23 +239,23 @@
                                     <h6 class="fw-semibold small mb-2">Access Scope</h6>
                                     <div class="small">
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="re1" checked>
+                                            <input class="form-check-input" type="checkbox" id="re1" checked disabled>
                                             <label class="form-check-label" for="re1">View dashboard summary</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="re2" checked>
+                                            <input class="form-check-input" type="checkbox" id="re2" checked disabled>
                                             <label class="form-check-label" for="re2">View inventory (read-only)</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="re3" checked>
+                                            <input class="form-check-input" type="checkbox" id="re3" checked disabled>
                                             <label class="form-check-label" for="re3">View issued items</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="re4" checked>
+                                            <input class="form-check-input" type="checkbox" id="re4" checked disabled>
                                             <label class="form-check-label" for="re4">View ICS/PAR records</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="re5" checked>
+                                            <input class="form-check-input" type="checkbox" id="re5" checked disabled>
                                             <label class="form-check-label" for="re5">Download or print form copy</label>
                                         </div>
                                     </div>

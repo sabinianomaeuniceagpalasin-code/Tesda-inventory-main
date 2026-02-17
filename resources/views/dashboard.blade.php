@@ -1,3 +1,8 @@
+@php
+  $user = auth()->user();
+  $isAdmin = $user && $user->role === 'Admin';
+@endphp
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -7,6 +12,7 @@
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>TESDA Dashboard</title>
   <link rel="stylesheet" href="{{ asset('css/dashboard.css') }}">
+  <link rel="stylesheet" href="{{ asset('css/scanner.css') }}">
   <link rel="stylesheet" href="{{ asset('css/notification.css') }}">
   <link rel="stylesheet" href="{{ asset('css/profile.css') }}">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -15,6 +21,7 @@
 
 <body>
   <div class="container">
+
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="logo">
@@ -23,46 +30,63 @@
 
       <!-- NAVIGATION MENU -->
       <nav class="menu">
+
+        <!-- Everyone -->
         <a href="#" class="active" data-target="dashboard">
-          <img src="{{ asset('images/reports.png') }}" alt="Dashboard Icon" class="menu-icon">
+          <img src="{{ asset('images/reports.png') }}" class="menu-icon">
           Dashboard
         </a>
+
         <a href="#" data-target="inventory">
-          <img src="{{ asset('images/inventory.png') }}" alt="Inventory Icon" class="menu-icon">
+          <img src="{{ asset('images/inventory.png') }}" class="menu-icon">
           Inventory
         </a>
+
         <a href="#" data-target="issued">
-          <img src="{{ asset('images/issued.png') }}" alt="Issued Icon" class="menu-icon">
+          <img src="{{ asset('images/issued.png') }}" class="menu-icon">
           Issued Item
         </a>
+
         <a href="#" data-target="form">
-          <img src="{{ asset('images/form.png') }}" alt="Form Icon" class="menu-icon">
+          <img src="{{ asset('images/form.png') }}" class="menu-icon">
           Form Records
         </a>
+
         <a href="#" data-target="damaged">
-          <img src="{{ asset('images/form.png') }}" alt="Form Icon" class="menu-icon">
+          <img src="{{ asset('images/form.png') }}" class="menu-icon">
           Damage Report
         </a>
-        <a href="#" data-target="reports">
-          <img src="{{ asset('images/maintenance.png') }}" alt="Reports Icon" class="menu-icon">
-          Maintenance
-        </a>
-        <a href="#" data-target="Generate">
-          <img src="{{ asset('images/maintenance.png') }}" alt="Generate Icon" class="menu-icon">
-          QR generator
-        </a>
+
+        <!-- ADMIN ONLY -->
+        @if($isAdmin)
+          <a href="#" data-target="reports">
+            <img src="{{ asset('images/maintenance.png') }}" class="menu-icon">
+            Maintenance
+          </a>
+
+          <a href="#" data-target="Generate">
+            <img src="{{ asset('images/maintenance.png') }}" class="menu-icon">
+            QR Generator
+          </a>
+        @endif
+
       </nav>
 
-      <a href="{{ route('inventory.settings') }}" class="bottom-menu">
-        <span class="icon">⚙️</span> Settings
-      </a>
+      <!-- SETTINGS (ADMIN ONLY) -->
+      @if($isAdmin)
+        <a href="{{ route('inventory.settings') }}" class="bottom-menu">
+          <span class="icon">⚙️</span> Settings
+        </a>
+      @endif
 
+      <!-- LOGOUT (ALL USERS) -->
       <form method="POST" action="{{ route('logout') }}" class="bottom-menu">
         @csrf
         <button type="submit">
           <span class="icon">🚪</span> Log Out
         </button>
       </form>
+
     </aside>
 
     <!-- Main -->
@@ -114,7 +138,7 @@
                 <p>| Unserviceable Items</p><span>{{ $missingItems }}</span>
               </div>
             </div>
-            
+
           </section>
 
           <section class="dashboard-layout">
@@ -158,6 +182,12 @@
               <div class="usage-modal-chart">
                 <canvas id="issuedModalChart"></canvas>
               </div>
+            </div>
+          </div>
+
+          <div>
+            <div>
+              <button class="modalBtn">MODAL BUTTON</button>
             </div>
           </div>
         </div>
@@ -221,11 +251,11 @@
                   <td>{{ \Carbon\Carbon::parse($item->date_acquired)->format('F d, Y') }}</td>
                   <td>
                     <span class="
-                                  @if($item->status === 'Available') text-green
-                                  @elseif($item->status === 'For Repair') text-brown
-                                  @elseif($item->status === 'Issued') text-blue
-                                  @elseif($item->status === 'Unserviceable' || $item->status === 'Damaged' || $item->status === 'Lost') text-red
-                                  @endif">
+                                                                          @if($item->status === 'Available') text-green
+                                                                          @elseif($item->status === 'For Repair') text-brown
+                                                                          @elseif($item->status === 'Issued') text-blue
+                                                                          @elseif($item->status === 'Unserviceable' || $item->status === 'Damaged' || $item->status === 'Lost') text-red
+                                                                          @endif">
                       {{ $item->status }}
                     </span>
                   </td>
@@ -379,49 +409,22 @@
             </div>
           </div>
 
-          <!-- MODAL -->
-          <div id="addItemModal" class="modal-overlay" style="display: none;">
-            <div class="modal-content">
-              <span class="close-btn" id="closeModal">&times;</span>
-              <h2>Add new item</h2>
-
-              @if(session('success'))
-                <script>
-                  Swal.fire({
-                    icon: 'success',
-                    title: 'Success',
-                    text: "{{ session('success') }}",
-                    timer: 3000,
-                    showConfirmButton: false
-                  });
-                </script>
-              @endif
-
-              <form id="addItemForm" method="POST" action="{{ route('inventory.store') }}">
-                @csrf
-                <div class="form-grid">
-                  <div><label>Property No.</label><input type="text" id="property_no" name="property_no" required></div>
-                  <div><label>Particular Article / Item Name</label><input type="text" id="item_name" name="item_name"
-                      required></div>
-                  <div><label>Classification</label><input type="text" id="classification" name="classification"
-                      required></div>
-                  <div><label>Source of Fund</label><input type="text" id="source_of_fund" name="source_of_fund"
-                      required></div>
-                  <div><label>Date Acquired</label><input type="date" id="date_acquired" name="date_acquired" required>
-                  </div>
-                  <div><label>Quantity</label><input type="number" id="quantity" name="quantity" value="1" min="1"
-                      required></div>
-                  <div><label>Unit Cost</label><input type="number" id="unit_cost" name="unit_cost" step="0.01"
-                      value="0" required></div>
-                  <div><label>Total Cost</label><input type="number" id="total_cost" name="total_cost" step="0.01"
-                      value="0" readonly></div>
-                  <div class="full-width"><label>Remarks / Location</label><input type="text" name="remarks"></div>
-                </div>
-                <div class="form-buttons">
-                  <button type="submit" class="save-btn">Save Item</button>
-                  <button type="reset" class="reset-btn">Reset Form</button>
-                </div>
-              </form>
+          <!-- SCANNER MODAL -->
+          <div id="scannerModal" class="scanner-modal hidden">
+            <div class="scanner-modal__box">
+              <div class="scanner-modal__header">
+                <h2>Scan Item</h2>
+                <button onclick="closeScannerModal()" class="scanner-modal__close">&times;</button>
+              </div>
+              <div class="scanner-modal__body">
+                <input id="scannerInput" type="text" placeholder="Scan QR/Barcode here" autofocus>
+                <p class="scanner-instruction">Scanned items will appear below</p>
+                <div id="scanned-items-list" class="scanned-items-container"></div>
+              </div>
+              <div class="scanner-modal__footer">
+                <button onclick="closeScannerModal()" class="scanner-btn scanner-btn--cancel">Cancel</button>
+                <button id="markReceivedBtn" class="scanner-btn scanner-btn--confirm">Mark as Received</button>
+              </div>
             </div>
           </div>
         </div>
@@ -845,16 +848,16 @@
 
                   <div class="full-width">
                     <label>Property Number</label>
-                    <input type="text" id="propertyFilter" placeholder="Enter property number..." autocomplete="off">
+                    <input type="text" id="propertyFilter" placeholder="Enter property number..." autocomplete="on">
                   </div>
 
-                  <div class="full-width">
+                  <!-- <div class="full-width">
                     <label>Available Serial Numbers</label>
                     <input type="hidden" id="serial_no" name="serial_no">
                     <div id="serialList" class="serial-container">
                       <div class="placeholder">Type a Serial No. to see available items.</div>
                     </div>
-                  </div>
+                  </div> -->
 
 
                   <div class="full-width">
@@ -885,74 +888,74 @@
 
 
   <!-- GENERATE QR CODE MODULE REQUEST -->
-<div class="content-section qr-code" id="Generate">
+  <div class="content-section qr-code" id="Generate">
 
     <div class="qr-container">
 
-        <!-- LEFT PANEL -->
-        <div class="qr-filters">
-            <h3>Add to Queue</h3>
+      <!-- LEFT PANEL -->
+      <div class="qr-filters">
+        <h3>Add to Queue</h3>
 
-            <label>Item Name</label>
-            <input type="text" id="item-name" placeholder="Enter item name">
+        <label>Item Name</label>
+        <input type="text" id="item-name" placeholder="Enter item name">
 
-            <label>Type</label>
-            <select id="item-type">
-                <option value="qr" selected>QR Code</option>
-                <option value="barcode">Barcode</option>
-            </select>
+        <label>Type</label>
+        <select id="item-type">
+          <option value="qr" selected>QR Code</option>
+          <option value="barcode">Barcode</option>
+        </select>
 
-            <label>Quantity</label>
-            <input type="number" id="item-quantity" min="1" placeholder="Enter quantity">
+        <label>Quantity</label>
+        <input type="number" id="item-quantity" min="1" placeholder="Enter quantity">
 
-            <button type="button" id="add-to-queue-btn">
-                Add to Queue
-            </button>
+        <button type="button" id="add-to-queue-btn">
+          Add to Queue
+        </button>
 
-            <p class="note">
-                Items will be queued first before generating codes.
-            </p>
+        <p class="note">
+          Items will be queued first before generating codes.
+        </p>
+      </div>
+
+      <!-- RIGHT PANEL -->
+      <div class="qr-preview">
+
+        <h3>Generation Queue</h3>
+
+        <div class="qr-queue-scroll">
+          <table class="qr-queue-table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Qty</th>
+                <th>Type</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="qr-queue-body"></tbody>
+          </table>
         </div>
 
-        <!-- RIGHT PANEL -->
-        <div class="qr-preview">
+        <h3 class="preview-title">Preview</h3>
 
-            <h3>Generation Queue</h3>
-
-            <div class="qr-queue-scroll">
-                <table class="qr-queue-table">
-                    <thead>
-                        <tr>
-                            <th>Item</th>
-                            <th>Qty</th>
-                            <th>Type</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="qr-queue-body"></tbody>
-                </table>
-            </div>
-
-            <h3 class="preview-title">Preview</h3>
-
-            <div class="qr-scroll">
-                <div id="qr-result"></div>
-            </div>
-
-            <!-- FOOTER -->
-            <div class="qr-footer">
-                <span class="approval-note">
-                    Items in queue require admin approval
-                </span>
-
-                <button id="send-request-btn" disabled>
-                    Send for Approval
-                </button>
-            </div>
-
+        <div class="qr-scroll">
+          <div id="qr-result"></div>
         </div>
+
+        <!-- FOOTER -->
+        <div class="qr-footer">
+          <span class="approval-note">
+            Items in queue require admin approval
+          </span>
+
+          <button id="send-request-btn" disabled>
+            Send for Approval
+          </button>
+        </div>
+
+      </div>
     </div>
-</div>
+  </div>
 
 
 
@@ -1207,9 +1210,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <script src="{{ asset('js/qr-module.js') }}"></script>
-
-
-
+  <script src="{{ asset('js/scanner.js') }}"></script>
 
 </body>
 

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
   <link rel="stylesheet" href="{{ asset('css/createaccount.css') }}">
   <meta name="csrf-token" content="{{ csrf_token() }}">
 </head>
+
 <body>
 
   <div class="form-box">
@@ -18,8 +20,14 @@
 
       <div class="row">
         <div class="form-group">
-          <label>Full Name:</label>
-          <input type="text" name="full_name" placeholder="Enter full name" required>
+          <label>First Name:</label>
+          <input type="text" name="first_name" placeholder="Enter first name" required>
+          <small class="error"></small>
+        </div>
+
+        <div class="form-group">
+          <label>Last Name:</label>
+          <input type="text" name="last_name" placeholder="Enter last name" required>
           <small class="error"></small>
         </div>
 
@@ -63,7 +71,8 @@
         <label>Confirm Password:</label>
 
         <div class="password-container">
-          <input type="password" name="password_confirmation" id="confirmPassword" placeholder="Confirm password" required>
+          <input type="password" name="password_confirmation" id="confirmPassword" placeholder="Confirm password"
+            required>
           <span class="toggle-password" onclick="togglePassword('confirmPassword', this)">👁</span>
         </div>
 
@@ -81,4 +90,5 @@
   <script src="{{ asset('js/createaccount.js') }}"></script>
 
 </body>
+
 </html>

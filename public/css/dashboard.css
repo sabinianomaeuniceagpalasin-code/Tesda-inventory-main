@@ -55,7 +55,7 @@ body {
     display: flex;
     align-items: center;
     gap: 12px;
-    text-decoration: none;
+    text-decoration: none !important;
     color: black;
     padding: 10px 10px;
     border-radius: 10px;
@@ -71,8 +71,8 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-top: auto;
     padding-top: 15px;
+    text-decoration: none !important;
 }
 
 /* --- Menu Icons --- */
@@ -2815,7 +2815,6 @@ td {
     border: 1px solid #ddd;
     border-radius: 6px;
     margin-bottom: 10px;
-
 }
 
 .qr-queue-table {
@@ -2932,4 +2931,18 @@ td {
 .code-container {
     margin-top: auto;
     padding-bottom: 10px;
+}
+
+.modalBtn {
+    /* display: flex; */
+    justify-content: center;
+    align-items: center;
+    border: 1px solid black;
+}
+
+.bottom-menu .icon {
+    color: blue;
+    font-size: 20px;
+    text-decoration: none;
+    margin-right: 10px;
 }
