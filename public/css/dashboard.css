@@ -591,6 +591,26 @@ td {
     height: 18px;
 }
 
+.view-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent; /* Para malinis ang loob */
+    border: 2px solid #000000; /* Black border */
+    cursor: pointer;
+    color: blue;
+    font-weight: 600;
+    padding: 8px 16px; /* Nagdagdag ng space para hindi dikit ang border */
+    border-radius: 6px; /* Optional: para hindi masyadong matulis ang kanto */
+    transition: all 0.2s ease; /* Para smooth kapag hinover */
+}
+
+/* Magandang dagdagan ng hover effect para alam ng user na clickable */
+.view-btn:hover {
+    background-color: #000000;
+    color: white; /* Magpapalit ng kulay pag tinapatan ng mouse */
+}
+
 .delete-btn {
     display: flex;
     align-items: center;
@@ -760,7 +780,8 @@ td {
 }
 
 .edit-btn,
-.delete-btn {
+.delete-btn,
+.view-btn {
     border: none;
     background: none;
     font-size: 18px;

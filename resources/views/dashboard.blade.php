@@ -251,11 +251,11 @@
                   <td>{{ \Carbon\Carbon::parse($item->date_acquired)->format('F d, Y') }}</td>
                   <td>
                     <span class="
-                                                                          @if($item->status === 'Available') text-green
-                                                                          @elseif($item->status === 'For Repair') text-brown
-                                                                          @elseif($item->status === 'Issued') text-blue
-                                                                          @elseif($item->status === 'Unserviceable' || $item->status === 'Damaged' || $item->status === 'Lost') text-red
-                                                                          @endif">
+                                                                            @if($item->status === 'Available') text-green
+                                                                            @elseif($item->status === 'For Repair') text-brown
+                                                                            @elseif($item->status === 'Issued') text-blue
+                                                                            @elseif($item->status === 'Unserviceable' || $item->status === 'Damaged' || $item->status === 'Lost') text-red
+                                                                            @endif">
                       {{ $item->status }}
                     </span>
                   </td>
@@ -267,6 +267,8 @@
               @endforeach
             </tbody>
           </table>
+
+          <div><button class="view-btn">View Usage History</button></div>
 
           <div class="modal fade" id="inventoryModal" tabindex="-1">
             <div class="modal-dialog modal-md modal-side-right">

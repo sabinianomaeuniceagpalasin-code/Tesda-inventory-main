@@ -1,18 +1,28 @@
+// DOM elements
 const scannerModal = document.getElementById("scannerModal");
 const scannerInput = document.getElementById("scannerInput");
 const scannedList = document.getElementById("scanned-items-list");
+const markReceivedBtn = document.getElementById("markReceivedBtn");
 
+// CSRF token for Laravel POST requests
+const csrfToken = document
+    .querySelector('meta[name="csrf-token"]')
+    .getAttribute("content");
+
+// Open scanner modal
 document.getElementById("addItemBtn").addEventListener("click", () => {
     scannerModal.classList.remove("hidden");
     scannerInput.focus();
 });
 
+// Close scanner modal
 function closeScannerModal() {
     scannerModal.classList.add("hidden");
     scannerInput.value = "";
+    scannedList.innerHTML = "";
 }
 
-// Handle input from hardware scanner
+// Handle hardware scanner input (Enter key)
 scannerInput.addEventListener("keydown", function (e) {
     if (e.key === "Enter") {
         const scannedData = this.value.trim(); // expects "ItemName | SerialNo"
@@ -29,17 +39,18 @@ scannerInput.addEventListener("keydown", function (e) {
             return;
         }
 
-        // Send to backend to mark as received
-        fetch(`/inventory/receive/${serialNo}`)
+        // Check item existence in backend
+        fetch(`/inventory/scan/${serialNo}`)
             .then((res) => res.json())
             .then((data) => {
-                if (!data.exists) {
+                if (!data.success) {
                     alert(`Item ${serialNo} not found in inventory.`);
                     return;
                 }
 
+                const item = data.item;
+
                 // Append to modal list
-                const item = data.data;
                 const html = `
                     <div class="scanned-item-entry" style="margin-bottom: 10px;">
                         <strong>${itemName}</strong> | INV: ${serialNo} | Status: ${item.status}
@@ -51,11 +62,12 @@ scannerInput.addEventListener("keydown", function (e) {
     }
 });
 
-document.getElementById("markReceivedBtn").addEventListener("click", () => {
+// Mark scanned items as received
+markReceivedBtn.addEventListener("click", () => {
     const entries = scannedList.querySelectorAll(".scanned-item-entry");
     const serialNumbers = Array.from(entries).map((entry) => {
         const parts = entry.textContent.split("|");
-        return parts[1].trim(); // serialNo
+        return parts[1].replace("INV:", "").trim(); // get serialNo
     });
 
     if (serialNumbers.length === 0) {
@@ -63,7 +75,7 @@ document.getElementById("markReceivedBtn").addEventListener("click", () => {
         return;
     }
 
-    // Send all serial numbers to backend
+    // Send batch to backend
     fetch("/inventory/receive-batch", {
         method: "POST",
         headers: {
@@ -75,9 +87,22 @@ document.getElementById("markReceivedBtn").addEventListener("click", () => {
         .then((res) => res.json())
         .then((data) => {
             if (data.success) {
-                alert("Items marked as received successfully!");
+                // Close scanner modal
                 closeScannerModal();
-                scannedList.innerHTML = "";
+
+                // Store received items temporarily for QR generator
+                const receivedItems = data.received_items; // should return array from backend
+
+                // Open QR generator section
+                const qrLink = document.querySelector(
+                    'a[data-target="Generate"]',
+                );
+                if (qrLink) qrLink.click();
+
+                // Prefill QR generator with received items
+                if (typeof prefillQRCodeList === "function") {
+                    prefillQRCodeList(receivedItems);
+                }
             } else {
                 alert("Error updating items.");
             }

@@ -1,11 +1,11 @@
 /* ==========================
-   SCANNER MODAL (ISOLATED)
+   SCANNER MODAL (REWRITTEN)
 ========================== */
 
 .scanner-modal {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.5); /* Semi-transparent overlay */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -13,72 +13,106 @@
 }
 
 .scanner-modal.hidden {
-    display: none;
+    display: none !important;
 }
 
 .scanner-modal__box {
-    width: 420px;
-    max-width: 95%;
-    background: #111;
-    border-radius: 12px;
+    width: 600px; /* Mas malapad para sa listahan */
+    max-width: 90%;
+    background: #ffffff; /* White background base sa image */
+    border-radius: 20px; /* Mas rounded corners */
     overflow: hidden;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2);
+    padding: 30px; /* Padding sa loob ng box */
+    position: relative;
 }
 
-/* HEADER */
-.scanner-modal__header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 14px 18px;
-    background: #1f2937;
-    color: #fff;
-}
-
+/* HEADER / CLOSE BUTTON */
 .scanner-modal__close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
     background: none;
     border: none;
-    font-size: 22px;
-    color: #fff;
+    font-size: 24px;
+    color: #333;
     cursor: pointer;
+    font-weight: bold;
 }
 
 /* BODY */
 .scanner-modal__body {
-    padding: 15px;
+    text-align: center;
+    padding-bottom: 10px;
+}
+
+.scanner-modal__body h2 {
+    font-family: "Serif", Georgia, serif; /* Title style sa image */
+    font-size: 24px;
+    margin-bottom: 25px;
+    color: #000;
+}
+
+/* SCANNED ITEMS LIST */
+#scanned-items-list {
+    margin: 20px 0;
+    max-height: 250px;
+    overflow-y: auto;
     text-align: center;
 }
 
-/* VIDEO */
-#scannerVideo {
-    width: 100%;
-    border-radius: 10px;
-    background: black;
+/* Style para sa "Hammer drill" at "QR" look */
+.scanned-item-entry {
+    margin-bottom: 20px;
+    font-size: 16px;
+    color: #000;
 }
 
-/* TEXT */
-.scanner-instruction {
-    margin-top: 10px;
-    color: #ccc;
-    font-size: 14px;
+.scanned-item-entry strong {
+    display: block;
+    font-size: 19px;
+    margin-bottom: 2px;
 }
 
 /* FOOTER */
 .scanner-modal__footer {
-    padding: 12px;
-    text-align: right;
-    background: #1f2937;
+    display: flex;
+    justify-content: center; /* Gitna ang buttons */
+    gap: 12px;
+    margin-top: 10px;
 }
 
-/* BUTTON */
+/* BUTTONS */
 .scanner-btn {
-    padding: 8px 14px;
-    border-radius: 8px;
+    padding: 10px 25px;
+    border-radius: 8px; /* Rounded buttons */
     border: none;
     cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    transition:
+        transform 0.2s,
+        opacity 0.2s;
 }
 
+.scanner-btn:active {
+    transform: scale(0.95);
+}
+
+/* Cancel Button (Pinkish/Red) */
 .scanner-btn--cancel {
-    background: #ef4444;
+    background: #f28b82;
     color: #fff;
+}
+
+/* Mark as Received Button (Blue/Violet) */
+.scanner-btn--confirm {
+    background: #6c7ae0;
+    color: #fff;
+}
+
+/* Hidden Input for Hardware Scanner */
+#scannerInput {
+    position: absolute;
+    opacity: 0;
 }
