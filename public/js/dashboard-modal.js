@@ -381,33 +381,50 @@ function openScannerModal() {
 }
 
 function showItemDetails(item) {
-    // I-populate ang text fields
-    const mapping = {
-        "modal-item": item.item_name,
-        "modal-serial": item.serial_no,
-        "modal-status": item.status,
-    };
+    // 1. I-populate ang basic info sa modal (Dagdagan natin ng check)
+    const elItem = document.getElementById("modal-item");
+    const elDisplay = document.getElementById("modal-item-display");
+    const elSerial = document.getElementById("modal-serial");
 
-    for (const [id, value] of Object.entries(mapping)) {
-        const el = document.getElementById(id);
-        if (el) el.innerText = value || "---";
+    if (elItem) elItem.innerText = item.item_name || "---";
+    if (elDisplay) elDisplay.innerText = item.item_name || "---"; // Hindi na ito mag-eerror kung wala ang ID
+    if (elSerial) elSerial.innerText = item.serial_no || "---";
+
+    // 2. I-populate ang fund at classification
+    const elFund = document.getElementById("modal-fund");
+    if (elFund) elFund.innerText = item.source_of_fund || "---";
+
+    // 3. Status logic
+    const statusEl = document.getElementById("modal-status");
+    if (statusEl) {
+        statusEl.innerText = item.status;
+        statusEl.className = "detail-value fw-bold"; // Siguraduhing nandoon ang original class
+        if (item.status === 'Available') statusEl.classList.add("text-success");
+        else if (item.status === 'For Repair') statusEl.classList.add("text-warning");
+        else statusEl.classList.add("text-danger");
     }
 
-    // Date formatting
+    // 4. Date formatting
     const dateEl = document.getElementById("modal-date");
     if (dateEl && item.date_acquired) {
-        const date = new Date(item.date_acquired);
-        dateEl.innerText = date.toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
+        const d = new Date(item.date_acquired);
+        dateEl.innerText = d.toLocaleDateString("en-US", {
+            year: "numeric", month: "long", day: "numeric"
         });
     }
 
-    // Buksan ang modal
+    // 5. I-update ang QR Code
+    const qrImg = document.getElementById("modal-qr");
+    if (qrImg) {
+        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${item.serial_no}`;
+    }
+
+    // 6. Tawagin ang Bootstrap Modal
     const modalEl = document.getElementById("inventoryModal");
-    const myModal = new bootstrap.Modal(modalEl);
-    myModal.show();
+    if (modalEl) {
+        const myModal = new bootstrap.Modal(modalEl);
+        myModal.show();
+    }
 }
 
 // function updateStatus(newStatus) {
