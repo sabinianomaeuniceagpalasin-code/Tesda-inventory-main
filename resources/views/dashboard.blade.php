@@ -29,7 +29,10 @@
         <img src="{{ asset('images/Tesda logo 1.png') }}" alt="TESDA Logo">
       </div>
 
+      <!-- NAVIGATION MENU -->
       <nav class="menu">
+
+        <!-- Everyone -->
         <a href="#" class="active" data-target="dashboard">
           <img src="{{ asset('images/reports.png') }}" class="menu-icon">
           Dashboard
@@ -55,6 +58,7 @@
           Damage Report
         </a>
 
+        <!-- ADMIN ONLY -->
         @if($isAdmin)
           <a href="#" data-target="reports">
             <img src="{{ asset('images/maintenance.png') }}" class="menu-icon">
@@ -66,24 +70,27 @@
             QR Generator
           </a>
         @endif
+
       </nav>
 
+      <!-- SETTINGS (ADMIN ONLY) -->
       @if($isAdmin)
         <a href="{{ route('inventory.settings') }}" class="bottom-menu">
           <span class="icon">⚙️</span> Settings
         </a>
       @endif
 
+      <!-- LOGOUT (ALL USERS) -->
       <form method="POST" action="{{ route('logout') }}" class="bottom-menu">
         @csrf
-        <button type="submit"
-          style="background: none; border: none; color: inherit; cursor: pointer; display: flex; align-items: center; width: 100%; font: inherit;">
+        <button type="submit">
           <span class="icon">🚪</span> Log Out
         </button>
       </form>
 
     </aside>
 
+    <!-- Main -->
     <main class="main">
       <header class="topbar">
         <h1 id="page-title">Dashboard</h1>
@@ -99,6 +106,9 @@
       </header>
 
       <section id="content-area">
+        <!-- ======================
+             DASHBOARD SECTION
+        ======================= -->
         <div id="dashboard" class="content-section active">
           <section class="quick-status">
             <div class="status-card clickable-card" onclick="openDashboardModal('inventory')">
@@ -126,9 +136,10 @@
                 <p>| Missing Items</p><span>{{ $missingItems }}</span>
               </div>
               <div class="summary-item clickable-item" onclick="openDashboardModal('unserviceable')">
-                <p>| Unserviceable Items</p><span>{{ $unserviceableItems ?? 0 }}</span>
+                <p>| Unserviceable Items</p><span>{{ $missingItems }}</span>
               </div>
             </div>
+
           </section>
 
           <section class="dashboard-layout">
@@ -140,6 +151,7 @@
                 </div>
               </div>
 
+
               <div class="chart-box equal-box clickable-card" onclick="openIssuedModal()">
                 <h3>Issued Items Frequency</h3>
                 <div class="chart-wrapper">
@@ -149,10 +161,13 @@
             </div>
           </section>
 
+
           <div id="usageModal" class="usage-modal-overlay">
             <div class="usage-modal-box">
               <button class="usage-modal-close" id="closeUsageModal">&times;</button>
+
               <h2>Usage Trends</h2>
+
               <div class="usage-modal-chart">
                 <canvas id="usageModalChart"></canvas>
               </div>
@@ -162,14 +177,27 @@
           <div id="issuedModal" class="usage-modal-overlay">
             <div class="usage-modal-box">
               <button class="usage-modal-close" id="closeIssuedModal">&times;</button>
+
               <h2>Issued Items Frequency</h2>
+
               <div class="usage-modal-chart">
                 <canvas id="issuedModalChart"></canvas>
               </div>
             </div>
           </div>
+
+          <div>
+            <div>
+              <button class="modalBtn">MODAL BUTTON</button>
+            </div>
+          </div>
         </div>
 
+
+
+        <!-- ======================
+            INVENTORY SECTION
+        ======================= -->
         <div id="inventory" class="content-section">
           <div class="inventory-summary">
             <div class="summary-box">
@@ -192,13 +220,13 @@
 
           <div class="inventory-controls">
             <div class="left-buttons">
-              <button class="btn-secondary">Sort by fields</button>
-              <button class="btn-secondary">+ Export</button>
-              <button class="btn-secondary">Clear filters</button>
+              <button>Sort by fields</button>
+              <button>+ Export</button>
+              <button>Clear filters</button>
             </div>
             <div class="right-buttons">
               <input type="text" id="inventorySearchInput" placeholder="Search Item Name...">
-              <button id="addItemBtn" class="btn-primary">+ Add new item</button>
+              <button id="addItemBtn">+ Add new item</button>
             </div>
           </div>
 
@@ -221,20 +249,20 @@
                   <td>{{ $item->item_name }}</td>
                   <td>{{ $item->source_of_fund }}</td>
                   <td>{{ $item->classification }}</td>
-                  <td>{{ \Carbon\Carbon::parse($item->date_acquired)->format('M d, Y') }}</td>
+                  <td>{{ \Carbon\Carbon::parse($item->date_acquired)->format('F d, Y') }}</td>
                   <td>
-                    <span class="status-badge 
-                                                @if($item->status === 'Available') text-green 
-                                                @elseif($item->status === 'For Repair') text-brown 
-                                                @else text-red @endif">
+                    <span class="
+                                                                                              @if($item->status === 'Available') text-green
+                                                                                              @elseif($item->status === 'For Repair') text-brown
+                                                                                              @elseif($item->status === 'Issued') text-blue
+                                                                                              @elseif($item->status === 'Unserviceable' || $item->status === 'Damaged' || $item->status === 'Lost') text-red
+                                                                                              @endif">
                       {{ $item->status }}
                     </span>
                   </td>
                   <td class="action-buttons">
-                    <button class="edit-btn"
-                      onclick="event.stopPropagation(); editItem('{{ $item->serial_no }}')">✏️</button>
-                    <button class="delete-btn"
-                      onclick="event.stopPropagation(); deleteItem('{{ $item->serial_no }}')">🗑️</button>
+                    <button class="edit-btn" onclick="event.stopPropagation();">✏️</button>
+                    <button class="delete-btn" onclick="event.stopPropagation();">🗑️</button>
                   </td>
                 </tr>
               @endforeach
@@ -321,239 +349,239 @@
               </div>
             </div>
           </div>
-        </div>
-      </section>
-    </main>
 
-    <div id="usageHistoryModal" class="usage-modal-overlay" style="display: none;">
+          <div id="usageHistoryModal" class="usage-modal-overlay" style="display: none;">
 
-      <div class="usage-history-content">
+            <div class="usage-history-content">
 
-        <div class="usage-header">
-          <button type="button" class="back-btn" onclick="closeUsageHistory()">
-            <i class="bi bi-arrow-left"></i> <span>&#8592;</span> </button>
-          <h1 class="usage-title">Usage History</h1>
-          <h1 class="usage-title">Usage History</h1>
-        </div>
+              <div class="usage-header">
+                <button type="button" class="back-btn" onclick="closeUsageHistory()">
+                  <i class="bi bi-arrow-left"></i> <span>&#8592;</span> </button>
+                <h1 class="usage-title">Usage History</h1>
+                <h1 class="usage-title">Usage History</h1>
+              </div>
 
-        <div class="usage-item-info">
-          Item: <span id="history-item-name" style="font-weight:bold;">Printer</span><br>
-          Property No.: <span id="history-property-no" style="font-weight:bold;">00001</span>
-        </div>
+              <div class="usage-item-info">
+                Item: <span id="history-item-name" style="font-weight:bold;">Printer</span><br>
+                Property No.: <span id="history-property-no" style="font-weight:bold;">00001</span>
+              </div>
 
-        <div class="usage-filters">
-          <select class="filter-select">
-            <option>All Statuses</option>
-          </select>
-          <select class="filter-select">
-            <option>Latest - Oldest</option>
-          </select>
-        </div>
+              <div class="usage-filters">
+                <select class="filter-select">
+                  <option>All Statuses</option>
+                </select>
+                <select class="filter-select">
+                  <option>Latest - Oldest</option>
+                </select>
+              </div>
 
-        <table class="usage-table">
-          <thead>
-            <tr>
-              <th>Issued Period</th>
-              <th>Issued To</th>
-              <th>Purpose</th>
-              <th>Issued By</th>
-              <th>Return Status</th>
-              <th>Condition After Use</th>
-              <th>Remarks</th>
-            </tr>
-          </thead>
-          <tbody id="usage-history-body">
-          </tbody>
-        </table>
+              <table class="usage-table">
+                <thead>
+                  <tr>
+                    <th>Issued Period</th>
+                    <th>Issued To</th>
+                    <th>Purpose</th>
+                    <th>Issued By</th>
+                    <th>Return Status</th>
+                    <th>Condition After Use</th>
+                    <th>Remarks</th>
+                  </tr>
+                </thead>
+                <tbody id="usage-history-body">
+                </tbody>
+              </table>
 
-        <div class="usage-footer">
-          <span class="entries-count">Showing 1-3 of 42 entries</span>
-          <div class="pagination-controls">
-            <button class="pag-btn"><i class="bi bi-chevron-left"></i></button>
-            <button class="pag-num active">1</button>
-            <button class="pag-num">2</button>
-            <button class="pag-btn"><i class="bi bi-chevron-right"></i></button>
+              <div class="usage-footer">
+                <span class="entries-count">Showing 1-3 of 42 entries</span>
+                <div class="pagination-controls">
+                  <button class="pag-btn"><i class="bi bi-chevron-left"></i></button>
+                  <button class="pag-num active">1</button>
+                  <button class="pag-num">2</button>
+                  <button class="pag-btn"><i class="bi bi-chevron-right"></i></button>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- SCANNER MODAL -->
-    <div id="scannerModal" class="scanner-modal hidden">
-      <div class="scanner-modal__box">
-        <div class="scanner-modal__header">
-          <h2>Scan Item</h2>
-          <button onclick="closeScannerModal()" class="scanner-modal__close">&times;</button>
-        </div>
-        <div class="scanner-modal__body">
-          <input id="scannerInput" type="text" placeholder="Scan QR/Barcode here" autofocus>
-          <p class="scanner-instruction">Scanned items will appear below</p>
-          <div id="scanned-items-list" class="scanned-items-container"></div>
-        </div>
-        <div class="scanner-modal__footer">
-          <button onclick="closeScannerModal()" class="scanner-btn scanner-btn--cancel">Cancel</button>
-          <button id="markReceivedBtn" class="scanner-btn scanner-btn--confirm">Mark as Received</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="issued" class="content-section">
-    <div class="issued-header">
-      <h2>Analytics Overview</h2>
-    </div>
-
-    <div class="issued-layout">
-      <!-- ===== LEFT SECTION ===== -->
-      <div class="issued-left">
-        <!-- Analytics Overview -->
-        <div class="analytics-overview">
-          <div class="analytic-card clickable-card" onclick="openDynamicModal('total')">
-            <h4>Total issued items</h4>
-            <p>309</p>
-          </div>
-          <div class="analytic-card clickable-card" onclick="openDynamicModal('active')">
-            <h4>Active issuances</h4>
-            <p>0</p>
-          </div>
-          <div class="analytic-card clickable-card" onclick="openDynamicModal('returned')">
-            <h4>Returned items</h4>
-            <p>0</p>
-          </div>
-          <div class="analytic-card clickable-card" onclick="openDynamicModal('overdue')">
-            <h4>Overdue items</h4>
-            <p>0</p>
-          </div>
-          <div class="analytic-card clickable-card" onclick="openDynamicModal('permanent')">
-            <h4>Permanent issuances</h4>
-            <p>0</p>
-          </div>
-          <div class="analytic-card clickable-card" onclick="openDynamicModal('pending')">
-            <h4>Pending issuances</h4>
-            <p>0</p>
+          <!-- SCANNER MODAL -->
+          <div id="scannerModal" class="scanner-modal hidden">
+            <div class="scanner-modal__box">
+              <div class="scanner-modal__header">
+                <h2>Scan Item</h2>
+                <button onclick="closeScannerModal()" class="scanner-modal__close">&times;</button>
+              </div>
+              <div class="scanner-modal__body">
+                <input id="scannerInput" type="text" placeholder="Scan QR/Barcode here" autofocus>
+                <p class="scanner-instruction">Scanned items will appear below</p>
+                <div id="scanned-items-list" class="scanned-items-container"></div>
+              </div>
+              <div class="scanner-modal__footer">
+                <button onclick="closeScannerModal()" class="scanner-btn scanner-btn--cancel">Cancel</button>
+                <button id="markReceivedBtn" class="scanner-btn scanner-btn--confirm">Mark as Received</button>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Issued Table -->
-        <div class="issued-table-section">
-          <div class="table-header">
-            <h4>Issued item list</h4>
-            <a href="#">View all</a>
+        <div id="issued" class="content-section">
+          <div class="issued-header">
+            <h2>Analytics Overview</h2>
           </div>
-          <table class="issued-table">
-            <thead>
-              <tr>
-                <th>Serial #</th>
-                <th>Issued to</th>
-                <th>Issued by</th>
-                <th>Date Issued</th>
-                <th>Expected Return Date</th>
-                <th>Item</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              @foreach($issuedItemsList as $item)
-                <tr>
-                  <td>{{ $item->serial_no }}</td>
-                  <td>{{ $item->issued_to }}</td>
-                  <td>{{ $item->issued_by }}</td>
-                  <td>{{ \Carbon\Carbon::parse($item->issued_date)->format('F d, Y') }}</td>
-                  <td>{{ \Carbon\Carbon::parse($item->return_date)->format('F d, Y') }}</td>
-                  <td>{{ $item->item }}</td>
-                  <td class="action-buttons-issued">
-                    <button class="action-btn-issued return-btn-issued" title="Return" data-id="{{ $item->issue_id }}">
-                      <i class="fas fa-undo"></i>
-                    </button>
-                    <button class="action-btn-issued damaged-btn-issued" data-id="{{ $item->serial_no }}" title="Damaged">
-                      <i class="fas fa-exclamation-triangle"></i>
-                    </button>
-                    <button class="action-btn-issued unserviceable-btn-issued" title="Unserviceable">
-                      <i class="fas fa-times-circle"></i>
-                    </button>
-                  </td>
-                </tr>
-              @endforeach
-            </tbody>
-          </table>
+
+          <div class="issued-layout">
+            <!-- ===== LEFT SECTION ===== -->
+            <div class="issued-left">
+              <!-- Analytics Overview -->
+              <div class="analytics-overview">
+                <div class="analytic-card clickable-card" onclick="openDynamicModal('total')">
+                  <h4>Total issued items</h4>
+                  <p>309</p>
+                </div>
+                <div class="analytic-card clickable-card" onclick="openDynamicModal('active')">
+                  <h4>Active issuances</h4>
+                  <p>0</p>
+                </div>
+                <div class="analytic-card clickable-card" onclick="openDynamicModal('returned')">
+                  <h4>Returned items</h4>
+                  <p>0</p>
+                </div>
+                <div class="analytic-card clickable-card" onclick="openDynamicModal('overdue')">
+                  <h4>Overdue items</h4>
+                  <p>0</p>
+                </div>
+                <div class="analytic-card clickable-card" onclick="openDynamicModal('permanent')">
+                  <h4>Permanent issuances</h4>
+                  <p>0</p>
+                </div>
+                <div class="analytic-card clickable-card" onclick="openDynamicModal('pending')">
+                  <h4>Pending issuances</h4>
+                  <p>0</p>
+                </div>
+              </div>
+
+              <!-- Issued Table -->
+              <div class="issued-table-section">
+                <div class="table-header">
+                  <h4>Issued item list</h4>
+                  <a href="#">View all</a>
+                </div>
+                <table class="issued-table">
+                  <thead>
+                    <tr>
+                      <th>Serial #</th>
+                      <th>Issued to</th>
+                      <th>Issued by</th>
+                      <th>Date Issued</th>
+                      <th>Expected Return Date</th>
+                      <th>Item</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @foreach($issuedItemsList as $item)
+                      <tr>
+                        <td>{{ $item->serial_no }}</td>
+                        <td>{{ $item->issued_to }}</td>
+                        <td>{{ $item->issued_by }}</td>
+                        <td>{{ \Carbon\Carbon::parse($item->issued_date)->format('F d, Y') }}</td>
+                        <td>{{ \Carbon\Carbon::parse($item->return_date)->format('F d, Y') }}</td>
+                        <td>{{ $item->item }}</td>
+                        <td class="action-buttons-issued">
+                          <button class="action-btn-issued return-btn-issued" title="Return"
+                            data-id="{{ $item->issue_id }}">
+                            <i class="fas fa-undo"></i>
+                          </button>
+                          <button class="action-btn-issued damaged-btn-issued" data-id="{{ $item->serial_no }}"
+                            title="Damaged">
+                            <i class="fas fa-exclamation-triangle"></i>
+                          </button>
+                          <button class="action-btn-issued unserviceable-btn-issued" title="Unserviceable">
+                            <i class="fas fa-times-circle"></i>
+                          </button>
+                        </td>
+                      </tr>
+                    @endforeach
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  </div>
 
 
-  <!-- ======================
+        <!-- ======================
               MAINTENANCE & MONITORING
           ======================= -->
-  <div id="reports" class="content-section">
-    <div class="form-header">
-      <h2>Maintenance Summary</h2>
+        <div id="reports" class="content-section">
+          <div class="form-header">
+            <h2>Maintenance Summary</h2>
 
-      <div class="reports-controls">
-        <div class="right-buttons">
-          <input type="text" id="MaintenanceSearchInput" placeholder="Search Item Name...">
-        </div>
-      </div>
-    </div>
+            <div class="reports-controls">
+              <div class="right-buttons">
+                <input type="text" id="MaintenanceSearchInput" placeholder="Search Item Name...">
+              </div>
+            </div>
+          </div>
 
-    <div class="form-summary">
-      <div class="summary-card">
-        <p>Items Under Repair</p>
-        <h2>{{ $maintenanceCounts['total'] }}</h2>
-      </div>
-      <div class="summary-card">
-        <p>Complete Repairs</p>
-        <h2>{{ $maintenanceCounts['pending'] }}</h2>
-      </div>
-      <div class="summary-card">
-        <p>Unserviceable</p>
-        <h2>{{ $maintenanceCounts['completed'] }}</h2>
-      </div>
-      <div class="summary-card">
-        <p>Total Repair Cost</p>
-        <h2>{{ $maintenanceCounts['upcoming'] }}</h2>
-      </div>
-    </div>
+          <div class="form-summary">
+            <div class="summary-card">
+              <p>Items Under Repair</p>
+              <h2>{{ $maintenanceCounts['total'] }}</h2>
+            </div>
+            <div class="summary-card">
+              <p>Complete Repairs</p>
+              <h2>{{ $maintenanceCounts['pending'] }}</h2>
+            </div>
+            <div class="summary-card">
+              <p>Unserviceable</p>
+              <h2>{{ $maintenanceCounts['completed'] }}</h2>
+            </div>
+            <div class="summary-card">
+              <p>Total Repair Cost</p>
+              <h2>{{ $maintenanceCounts['upcoming'] }}</h2>
+            </div>
+          </div>
 
-    <!-- Maintenance Filter Input -->
-    <div class="reports-controls">
+          <!-- Maintenance Filter Input -->
+          <div class="reports-controls">
 
-      <!-- Input With Icon -->
-      <div class="left-side">
-        <div class="input-with-icon">
-          <input type="text" id="MaintenanceFilterInput" placeholder="Filter Items">
-          <svg class="filter-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M21 4V6H20L15 13.5V22H9V13.5L4 6H3V4H21ZM6.4037 6L11 12.8944V20H13V12.8944L17.5963 6H6.4037Z">
-            </path>
-          </svg>
-        </div>
+            <!-- Input With Icon -->
+            <div class="left-side">
+              <div class="input-with-icon">
+                <input type="text" id="MaintenanceFilterInput" placeholder="Filter Items">
+                <svg class="filter-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                  <path
+                    d="M21 4V6H20L15 13.5V22H9V13.5L4 6H3V4H21ZM6.4037 6L11 12.8944V20H13V12.8944L17.5963 6H6.4037Z">
+                  </path>
+                </svg>
+              </div>
 
-        <!-- Export Button -->
-        <div class="btn-with-icon">
-          <button class="export-btn" id="ExportMaintenanceBtn">
-            <svg class="export-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-              <path
-                d="M21 3H3C2.44772 3 2 3.44772 2 4V20C2 20.5523 2.44772 21 3 21H21C21.5523 21 22 20.5523 22 20V4C22 3.44772 21.5523 3 21 3ZM12 16C10.3431 16 9 14.6569 9 13H4V5H20V13H15C15 14.6569 13.6569 16 12 16ZM16 11H13V14H11V11H8L12 6.5L16 11Z">
-              </path>
-            </svg>
-            Export to PDF
-          </button>
-        </div>
+              <!-- Export Button -->
+              <div class="btn-with-icon">
+                <button class="export-btn" id="ExportMaintenanceBtn">
+                  <svg class="export-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                      d="M21 3H3C2.44772 3 2 3.44772 2 4V20C2 20.5523 2.44772 21 3 21H21C21.5523 21 22 20.5523 22 20V4C22 3.44772 21.5523 3 21 3ZM12 16C10.3431 16 9 14.6569 9 13H4V5H20V13H15C15 14.6569 13.6569 16 12 16ZM16 11H13V14H11V11H8L12 6.5L16 11Z">
+                    </path>
+                  </svg>
+                  Export to PDF
+                </button>
+              </div>
 
-        <!-- Print Button -->
-        <div class="btn-wth-icon">
-          <button class="print-btn" id="PrintMaintenanceBtn">
-            <svg class="print-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-              <path
-                d="M7 17H17V22H7V17ZM19 20V15H5V20H3C2.44772 20 2 19.5523 2 19V9C2 8.44772 2.44772 8 3 8H21C21.5523 8 22 8.44772 22 9V19C22 19.5523 21.5523 20 21 20H19ZM5 10V12H8V10H5ZM7 2H17C17.5523 2 18 2.44772 18 3V6H6V3C6 2.44772 6.44772 2 7 2Z">
-              </path>
-            </svg>
-            Print
-        </div>
-      </div>
+              <!-- Print Button -->
+              <div class="btn-wth-icon">
+                <button class="print-btn" id="PrintMaintenanceBtn">
+                  <svg class="print-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                      d="M7 17H17V22H7V17ZM19 20V15H5V20H3C2.44772 20 2 19.5523 2 19V9C2 8.44772 2.44772 8 3 8H21C21.5523 8 22 8.44772 22 9V19C22 19.5523 21.5523 20 21 20H19ZM5 10V12H8V10H5ZM7 2H17C17.5523 2 18 2.44772 18 3V6H6V3C6 2.44772 6.44772 2 7 2Z">
+                    </path>
+                  </svg>
+                  Print
+              </div>
+            </div>
 
-      <!-- Right Buttons -->
-      <!-- <div class="right-side">
+            <!-- Right Buttons -->
+            <!-- <div class="right-side">
               <div class="btn-with-icon">
                 <button class="add-btn" id="AddMaintenanceBtn">
                   <svg class="add-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20"
@@ -565,257 +593,259 @@
                 </button>
               </div>
             </div> -->
-    </div>
+          </div>
 
 
-    <!-- Maintenance Records Table -->
-    <div class="form-table-container mt-4">
-      <h3>Maintenance Records</h3>
-      <table class="form-table">
-        <thead>
-          <tr>
-            <th>Serial #</th>
-            <th>Item</th>
-            <th>Issue / Problem</th>
-            <th>Date Reported</th>
-            <th>Repair Cost</th>
-            <th>Expected Completion</th>
-            <th>Remarks</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          @forelse($maintenanceRecords as $record)
-            <tr>
-              <td class="serial-cell" data-serial="{{ $record->serial_no }}">
-                {{ $record->serial_no }}
-              </td>
-              <td>{{ $record->item_name ?? '-' }}</td>
-              <td>{{ $record->issue_type ?? '-' }}</td>
-              <td>{{ \Carbon\Carbon::parse($record->date_reported)->format('F d, Y') }}</td>
-              <td>{{ $record->repair_cost ? '₱' . number_format($record->repair_cost, 2) : '-' }}</td>
-              <td>
-                {{ $record->expected_completion ? \Carbon\Carbon::parse($record->expected_completion)->format('M d, Y') : '-' }}
-              </td>
-              <td>{{ $record->remarks ?? '-' }}</td>
-              <td>
-                <div class="btn-with-icon">
-                  <button class="edit-btn" data-id="{{ $record->maintenance_id }}" data-serial="{{ $record->serial_no }}">
-                    <svg class="edit-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-                      fill="rgba(100,205,138,1)">
-                      <path
-                        d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z">
-                      </path>
-                    </svg>
-                    Edit
-                  </button>
-                </div>
-                <div class="right-side">
-                  <div class="btn-with-icon">
-                    <button class="make-available-btn" data-serial="{{ $record->serial_no }}" title="Make Available">
-                      <svg class="available-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-                        fill="rgba(100,205,138,1)">
-                        <path d="M9 16.2l-3.5-3.5 1.41-1.42L9 13.38l7.09-7.09L17.5 7.8z" />
-                      </svg>
-                      Make Available
-                    </button>
-                  </div>
-                </div>
-              </td>
-            </tr>
-          @empty
-            <tr>
-              <td colspan="7" style="text-align:center;">No maintenance records found.</td>
-            </tr>
-          @endforelse
-        </tbody>
-      </table>
-    </div>
+          <!-- Maintenance Records Table -->
+          <div class="form-table-container mt-4">
+            <h3>Maintenance Records</h3>
+            <table class="form-table">
+              <thead>
+                <tr>
+                  <th>Serial #</th>
+                  <th>Item</th>
+                  <th>Issue / Problem</th>
+                  <th>Date Reported</th>
+                  <th>Repair Cost</th>
+                  <th>Expected Completion</th>
+                  <th>Remarks</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @forelse($maintenanceRecords as $record)
+                  <tr>
+                    <td class="serial-cell" data-serial="{{ $record->serial_no }}">
+                      {{ $record->serial_no }}
+                    </td>
+                    <td>{{ $record->item_name ?? '-' }}</td>
+                    <td>{{ $record->issue_type ?? '-' }}</td>
+                    <td>{{ \Carbon\Carbon::parse($record->date_reported)->format('F d, Y') }}</td>
+                    <td>{{ $record->repair_cost ? '₱' . number_format($record->repair_cost, 2) : '-' }}</td>
+                    <td>
+                      {{ $record->expected_completion ? \Carbon\Carbon::parse($record->expected_completion)->format('M d, Y') : '-' }}
+                    </td>
+                    <td>{{ $record->remarks ?? '-' }}</td>
+                    <td>
+                      <div class="btn-with-icon">
+                        <button class="edit-btn" data-id="{{ $record->maintenance_id }}"
+                          data-serial="{{ $record->serial_no }}">
+                          <svg class="edit-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                            fill="rgba(100,205,138,1)">
+                            <path
+                              d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z">
+                            </path>
+                          </svg>
+                          Edit
+                        </button>
+                      </div>
+                      <div class="right-side">
+                        <div class="btn-with-icon">
+                          <button class="make-available-btn" data-serial="{{ $record->serial_no }}"
+                            title="Make Available">
+                            <svg class="available-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                              fill="rgba(100,205,138,1)">
+                              <path d="M9 16.2l-3.5-3.5 1.41-1.42L9 13.38l7.09-7.09L17.5 7.8z" />
+                            </svg>
+                            Make Available
+                          </button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                @empty
+                  <tr>
+                    <td colspan="7" style="text-align:center;">No maintenance records found.</td>
+                  </tr>
+                @endforelse
+              </tbody>
+            </table>
+          </div>
 
-  </div>
+        </div>
 
-  <!-- ======================
+        <!-- ======================
            DAMAGE REPORTS SECTION
         ======================= -->
 
-  <div id="damaged" class="content-section">
-    <div class="form-header">
-      <h2>Damage Records History</h2>
-    </div>
-
-    <div class="damaged-layout">
-
-      <div class="issued-left">
-
-        <div class="form-summary">
-          <div class="summary-card">
-            <h4>Total Reports</h4>
-            <p>{{ $damageCounts['total'] ?? 0 }}</p>
+        <div id="damaged" class="content-section">
+          <div class="form-header">
+            <h2>Damage Records History</h2>
           </div>
-          <div class="summary-card">
-            <h4>Reported Damages</h4>
-            <p>{{ $damageCounts['reported'] ?? 0 }}</p>
+
+          <div class="damaged-layout">
+
+            <div class="issued-left">
+
+              <div class="form-summary">
+                <div class="summary-card">
+                  <h4>Total Reports</h4>
+                  <p>{{ $damageCounts['total'] ?? 0 }}</p>
+                </div>
+                <div class="summary-card">
+                  <h4>Reported Damages</h4>
+                  <p>{{ $damageCounts['reported'] ?? 0 }}</p>
+                </div>
+              </div>
+
+              <div class="damaged-table-section">
+                <div class="table-header">
+                  <h4>Damage Report List</h4>
+                </div>
+
+                <table class="issued-table">
+                  <thead>
+                    <tr>
+                      <th>Serial #</th>
+                      <th>Item</th>
+                      <th>Date Reported</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    @forelse($damageReports as $report)
+                      <tr>
+                        <td>{{ $report->serial_no }}</td>
+                        <td>{{ $report->item->item_name ?? '-' }}</td>
+                        <td>{{ \Carbon\Carbon::parse($report->reported_at)->format('F d, Y') }}</td>
+                        <td>
+                          <div class="button-container">
+                            <button class="action-btn-issued maintenance-btn-issued" data-id="{{ $report->id }}"
+                              data-serial="{{ $report->serial_no }}" title="Maintenance">
+                              <i class="fas fa-exclamation-triangle"></i>
+                            </button>
+
+                          </div>
+                        </td>
+                      </tr>
+                    @empty
+                      <tr>
+                        <td colspan="7" style="text-align:center; padding:20px;">
+                          No damage reports found.
+                        </td>
+                      </tr>
+                    @endforelse
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
           </div>
         </div>
 
-        <div class="damaged-table-section">
-          <div class="table-header">
-            <h4>Damage Report List</h4>
-          </div>
 
-          <table class="issued-table">
-            <thead>
-              <tr>
-                <th>Serial #</th>
-                <th>Item</th>
-                <th>Date Reported</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              @forelse($damageReports as $report)
-                <tr>
-                  <td>{{ $report->serial_no }}</td>
-                  <td>{{ $report->item->item_name ?? '-' }}</td>
-                  <td>{{ \Carbon\Carbon::parse($report->reported_at)->format('F d, Y') }}</td>
-                  <td>
-                    <div class="button-container">
-                      <button class="action-btn-issued maintenance-btn-issued" data-id="{{ $report->id }}"
-                        data-serial="{{ $report->serial_no }}" title="Maintenance">
-                        <i class="fas fa-exclamation-triangle"></i>
-                      </button>
-
-                    </div>
-                  </td>
-                </tr>
-              @empty
-                <tr>
-                  <td colspan="7" style="text-align:center; padding:20px;">
-                    No damage reports found.
-                  </td>
-                </tr>
-              @endforelse
-            </tbody>
-          </table>
-        </div>
-
-      </div>
-    </div>
-  </div>
-
-
-  <!-- ======================
+        <!-- ======================
             FORM RECORDS SECTION
         ======================= -->
-  <div id="form" class="content-section">
-    <div class="form-header">
-      <h2>Form Summary</h2>
-    </div>
+        <div id="form" class="content-section">
+          <div class="form-header">
+            <h2>Form Summary</h2>
+          </div>
 
-    <div class="form-summary">
-      <div class="summary-card">
-        <p>Total Forms</p>
-        <h2>{{ $formSummaryCounts->total_forms }}</h2>
-      </div>
-      <div class="summary-card">
-        <p>ICS Form</p>
-        <h2>{{ $formSummaryCounts->ics_forms }}</h2>
-      </div>
-      <div class="summary-card">
-        <p>PAR Form</p>
-        <h2>{{ $formSummaryCounts->par_forms }}</h2>
-      </div>
-      <div class="summary-card">
-        <p>Active</p>
-        <h2>{{ $formSummaryCounts->active_forms }}</h2>
-      </div>
-      <div class="summary-card">
-        <p>Archive</p>
-        <h2>{{ $formSummaryCounts->archived_forms }}</h2>
-      </div>
-    </div>
-
-    <div class="form-controls">
-
-      <button class="sort-btn"><i class="fas fa-filter"></i> Sort by field</button>
-      <button class="add-btn"><i class="fas fa-plus"></i> Add New Form</button>
-    </div>
-
-    <div class="form-table-container">
-      <table class="form-table">
-        <thead>
-          <tr>
-            <th>Form Type</th>
-            <th>Reference No.</th>
-            <th>Date Created</th>
-            <th>Issued To</th>
-            <th>Item Count</th>
-            <th>Status</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          @foreach($issuedForms as $form)
-            <tr>
-              <td>{{ $form->form_type }}</td>
-              <td>{{ $form->reference_no }}</td>
-              <td>{{ \Carbon\Carbon::parse($form->created_at)->format('F d, Y') }}</td>
-              <td>{{ $form->student_name }}</td>
-              <td>{{ $form->item_count }}</td>
-              <td><span class="status {{ strtolower($form->status) }}">{{ $form->status }}</span></td>
-              <td><a href="#">View</a></td>
-            </tr>
-          @endforeach
-        </tbody>
-      </table>
-    </div>
-
-    <div id="formTypeModal" class="modal-overlay" style="display: none;">
-      <div class="modal-content" style="width: 420px;">
-        <span class="close-btn" onclick="closeFormTypeModal()">&times;</span>
-        <h2 style="color:#004aad;text-align:center;">Choose Form Type</h2>
-        <div style="display:flex;gap:20px;justify-content:center;margin-top:20px;">
-          <button class="save-btn" id="chooseIcs">ICS</button>
-          <button class="save-btn" id="choosePar">PAR</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="viewFormModal" class="modal-overlay" style="display:none;">
-      <div class="modal-content" style="width: 800px;">
-        <span class="close-btn" onclick="closeViewFormModal()">&times;</span>
-        <h2 style="text-align:center;color:#004aad;">Form Details</h2>
-        <div class="modal-body" style="margin-top:20px;"></div>
-        <div style="text-align:center; margin:20px 0;">
-          <button class="save-btn" onclick="printFormModal()">🖨️ Print</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="addFormModal" class="modal-overlay" style="display:none;">
-      <div class="modal-content">
-        <span class="close-btn" onclick="closeAddFormModal()">&times;</span>
-        <h2 id="addFormTitle" style="text-align:center;color:#004aad;">Add New Form</h2>
-
-        <form id="addForm" onsubmit="submitForm(event)">
-          <input type="hidden" id="form_type_input" name="form_type" value="ICS">
-
-          <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 12px;">
-            <div class="full-width" style="position:relative;">
-              <label>Student Name</label>
-              <input type="text" id="studentSearch" name="student_name" autocomplete="off"
-                placeholder="Type student name..." required>
-
-              <div id="studentSuggestion" class="suggestion-box"></div>
+          <div class="form-summary">
+            <div class="summary-card">
+              <p>Total Forms</p>
+              <h2>{{ $formSummaryCounts->total_forms }}</h2>
             </div>
-
-            <div class="full-width">
-              <label>Property Number</label>
-              <input type="text" id="propertyFilter" placeholder="Enter property number..." autocomplete="on">
+            <div class="summary-card">
+              <p>ICS Form</p>
+              <h2>{{ $formSummaryCounts->ics_forms }}</h2>
             </div>
+            <div class="summary-card">
+              <p>PAR Form</p>
+              <h2>{{ $formSummaryCounts->par_forms }}</h2>
+            </div>
+            <div class="summary-card">
+              <p>Active</p>
+              <h2>{{ $formSummaryCounts->active_forms }}</h2>
+            </div>
+            <div class="summary-card">
+              <p>Archive</p>
+              <h2>{{ $formSummaryCounts->archived_forms }}</h2>
+            </div>
+          </div>
 
-            <!-- <div class="full-width">
+          <div class="form-controls">
+
+            <button class="sort-btn"><i class="fas fa-filter"></i> Sort by field</button>
+            <button class="add-btn"><i class="fas fa-plus"></i> Add New Form</button>
+          </div>
+
+          <div class="form-table-container">
+            <table class="form-table">
+              <thead>
+                <tr>
+                  <th>Form Type</th>
+                  <th>Reference No.</th>
+                  <th>Date Created</th>
+                  <th>Issued To</th>
+                  <th>Item Count</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                @foreach($issuedForms as $form)
+                  <tr>
+                    <td>{{ $form->form_type }}</td>
+                    <td>{{ $form->reference_no }}</td>
+                    <td>{{ \Carbon\Carbon::parse($form->created_at)->format('F d, Y') }}</td>
+                    <td>{{ $form->student_name }}</td>
+                    <td>{{ $form->item_count }}</td>
+                    <td><span class="status {{ strtolower($form->status) }}">{{ $form->status }}</span></td>
+                    <td><a href="#">View</a></td>
+                  </tr>
+                @endforeach
+              </tbody>
+            </table>
+          </div>
+
+          <div id="formTypeModal" class="modal-overlay" style="display: none;">
+            <div class="modal-content" style="width: 420px;">
+              <span class="close-btn" onclick="closeFormTypeModal()">&times;</span>
+              <h2 style="color:#004aad;text-align:center;">Choose Form Type</h2>
+              <div style="display:flex;gap:20px;justify-content:center;margin-top:20px;">
+                <button class="save-btn" id="chooseIcs">ICS</button>
+                <button class="save-btn" id="choosePar">PAR</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="viewFormModal" class="modal-overlay" style="display:none;">
+            <div class="modal-content" style="width: 800px;">
+              <span class="close-btn" onclick="closeViewFormModal()">&times;</span>
+              <h2 style="text-align:center;color:#004aad;">Form Details</h2>
+              <div class="modal-body" style="margin-top:20px;"></div>
+              <div style="text-align:center; margin:20px 0;">
+                <button class="save-btn" onclick="printFormModal()">🖨️ Print</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="addFormModal" class="modal-overlay" style="display:none;">
+            <div class="modal-content">
+              <span class="close-btn" onclick="closeAddFormModal()">&times;</span>
+              <h2 id="addFormTitle" style="text-align:center;color:#004aad;">Add New Form</h2>
+
+              <form id="addForm" onsubmit="submitForm(event)">
+                <input type="hidden" id="form_type_input" name="form_type" value="ICS">
+
+                <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 12px;">
+                  <div class="full-width" style="position:relative;">
+                    <label>Student Name</label>
+                    <input type="text" id="studentSearch" name="student_name" autocomplete="off"
+                      placeholder="Type student name..." required>
+
+                    <div id="studentSuggestion" class="suggestion-box"></div>
+                  </div>
+
+                  <div class="full-width">
+                    <label>Property Number</label>
+                    <input type="text" id="propertyFilter" placeholder="Enter property number..." autocomplete="on">
+                  </div>
+
+                  <!-- <div class="full-width">
                     <label>Available Serial Numbers</label>
                     <input type="hidden" id="serial_no" name="serial_no">
                     <div id="serialList" class="serial-container">
@@ -824,30 +854,30 @@
                   </div> -->
 
 
-            <div class="full-width">
-              <label>Reference No.</label>
-              <input type="text" id="referenceNo" name="reference_no" required>
-              <div id="refCheck" style="color:red;margin-top:6px;display:none;">Reference already exists.</div>
-            </div>
+                  <div class="full-width">
+                    <label>Reference No.</label>
+                    <input type="text" id="referenceNo" name="reference_no" required>
+                    <div id="refCheck" style="color:red;margin-top:6px;display:none;">Reference already exists.</div>
+                  </div>
 
-            <div class="full-width">
-              <label>Issued Date</label>
-              <input type="date" id="issuedDate" name="issued_date" required>
-            </div>
+                  <div class="full-width">
+                    <label>Issued Date</label>
+                    <input type="date" id="issuedDate" name="issued_date" required>
+                  </div>
 
-            <div class="full-width">
-              <label>Return Date</label>
-              <input type="date" id="returnDate" name="return_date">
-            </div>
+                  <div class="full-width">
+                    <label>Return Date</label>
+                    <input type="date" id="returnDate" name="return_date">
+                  </div>
 
-            <div class="form-buttons" style="margin-top:18px; grid-column: 1 / -1;">
-              <button type="submit" class="save-btn">Save Form</button>
-              <button type="button" class="reset-btn" onclick="closeAddFormModal()">Cancel</button>
+                  <div class="form-buttons" style="margin-top:18px; grid-column: 1 / -1;">
+                    <button type="submit" class="save-btn">Save Form</button>
+                    <button type="button" class="reset-btn" onclick="closeAddFormModal()">Cancel</button>
+                  </div>
+              </form>
             </div>
-        </form>
-      </div>
-    </div>
-  </div>
+          </div>
+        </div>
   </div>
 
 
