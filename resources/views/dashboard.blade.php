@@ -224,9 +224,9 @@
                   <td>{{ \Carbon\Carbon::parse($item->date_acquired)->format('M d, Y') }}</td>
                   <td>
                     <span class="status-badge 
-                                        @if($item->status === 'Available') text-green 
-                                        @elseif($item->status === 'For Repair') text-brown 
-                                        @else text-red @endif">
+                                                @if($item->status === 'Available') text-green 
+                                                @elseif($item->status === 'For Repair') text-brown 
+                                                @else text-red @endif">
                       {{ $item->status }}
                     </span>
                   </td>
@@ -242,7 +242,9 @@
           </table>
 
           <div style="margin-top: 20px;">
-            <button class="view-btn">View Usage History</button>
+            <button type="button" class="view-btn" onclick="showUsageHistory()">
+              View Usage History
+            </button>
           </div>
 
           <div class="modal fade" id="inventoryModal" tabindex="-1">
@@ -323,62 +325,54 @@
       </section>
     </main>
 
-    <div id="usageHistoryModal" class="modal-overlay" style="display: none;">
-      <div class="modal-content usage-history-content">
+    <div id="usageHistoryModal" class="usage-modal-overlay" style="display: none;">
+
+      <div class="usage-history-content">
+
         <div class="usage-header">
-          <button class="back-btn" onclick="closeUsageHistory()">
-            <i class="bi bi-arrow-left"></i>
-          </button>
+          <button type="button" class="back-btn" onclick="closeUsageHistory()">
+            <i class="bi bi-arrow-left"></i> <span>&#8592;</span> </button>
+          <h1 class="usage-title">Usage History</h1>
           <h1 class="usage-title">Usage History</h1>
         </div>
 
         <div class="usage-item-info">
-          <p>Item: <span id="history-item-name">Printer</span></p>
-          <p>Property No.: <span id="history-property-no">00001</span></p>
+          Item: <span id="history-item-name" style="font-weight:bold;">Printer</span><br>
+          Property No.: <span id="history-property-no" style="font-weight:bold;">00001</span>
         </div>
 
         <div class="usage-filters">
-          <select class="filter-select" id="filterStatus">
+          <select class="filter-select">
             <option>All Statuses</option>
           </select>
-          <select class="filter-select" id="filterDate">
+          <select class="filter-select">
             <option>Latest - Oldest</option>
           </select>
         </div>
 
-        <div class="table-responsive usage-table-container">
-          <table class="usage-table">
-            <thead>
-              <tr>
-                <th>Issued Period</th>
-                <th>Issued To</th>
-                <th>Purpose</th>
-                <th>Issued By</th>
-                <th>Return Status</th>
-                <th>Condition After Use</th>
-                <th>Remarks</th>
-              </tr>
-            </thead>
-            <tbody id="usage-history-body">
-            </tbody>
-          </table>
-        </div>
+        <table class="usage-table">
+          <thead>
+            <tr>
+              <th>Issued Period</th>
+              <th>Issued To</th>
+              <th>Purpose</th>
+              <th>Issued By</th>
+              <th>Return Status</th>
+              <th>Condition After Use</th>
+              <th>Remarks</th>
+            </tr>
+          </thead>
+          <tbody id="usage-history-body">
+          </tbody>
+        </table>
 
         <div class="usage-footer">
           <span class="entries-count">Showing 1-3 of 42 entries</span>
-
           <div class="pagination-controls">
-            <button class="pag-btn" title="Previous">
-              <i class="bi bi-chevron-left"></i>
-            </button>
-
+            <button class="pag-btn"><i class="bi bi-chevron-left"></i></button>
             <button class="pag-num active">1</button>
             <button class="pag-num">2</button>
-            <button class="pag-num">3...</button>
-
-            <button class="pag-btn" title="Next">
-              <i class="bi bi-chevron-right"></i>
-            </button>
+            <button class="pag-btn"><i class="bi bi-chevron-right"></i></button>
           </div>
         </div>
       </div>

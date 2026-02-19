@@ -448,67 +448,43 @@ function showItemDetails(item) {
 //   });
 // }
 
-// Function na tatawagin kapag clinick ang "View item usage history"
+// Ilagay ito sa loob ng dashboard-modal.js
+document.addEventListener('click', function (e) {
+    // I-check kung ang clinick ay ang button na may class na 'view-btn'
+    if (e.target && e.target.classList.contains('view-btn')) {
+        console.log("Usage History button clicked!"); // Para makita mo sa Console (F12) kung gumagana
+        showUsageHistory();
+    }
+});
+
 function showUsageHistory() {
-    // 1. Isara ang Item Detail Modal (Bootstrap)
-    const detailModalEl = document.getElementById("inventoryModal");
-    const detailModal = bootstrap.Modal.getInstance(detailModalEl);
-    if (detailModal) detailModal.hide();
+    // 1. Kunin ang IDs ng modal
+    const historyModal = document.getElementById("usageHistoryModal");
 
-    // 2. I-populate ang data (Halimbawa muna)
-    document.getElementById("history-item-name").innerText =
-        document.getElementById("modal-item").innerText;
-    document.getElementById("history-property-no").innerText =
-        document.getElementById("modal-serial").innerText;
+    // 2. Siguraduhin na may data tayong makukuha sa main Item Detail modal
+    const itemName = document.getElementById("modal-item") ? document.getElementById("modal-item").innerText : "---";
+    const serialNo = document.getElementById("modal-serial") ? document.getElementById("modal-serial").innerText : "---";
 
-    // 3. Ipakita ang Usage History Modal
-    document.getElementById("usageHistoryModal").style.display = "flex";
+    // 3. I-populate ang data sa Usage History Modal
+    if (document.getElementById("history-item-name")) {
+        document.getElementById("history-item-name").innerText = itemName;
+    }
+    if (document.getElementById("history-property-no")) {
+        document.getElementById("history-property-no").innerText = serialNo;
+    }
 
-    // 4. Load table data (Optional: Dito ka mag-a-ajax kung gusto mong real data)
-    loadHistoryTable();
+    // 4. Ipakita ang modal (Force display)
+    if (historyModal) {
+        historyModal.style.setProperty('display', 'flex', 'important');
+        loadHistoryData(); // Ito yung function na naglalagay ng rows sa table
+    } else {
+        alert("Hindi mahanap ang usageHistoryModal sa HTML mo!");
+    }
 }
 
 function closeUsageHistory() {
-    document.getElementById("usageHistoryModal").style.display = "none";
-}
-
-function loadHistoryTable() {
-    const tbody = document.getElementById("usage-history-body");
-    // Sample static data base sa screenshot mo
-    const data = [
-        {
-            period: "Aug 3, 2025 - Present",
-            to: "Admin Office",
-            purpose: "Daily Operation",
-            by: "Custodian",
-            status: "ACTIVE",
-            cond: "-",
-            remarks: "-",
-        },
-        {
-            period: "Jul 20 - Jul 25, 2025",
-            to: "IT Department",
-            purpose: "Office Setup",
-            by: "Custodian",
-            status: "RETURNED (ON-TIME)",
-            cond: "No issues",
-            remarks: "-",
-        },
-    ];
-
-    tbody.innerHTML = data
-        .map(
-            (row) => `
-        <tr>
-            <td>${row.period}</td>
-            <td>${row.to}</td>
-            <td>${row.purpose}</td>
-            <td>${row.by}</td>
-            <td style="font-weight: bold; font-size: 0.8rem;">${row.status}</td>
-            <td>${row.cond}</td>
-            <td>${row.remarks}</td>
-        </tr>
-    `,
-        )
-        .join("");
+    const modal = document.getElementById("usageHistoryModal");
+    if (modal) {
+        modal.style.display = "none";
+    }
 }

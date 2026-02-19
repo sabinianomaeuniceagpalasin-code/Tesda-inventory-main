@@ -11,7 +11,8 @@
 html,
 body {
     height: 100%;
-    overflow: hidden; /* removes browser scrollbar */
+    overflow: hidden;
+    /* removes browser scrollbar */
 }
 
 body {
@@ -98,9 +99,12 @@ body {
 
 /* --- Logout Button --- */
 .bottom-menu button {
-    background: none; /* No background */
-    border: none; /* No border */
-    color: #000; /* Black text */
+    background: none;
+    /* No background */
+    border: none;
+    /* No border */
+    color: #000;
+    /* Black text */
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
@@ -111,7 +115,8 @@ body {
 }
 
 .bottom-menu button:hover {
-    color: #004aad; /* TESDA blue on hover */
+    color: #004aad;
+    /* TESDA blue on hover */
     transform: scale(1.05);
     text-decoration: underline;
 }
@@ -244,7 +249,8 @@ body {
 =========================== */
 
 .usage-modal-overlay {
-    display: none; /* stays hidden */
+    display: none;
+    /* stays hidden */
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.55);
@@ -290,16 +296,20 @@ body {
 .dashboard-layout {
     display: flex;
     flex-direction: column;
-    gap: 30px; /* slightly increased spacing between rows */
+    gap: 30px;
+    /* slightly increased spacing between rows */
     margin-top: 25px;
-    width: 100%; /* ensures full stretch */
+    width: 100%;
+    /* ensures full stretch */
 }
 
 .top-row,
 .bottom-row {
     display: grid;
-    grid-template-columns: 1fr 1fr; /* equal width boxes */
-    gap: 25px; /* spacing between boxes */
+    grid-template-columns: 1fr 1fr;
+    /* equal width boxes */
+    gap: 25px;
+    /* spacing between boxes */
     width: 100%;
 }
 
@@ -307,10 +317,12 @@ body {
 .table-box {
     background: #fff;
     border-radius: 12px;
-    padding: 25px; /* slightly larger for content breathing room */
+    padding: 25px;
+    /* slightly larger for content breathing room */
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
     border: 1px solid black;
-    width: 100%; /* make each box fully expand inside grid */
+    width: 100%;
+    /* make each box fully expand inside grid */
 }
 
 .chart-box h3,
@@ -333,17 +345,22 @@ body {
 
 .chart-wrapper canvas {
     width: 100% !important;
-    height: 100% !important; /* fills the chart-wrapper area */
-    max-width: 620px; /* optional maximum width for very wide screens */
-    max-height: 340px; /* match wrapper height to prevent overflow */
+    height: 100% !important;
+    /* fills the chart-wrapper area */
+    max-width: 620px;
+    /* optional maximum width for very wide screens */
+    max-height: 340px;
+    /* match wrapper height to prevent overflow */
     display: block;
 }
 
 #issuedChart {
     width: 100% !important;
     height: 100% !important;
-    max-width: 420px !important; /* size of pie inside the box — adjust if needed */
-    max-height: 320px !important; /* adjust if you want it smaller/taller */
+    max-width: 420px !important;
+    /* size of pie inside the box — adjust if needed */
+    max-height: 320px !important;
+    /* adjust if you want it smaller/taller */
 }
 
 .chart-wrapper,
@@ -364,7 +381,8 @@ body {
 
 .equal-box h3 {
     text-align: center;
-    margin-bottom: 15px; /* creates gap between the heading and content */
+    margin-bottom: 15px;
+    /* creates gap between the heading and content */
     font-size: 1.2rem;
 }
 
@@ -395,6 +413,7 @@ td {
    RESPONSIVE
 ====================== */
 @media (max-width: 992px) {
+
     .top-row,
     .bottom-row {
         grid-template-columns: 1fr;
@@ -432,6 +451,7 @@ td {
         opacity: 0;
         transform: translateY(5px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -595,20 +615,26 @@ td {
     display: flex;
     align-items: center;
     gap: 6px;
-    background: transparent; /* Para malinis ang loob */
-    border: 2px solid #000000; /* Black border */
+    background: transparent;
+    /* Para malinis ang loob */
+    border: 2px solid #000000;
+    /* Black border */
     cursor: pointer;
     color: blue;
     font-weight: 600;
-    padding: 8px 16px; /* Nagdagdag ng space para hindi dikit ang border */
-    border-radius: 6px; /* Optional: para hindi masyadong matulis ang kanto */
-    transition: all 0.2s ease; /* Para smooth kapag hinover */
+    padding: 8px 16px;
+    /* Nagdagdag ng space para hindi dikit ang border */
+    border-radius: 6px;
+    /* Optional: para hindi masyadong matulis ang kanto */
+    transition: all 0.2s ease;
+    /* Para smooth kapag hinover */
 }
 
 /* Magandang dagdagan ng hover effect para alam ng user na clickable */
 .view-btn:hover {
     background-color: #000000;
-    color: white; /* Magpapalit ng kulay pag tinapatan ng mouse */
+    color: white;
+    /* Magpapalit ng kulay pag tinapatan ng mouse */
 }
 
 .delete-btn {
@@ -739,12 +765,14 @@ td {
 
 /* 🔹 Alternate Header Colors */
 #inventoryTable thead tr th:nth-child(odd) {
-    background-color: #27c0d2; /* Light blue */
+    background-color: #27c0d2;
+    /* Light blue */
     color: black;
 }
 
 #inventoryTable thead tr th:nth-child(even) {
-    background-color: #99c665; /* Light green */
+    background-color: #99c665;
+    /* Light green */
     color: black;
 }
 
@@ -757,7 +785,8 @@ td {
 /* 🔹 Table Body */
 #inventoryTable tbody td {
     padding: 10px;
-    border-bottom: 1px solid #ccc; /* horizontal line between rows */
+    border-bottom: 1px solid #ccc;
+    /* horizontal line between rows */
     text-align: center;
 }
 
@@ -775,8 +804,10 @@ td {
 .action-buttons {
     display: flex;
     gap: 8px;
-    justify-content: center; /* Center horizontally inside table cell */
-    align-items: center; /* Center vertically */
+    justify-content: center;
+    /* Center horizontally inside table cell */
+    align-items: center;
+    /* Center vertically */
 }
 
 .edit-btn,
@@ -809,7 +840,8 @@ td {
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.4);
-    display: none; /* hidden by default */
+    display: none;
+    /* hidden by default */
     justify-content: center;
     align-items: center;
     z-index: 999;
@@ -868,9 +900,11 @@ td {
 
 .form-buttons {
     display: flex;
-    justify-content: center; /* centers horizontally */
+    justify-content: center;
+    /* centers horizontally */
     align-items: center;
-    gap: 12px; /* space between buttons */
+    gap: 12px;
+    /* space between buttons */
     margin-top: 15px;
 }
 
@@ -1152,15 +1186,19 @@ td {
 /* CONTROLS */
 
 #no-items-msg {
-    white-space: nowrap; /* prevents line break */
+    white-space: nowrap;
+    /* prevents line break */
     width: 100%;
     text-align: center;
 }
 
 .no-items-message {
-    white-space: nowrap; /* keep text in ONE LINE */
-    overflow: hidden; /* prevent spilling */
-    text-overflow: ellipsis; /* optional: adds ... if too long */
+    white-space: nowrap;
+    /* keep text in ONE LINE */
+    overflow: hidden;
+    /* prevent spilling */
+    text-overflow: ellipsis;
+    /* optional: adds ... if too long */
     display: block;
     width: 100%;
     text-align: center;
@@ -1408,17 +1446,22 @@ td {
    Container for the serial list
 ------------------------------ */
 .serial-list {
-    max-height: 110px; /* set your desired box height */
+    max-height: 110px;
+    /* set your desired box height */
     min-height: 0;
-    min-width: 350px; /* ensures flex parent doesn't expand it */
-    overflow-y: auto; /* scroll if items exceed max-height */
-    padding: 4px; /* container padding */
+    min-width: 350px;
+    /* ensures flex parent doesn't expand it */
+    overflow-y: auto;
+    /* scroll if items exceed max-height */
+    padding: 4px;
+    /* container padding */
     border: 1px solid #ccc;
     border-radius: 6px;
     background-color: #fff;
     display: flex;
     flex-direction: column;
-    gap: 2px; /* smaller gap between items */
+    gap: 2px;
+    /* smaller gap between items */
     box-sizing: border-box;
 }
 
@@ -1491,7 +1534,8 @@ td {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
     gap: 8px;
-    max-height: 200px; /* 🔥 allows scrolling without stretching layout */
+    max-height: 200px;
+    /* 🔥 allows scrolling without stretching layout */
     min-height: 0;
     overflow-y: auto;
     padding: 12px;
@@ -1502,7 +1546,8 @@ td {
 }
 
 .serial-container .placeholder {
-    white-space: nowrap; /* force one line */
+    white-space: nowrap;
+    /* force one line */
     text-align: center;
     width: 100%;
     display: block;
@@ -1536,7 +1581,8 @@ td {
 
 /* Table Container */
 #reports .form-table-container {
-    margin-top: 20px; /* Space between cards & table */
+    margin-top: 20px;
+    /* Space between cards & table */
     padding: 20px;
     background: #ffffff;
     border-radius: 10px;
@@ -1584,6 +1630,7 @@ td {
     from {
         opacity: 0;
     }
+
     to {
         opacity: 1;
     }
@@ -1791,9 +1838,11 @@ td {
     0% {
         opacity: 0.2;
     }
+
     20% {
         opacity: 1;
     }
+
     100% {
         opacity: 0.2;
     }
@@ -2014,9 +2063,11 @@ td {
     font-size: 14px;
     z-index: 10000;
 }
+
 .history-content p {
     margin: 5px 0;
 }
+
 .loading-text {
     font-style: italic;
     color: #666;
@@ -2030,7 +2081,8 @@ td {
 }
 
 .modal-header-custom {
-    background-color: #e0e0e0; /* Gray header from image */
+    background-color: #e0e0e0;
+    /* Gray header from image */
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -2117,15 +2169,19 @@ td {
 .text-repair {
     color: #8a4af3;
 }
+
 .text-unserviceable {
     color: #4b0082;
 }
+
 .text-missing {
     color: #b8b800;
 }
+
 .text-notfound {
     color: #d9534f;
 }
+
 .text-maintenance {
     color: #28a745;
 }
@@ -2200,7 +2256,8 @@ td {
     color: var(--primary-blue);
     font-weight: 700;
     margin-bottom: 5px;
-    text-transform: none; /* Matches screenshot style */
+    text-transform: none;
+    /* Matches screenshot style */
 }
 
 .qr-subtitle {
@@ -2460,6 +2517,7 @@ td {
     cursor: pointer;
     transition: background 0.2s;
 }
+
 .clickable-item:hover {
     background: #f0f0f0;
 }
@@ -2575,7 +2633,8 @@ td {
 }
 
 .btn-generate {
-    background-color: #737df2; /* Purple/Blue */
+    background-color: #737df2;
+    /* Purple/Blue */
     color: white;
     border: none;
     padding: 15px 60px;
@@ -2587,7 +2646,8 @@ td {
 }
 
 .btn-later {
-    background-color: #e59393; /* Pastel Red */
+    background-color: #e59393;
+    /* Pastel Red */
     color: white;
     border: none;
     padding: 15px 60px;
@@ -2694,7 +2754,8 @@ td {
 /* General Button Style */
 .pag-btn,
 .pag-num {
-    background-color: #f0f0f0; /* Light grey background */
+    background-color: #f0f0f0;
+    /* Light grey background */
     border: none;
     color: #444;
     padding: 8px 14px;
@@ -2715,7 +2776,8 @@ td {
 
 /* Active Page (Yung naka-select na number) */
 .pag-num.active {
-    background-color: #d1d1d1; /* Medyo darker grey gaya ng sa image */
+    background-color: #d1d1d1;
+    /* Medyo darker grey gaya ng sa image */
     font-weight: bold;
     color: #000;
 }
@@ -2910,7 +2972,7 @@ td {
     height: auto;
 }
 
-.qr-box > div {
+.qr-box>div {
     width: 100%;
     display: flex;
     justify-content: center;
@@ -2966,4 +3028,40 @@ td {
     font-size: 20px;
     text-decoration: none;
     margin-right: 10px;
+}
+
+.usage-header {
+    display: flex;
+    align-items: center;
+    /* Pantay ang arrow at ang text na 'Usage History' */
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.back-btn {
+    background: none;
+    border: none;
+    font-size: 1.8rem;
+    /* Lakihan ang arrow */
+    cursor: pointer;
+    color: #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+    transition: transform 0.2s ease;
+}
+
+.back-btn:hover {
+    transform: translateX(-5px);
+    /* Konting galaw pabalik kapag hino-hover */
+    color: #000;
+}
+
+.usage-title {
+    font-size: 2.2rem;
+    font-family: inherit;
+    font-weight: 500;
+    margin: 0;
+    /* Alisin ang default margin ng h1 */
 }
