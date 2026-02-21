@@ -193,8 +193,6 @@
           </div>
         </div>
 
-
-
         <!-- ======================
             INVENTORY SECTION
         ======================= -->
@@ -508,7 +506,6 @@
           </div>
         </div>
 
-
         <!-- ======================
               MAINTENANCE & MONITORING
           ======================= -->
@@ -579,22 +576,7 @@
                   Print
               </div>
             </div>
-
-            <!-- Right Buttons -->
-            <!-- <div class="right-side">
-              <div class="btn-with-icon">
-                <button class="add-btn" id="AddMaintenanceBtn">
-                  <svg class="add-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20"
-                    fill="white">
-                    <path d="M12 5v14m-7-7h14" stroke="white" stroke-width="2" stroke-linecap="round"
-                      stroke-linejoin="round" />
-                  </svg>
-                  Add New Form
-                </button>
-              </div>
-            </div> -->
           </div>
-
 
           <!-- Maintenance Records Table -->
           <div class="form-table-container mt-4">
@@ -661,7 +643,6 @@
               </tbody>
             </table>
           </div>
-
         </div>
 
         <!-- ======================
@@ -733,7 +714,6 @@
             </div>
           </div>
         </div>
-
 
         <!-- ======================
             FORM RECORDS SECTION
@@ -845,15 +825,6 @@
                     <input type="text" id="propertyFilter" placeholder="Enter property number..." autocomplete="on">
                   </div>
 
-                  <!-- <div class="full-width">
-                    <label>Available Serial Numbers</label>
-                    <input type="hidden" id="serial_no" name="serial_no">
-                    <div id="serialList" class="serial-container">
-                      <div class="placeholder">Type a Serial No. to see available items.</div>
-                    </div>
-                  </div> -->
-
-
                   <div class="full-width">
                     <label>Reference No.</label>
                     <input type="text" id="referenceNo" name="reference_no" required>
@@ -879,7 +850,6 @@
           </div>
         </div>
   </div>
-
 
   <!-- GENERATE QR CODE MODULE REQUEST -->
   <div class="content-section qr-code" id="Generate">
@@ -950,12 +920,6 @@
       </div>
     </div>
   </div>
-
-
-
-
-
-
   </div>
   <!-- ===============================
      ISSUED ITEMS MODAL
@@ -1012,7 +976,6 @@
     </div>
   </div>
 
-
   <!-- ===============================
      MAINTENANCE EDIT MODAL
 ================================ -->
@@ -1065,7 +1028,6 @@
     </div>
   </div>
 
-
   <!-- CHATBOT BUTTON -->
   <div id="chat-toggle" class="chat-toggle">
     <i class="fa-solid fa-comments"></i>
@@ -1096,12 +1058,8 @@
 
     </div>
   </div>
-
-
+  
   <script>
-
-    // I DIDN'T SEPERATE THIS FUNCTION INTO A DIFFERENT JS FILE BECAUSE IT'S ONLY USED HERE
-    // Print the content of the View Form Modal
     function printFormModal() {
       const modal = document.getElementById('viewFormModal');
       const modalContent = modal.querySelector('.modal-body').cloneNode(true);

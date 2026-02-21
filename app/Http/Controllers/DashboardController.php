@@ -13,7 +13,6 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        // ---------- Dashboard Stats ----------
         $maintenanceData = $this->getMaintenanceRecords();
         $maintenanceRecords = $maintenanceData['records'];
         $maintenanceCounts = $maintenanceData['counts'];
@@ -38,12 +37,10 @@ class DashboardController extends Controller
             )
             ->groupBy('serial_no');
 
-        // ---------- Inventory ----------
         $inventory = DB::table('items')
             ->select('status', 'serial_no', 'item_name', 'source_of_fund', 'classification', DB::raw('DATE(date_acquired) as date_acquired'))
             ->get();
 
-        // ---------- Issued Items List ----------
         $issuedItemsList = DB::table('issuedlog as i')
             ->join('items as it', 'i.serial_no', '=', 'it.serial_no')
             ->leftJoin('formrecords as f', 'i.reference_no', '=', 'f.reference_no')
@@ -66,9 +63,6 @@ class DashboardController extends Controller
             ->orderBy('i.issued_date', 'desc')
             ->get();
 
-
-
-        // ---------- Form Records ----------
         $issuedForms = DB::table('formrecords')
             ->select('form_id', 'form_type', 'reference_no', 'created_at', 'student_name', 'item_count', 'status')
             ->orderBy('created_at', 'desc')
@@ -82,7 +76,6 @@ class DashboardController extends Controller
             'archived_forms' => $issuedForms->where('status', 'Archived')->count(),
         ];
 
-        // ---------- Usage & Issued Frequency ----------
         $issuedFrequency = DB::table('issuedlog')
             ->join('items', 'issuedlog.serial_no', '=', 'items.serial_no')
             ->select('items.item_name', DB::raw('COUNT(*) as total'))
@@ -94,7 +87,6 @@ class DashboardController extends Controller
             ->groupBy('item_name')
             ->get();
 
-        // ---------- Maintenance Records ----------
         $maintenanceForecast = DB::table('items')
             ->leftJoinSub($itemsUsage, 'usage', function ($join) {
                 $join->on('items.serial_no', '=', 'usage.serial_no');
@@ -148,7 +140,6 @@ class DashboardController extends Controller
                 || ($item->next_maintenance_date && Carbon::parse($item->next_maintenance_date)->isPast()));
 
 
-        // ---------- Return view ----------
         return view('dashboard', compact(
             'totalItems',
             'availableItems',
@@ -730,7 +721,6 @@ class DashboardController extends Controller
 
     public function report($serial_no)
     {
-        // Fetch damage report
         $damage = DB::table('damagereports')
             ->where('serial_no', $serial_no)
             ->orderByDesc('reported_at')
