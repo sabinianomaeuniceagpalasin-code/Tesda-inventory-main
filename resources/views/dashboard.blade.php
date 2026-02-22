@@ -250,11 +250,11 @@
                   <td>{{ \Carbon\Carbon::parse($item->date_acquired)->format('F d, Y') }}</td>
                   <td>
                     <span class="
-                                                                                                        @if($item->status === 'Available') text-green
-                                                                                                        @elseif($item->status === 'For Repair') text-brown
-                                                                                                        @elseif($item->status === 'Issued') text-blue
-                                                                                                        @elseif($item->status === 'Unserviceable' || $item->status === 'Damaged' || $item->status === 'Lost') text-red
-                                                                                                        @endif">
+                                                                                                          @if($item->status === 'Available') text-green
+                                                                                                          @elseif($item->status === 'For Repair') text-brown
+                                                                                                          @elseif($item->status === 'Issued') text-blue
+                                                                                                          @elseif($item->status === 'Unserviceable' || $item->status === 'Damaged' || $item->status === 'Lost') text-red
+                                                                                                          @endif">
                       {{ $item->status }}
                     </span>
                   </td>
@@ -752,7 +752,7 @@
           <div class="form-controls">
 
             <button class="sort-btn"><i class="fas fa-filter"></i> Sort by field</button>
-            <button id="addFormBtn"><i class="fas fa-plus"></i> Add New Form</button>
+            <button id="addFormBtn" class="add-btn"><i class="fas fa-plus"></i> Add New Form</button>
           </div>
 
           <div class="form-table-container">

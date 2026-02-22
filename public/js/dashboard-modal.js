@@ -66,80 +66,101 @@ const dashboardConfigs = {
     },
 };
 
-/* ============================
-       MODALS (Add Item & Forms)
-    ============================ */
 let html5QrCode = null;
+
 const modals = {
     addItem: document.getElementById("addItemModal"),
     formType: document.getElementById("formTypeModal"),
     addForm: document.getElementById("addFormModal"),
 };
 
-document
-    .getElementById("addItemBtn")
-    .addEventListener("click", () => (modals.addItem.style.display = "flex"));
-document
-    .getElementById("closeModal")
-    .addEventListener("click", () => (modals.addItem.style.display = "none"));
+document.getElementById("addItemBtn").addEventListener("click", () => {
+    modals.addItem.style.display = "flex";
+});
+
+document.getElementById("closeModal").addEventListener("click", () => {
+    modals.addItem.style.display = "none";
+});
 
 function openFormTypeModal() {
-    modals.formType.style.display = "flex";
+    const typeModal = document.getElementById("formTypeModal");
+    if (typeModal) {
+        typeModal.style.display = "flex";
+    }
 }
+
 function closeFormTypeModal() {
-    modals.formType.style.display = "none";
+    const typeModal = document.getElementById("formTypeModal");
+    if (typeModal) {
+        typeModal.style.display = "none";
+    }
 }
+
 function openAddFormModal(type) {
-    document.getElementById("form_type_input").value = type;
-    document.getElementById("addFormTitle").textContent = `${type} - New Form`;
-    closeFormTypeModal();
-    loadAvailableSerials();
-    modals.addForm.style.display = "flex";
+    const addModal = document.getElementById("addFormModal");
+    const typeInput = document.getElementById("form_type_input");
+    const title = document.getElementById("addFormTitle");
+
+    if (addModal) {
+        if (typeInput) typeInput.value = type;
+        if (title) title.textContent = `${type} - New Form`;
+
+        closeFormTypeModal();
+
+        addModal.style.display = "flex";
+
+        if (typeof loadAvailableSerials === "function") {
+            loadAvailableSerials();
+        }
+    }
 }
 
 function closeAddFormModal() {
-    modals.addForm.style.display = "none";
-    document.getElementById("addForm").reset();
-    document.getElementById("studentSuggestion").innerHTML = "";
-    document.getElementById("serialList").innerHTML = "";
-    document.getElementById("refCheck").style.display = "none";
+    if (modals.addForm) {
+        modals.addForm.style.display = "none";
+    }
+    const form = document.getElementById("addForm");
+    if (form) form.reset();
+
+    const suggestion = document.getElementById("studentSuggestion");
+    if (suggestion) suggestion.innerHTML = "";
+
+    const serialList = document.getElementById("serialList");
+    if (serialList) serialList.innerHTML = "";
+
+    const refCheck = document.getElementById("refCheck");
+    if (refCheck) refCheck.style.display = "none";
 }
 
-// Add Form buttons
 document
     .getElementById("chooseIcs")
     .addEventListener("click", () => openAddFormModal("ICS"));
 document
     .getElementById("choosePar")
     .addEventListener("click", () => openAddFormModal("PAR"));
-document.querySelectorAll(".add-btn").forEach((el) =>
+
+document.querySelectorAll(".add-btn").forEach((el) => {
     el.addEventListener("click", (e) => {
         e.preventDefault();
         openFormTypeModal();
-    }),
-);
-
-// Close modals if clicked outside
-window.addEventListener("click", (e) => {
-    if (e.target.classList.contains("modal-overlay"))
-        e.target.style.display = "none";
+    });
 });
 
-// Open View Modal
+window.addEventListener("click", (e) => {
+    if (e.target.classList.contains("modal-overlay")) {
+        e.target.style.display = "none";
+    }
+});
+
 function closeViewFormModal() {
     const modal = document.getElementById("viewFormModal");
-    modal.style.display = "none";
-    modal.querySelector(".modal-body").innerHTML = "";
+    if (modal) {
+        modal.style.display = "none";
+        const body = modal.querySelector(".modal-body");
+        if (body) body.innerHTML = "";
+    }
 }
 
-// Attach click event to all "View" links in the form table
-function closeViewFormModal() {
-    const modal = document.getElementById("viewFormModal");
-    modal.style.display = "none";
-    modal.querySelector(".modal-body").innerHTML = "";
-}
-
-// Attach click event to all "View" links in the table
 document.querySelectorAll("#form .form-table tbody tr td a").forEach((link) => {
     if (link.textContent.trim() === "View") {
         link.addEventListener("click", async function (e) {
@@ -217,7 +238,7 @@ document.querySelectorAll("#form .form-table tbody tr td a").forEach((link) => {
                 </div>`;
 
                 const modal = document.getElementById("viewFormModal");
-                modal.dataset.formType = data.form_type; // Add this
+                modal.dataset.formType = data.form_type;
                 modal.querySelector(".modal-body").innerHTML = html;
                 modal.style.display = "flex";
             } catch (err) {
@@ -228,50 +249,47 @@ document.querySelectorAll("#form .form-table tbody tr td a").forEach((link) => {
     }
 });
 
-// Close modal if clicked outside
-window.addEventListener("click", (e) => {
-    const modal = document.getElementById("viewFormModal");
-    if (e.target === modal) closeViewFormModal();
-});
-
 document.addEventListener("DOMContentLoaded", function () {
     const modalElement = document.getElementById("inventoryModal");
-    const inventoryModal = new bootstrap.Modal(modalElement);
+    if (modalElement && typeof bootstrap !== "undefined") {
+        const inventoryModal = new bootstrap.Modal(modalElement);
 
-    document.addEventListener("click", function (e) {
-        const cell = e.target.closest(".serial-cell");
-        if (!cell) return;
+        document.addEventListener("click", function (e) {
+            const cell = e.target.closest(".serial-cell");
+            if (!cell) return;
 
-        const { serial, item, fund, classification, date, status } =
-            cell.dataset;
+            const { serial, item, fund, classification, date, status } =
+                cell.dataset;
 
-        document.getElementById("modal-serial").textContent = serial;
-        document.getElementById("modal-item").textContent = item;
+            document.getElementById("modal-serial").textContent = serial;
+            document.getElementById("modal-item").textContent = item;
 
-        if (document.getElementById("modal-fund"))
-            document.getElementById("modal-fund").textContent = fund;
-        if (document.getElementById("modal-classification"))
-            document.getElementById("modal-classification").textContent =
-                classification;
-        document.getElementById("modal-date").textContent = date;
+            if (document.getElementById("modal-fund"))
+                document.getElementById("modal-fund").textContent = fund;
+            if (document.getElementById("modal-classification"))
+                document.getElementById("modal-classification").textContent =
+                    classification;
 
-        const statusEl = document.getElementById("modal-status");
-        statusEl.textContent = status;
-        statusEl.className = "detail-value";
+            document.getElementById("modal-date").textContent = date;
 
-        if (status === "Available") statusEl.classList.add("text-success");
-        else if (status === "For Repair")
-            statusEl.classList.add("text-warning");
-        else if (status === "Unserviceable" || status === "Lost")
-            statusEl.classList.add("text-danger");
+            const statusEl = document.getElementById("modal-status");
+            statusEl.textContent = status;
+            statusEl.className = "detail-value";
 
-        const qrImg = modalElement.querySelector(".qr-code");
-        if (qrImg) {
-            qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${serial}`;
-        }
+            if (status === "Available") statusEl.classList.add("text-success");
+            else if (status === "For Repair")
+                statusEl.classList.add("text-warning");
+            else if (status === "Unserviceable" || status === "Lost")
+                statusEl.classList.add("text-danger");
 
-        inventoryModal.show();
-    });
+            const qrImg = modalElement.querySelector(".qr-code");
+            if (qrImg) {
+                qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${serial}`;
+            }
+
+            inventoryModal.show();
+        });
+    }
 });
 
 function openDynamicModal(type) {
@@ -321,32 +339,21 @@ function openViewSection(section) {
 }
 
 function openDashboardModal(type) {
-    console.log("clicked", type);
-
     const modal = document.getElementById("dashboardTableModal");
 
     if (typeof dashboardConfigs === "undefined") {
-        console.warn("Dashboard configurations are still loading...");
         return;
     }
 
     const config = dashboardConfigs[type];
-
-    if (!config) {
-        console.error("Invalid dashboard type:", type);
-        return;
-    }
-
-    console.log(config);
+    if (!config) return;
 
     document.getElementById("dt-title").innerText = config.title;
-
     document.getElementById("dt-thead").innerHTML = `
         <tr>${config.headers.map((h) => `<th>${h}</th>`).join("")}</tr>
     `;
 
     const footerBtn = document.querySelector(".btn-view-section");
-
     if (footerBtn) {
         footerBtn.innerText = config.buttonText;
         footerBtn.onclick = () => openViewSection(config.targetSection);
@@ -370,9 +377,9 @@ function openDashboardModal(type) {
     modal.style.display = "flex";
 }
 
-document
-    .getElementById("manualEntryBtn")
-    .addEventListener("click", function () {
+const manualBtn = document.getElementById("manualEntryBtn");
+if (manualBtn) {
+    manualBtn.addEventListener("click", function () {
         const scannerMsg = document.querySelector(".scanner-container");
         const entryForm = document.getElementById("addItemForm");
 
@@ -386,6 +393,7 @@ document
             this.innerText = "Manual Entry Mode";
         }
     });
+}
 
 function openScannerModal() {
     document.getElementById("addItemModal").style.display = "flex";
@@ -400,11 +408,9 @@ function showItemDetails(item) {
     if (elDisplay) elDisplay.innerText = item.item_name || "---";
     if (elSerial) elSerial.innerText = item.serial_no || "---";
 
-    // 2. I-populate ang fund at classification
     const elFund = document.getElementById("modal-fund");
     if (elFund) elFund.innerText = item.source_of_fund || "---";
 
-    // 3. Status logic
     const statusEl = document.getElementById("modal-status");
     if (statusEl) {
         statusEl.innerText = item.status;
@@ -430,49 +436,21 @@ function showItemDetails(item) {
         qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${item.serial_no}`;
     }
 
-    // 6. Tawagin ang Bootstrap Modal
     const modalEl = document.getElementById("inventoryModal");
-    if (modalEl) {
+    if (modalEl && typeof bootstrap !== "undefined") {
         const myModal = new bootstrap.Modal(modalEl);
         myModal.show();
     }
 }
 
-// function updateStatus(newStatus) {
-//   Swal.fire({
-//     title: `Mark item as ${newStatus}?`,
-//     text: "This will update the item's current condition.",
-//     icon: "warning",
-//     showCancelButton: true,
-//     confirmButtonColor: "#737df2",
-//     confirmButtonText: "Yes, update it!",
-//   }).then((result) => {
-//     if (result.isConfirmed) {
-//       // Dito mo gagawin ang AJAX call para i-save sa database
-//       console.log("Updating status to:", newStatus);
-
-//       // I-update muna ang display sa modal
-//       document.getElementById("modal-status").innerText = newStatus;
-
-//       Swal.fire("Updated!", `Status is now ${newStatus}.`, "success");
-//     }
-//   });
-// }
-
-// Ilagay ito sa loob ng dashboard-modal.js
 document.addEventListener("click", function (e) {
-    // I-check kung ang clinick ay ang button na may class na 'view-btn'
     if (e.target && e.target.classList.contains("view-btn")) {
-        console.log("Usage History button clicked!"); // Para makita mo sa Console (F12) kung gumagana
         showUsageHistory();
     }
 });
 
 function showUsageHistory() {
-    // 1. Kunin ang IDs ng modal
     const historyModal = document.getElementById("usageHistoryModal");
-
-    // 2. Siguraduhin na may data tayong makukuha sa main Item Detail modal
     const itemName = document.getElementById("modal-item")
         ? document.getElementById("modal-item").innerText
         : "---";
@@ -480,7 +458,6 @@ function showUsageHistory() {
         ? document.getElementById("modal-serial").innerText
         : "---";
 
-    // 3. I-populate ang data sa Usage History Modal
     if (document.getElementById("history-item-name")) {
         document.getElementById("history-item-name").innerText = itemName;
     }
@@ -488,12 +465,9 @@ function showUsageHistory() {
         document.getElementById("history-property-no").innerText = serialNo;
     }
 
-    // 4. Ipakita ang modal (Force display)
     if (historyModal) {
         historyModal.style.setProperty("display", "flex", "important");
-        loadHistoryData(); // Ito yung function na naglalagay ng rows sa table
-    } else {
-        alert("Hindi mahanap ang usageHistoryModal sa HTML mo!");
+        if (typeof loadHistoryData === "function") loadHistoryData();
     }
 }
 
@@ -504,7 +478,18 @@ function closeUsageHistory() {
     }
 }
 
-document.getElementById("addFormBtn").addEventListener("click", (e) => {
-    e.preventDefault();
-    openFormTypeModal();
+document.addEventListener("DOMContentLoaded", function () {
+    const addBtn = document.getElementById("addFormBtn");
+    if (addBtn) {
+        addBtn.addEventListener("click", function (e) {
+            e.preventDefault();
+            openFormTypeModal();
+        });
+    }
+
+    const icsBtn = document.getElementById("chooseIcs");
+    const parBtn = document.getElementById("choosePar");
+
+    if (icsBtn) icsBtn.onclick = () => openAddFormModal("ICS");
+    if (parBtn) parBtn.onclick = () => openAddFormModal("PAR");
 });
