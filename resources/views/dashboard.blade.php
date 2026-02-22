@@ -250,11 +250,11 @@
                   <td>{{ \Carbon\Carbon::parse($item->date_acquired)->format('F d, Y') }}</td>
                   <td>
                     <span class="
-                                                                                              @if($item->status === 'Available') text-green
-                                                                                              @elseif($item->status === 'For Repair') text-brown
-                                                                                              @elseif($item->status === 'Issued') text-blue
-                                                                                              @elseif($item->status === 'Unserviceable' || $item->status === 'Damaged' || $item->status === 'Lost') text-red
-                                                                                              @endif">
+                                                                                                  @if($item->status === 'Available') text-green
+                                                                                                  @elseif($item->status === 'For Repair') text-brown
+                                                                                                  @elseif($item->status === 'Issued') text-blue
+                                                                                                  @elseif($item->status === 'Unserviceable' || $item->status === 'Damaged' || $item->status === 'Lost') text-red
+                                                                                                  @endif">
                       {{ $item->status }}
                     </span>
                   </td>
@@ -1058,7 +1058,7 @@
 
     </div>
   </div>
-  
+
   <script>
     function printFormModal() {
       const modal = document.getElementById('viewFormModal');
@@ -1135,7 +1135,6 @@
   <script src="{{ asset('js/dashboard-charts.js') }}"></script>
   <script src=" {{ asset('js/dashboard-page-switch.js') }}"></script>
   <script src="{{ asset('js/dashboard-inv-search.js') }}"></script>
-  <script src="{{ asset('js/dashboard-modal.js') }}"></script>
   <script src="{{ asset('js/dashboard-form-search.js') }}"></script>
   <script src="{{ asset('js/dashboard-calc-total.js') }}"></script>
   <script src="{{ asset('js/dashboard-fill-prop-num.js') }}"></script>
@@ -1163,6 +1162,7 @@
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <script src="{{ asset('js/qr-module.js') }}"></script>
   <script src="{{ asset('js/scanner.js') }}"></script>
+    <script src="{{ asset('js/dashboard-modal.js') }}"></script>
 
 </body>
 

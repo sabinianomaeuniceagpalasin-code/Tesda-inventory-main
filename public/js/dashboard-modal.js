@@ -1,3 +1,71 @@
+const dashboardConfigs = {
+    inventory: {
+        title: "List of All Items",
+        headers: ["Item Name", "Classification", "Stock", "Location", "Status"],
+        buttonText: "View Inventory Section",
+        apiUrl: "/dashboard/get-total-items-and-equipment",
+        targetSection: "inventory",
+    },
+    available: {
+        title: "List of All Available Items",
+        headers: ["Item name", "Classification", "Stock", "Location"],
+        buttonText: "View Inventory Section",
+        apiUrl: "/dashboard/get-available-items",
+        targetSection: "inventory",
+    },
+    issued: {
+        title: "List of Issued Items",
+        headers: [
+            "Item name",
+            "Classification",
+            "Issued to",
+            "Date Issued",
+            "Expected return",
+        ],
+        buttonText: "View Issued Item Section",
+        apiUrl: "/dashboard/get-issued-items",
+        targetSection: "issued",
+    },
+    repair: {
+        title: "Under Maintenance List",
+        headers: [
+            "Item name",
+            "Classification",
+            "Date sent for Repair",
+            "Repair Status",
+            "Location",
+        ],
+        buttonText: "View Maintenance Section",
+        apiUrl: "/dashboard/get-under-maintenance",
+        targetSection: "reports",
+    },
+    lowstock: {
+        title: "Low Stock Items",
+        headers: [
+            "Item name",
+            "Classification",
+            "Current Quantity",
+            "Minimum Quantity",
+            "Suggested Qty Order",
+        ],
+        buttonText: "View Inventory Section",
+        apiUrl: "/dashboard/get-low-stock-items",
+        targetSection: "inventory",
+    },
+    missing: {
+        title: "Missing Items",
+        headers: [
+            "Item name",
+            "Classification",
+            "Last Known Location",
+            "Date Reported Missing",
+        ],
+        buttonText: "View Inventory Section",
+        apiUrl: "/dashboard/get-missing-items",
+        targetSection: "inventory",
+    },
+};
+
 /* ============================
        MODALS (Add Item & Forms)
     ============================ */
@@ -252,98 +320,41 @@ function openViewSection(section) {
     }
 }
 
-const dashboardConfigs = {
-    inventory: {
-        title: "List of All Items",
-        headers: ["Item Name", "Classification", "Stock", "Location", "Status"],
-        buttonText: "View Inventory Section",
-        apiUrl: "/dashboard/get-total-items-and-equipment",
-        targetSection: "inventory",
-    },
-    available: {
-        title: "List of All Available Items",
-        headers: ["Item name", "Classification", "Stock", "Location"],
-        buttonText: "View Inventory Section",
-        apiUrl: "/dashboard/get-available-items",
-        targetSection: "inventory",
-    },
-    issued: {
-        title: "List of Issued Items",
-        headers: [
-            "Item name",
-            "Classification",
-            "Issued to",
-            "Date Issued",
-            "Expected return",
-        ],
-        buttonText: "View Issued Item Section",
-        apiUrl: "/dashboard/get-issued-items",
-        targetSection: "issued",
-    },
-    repair: {
-        title: "Under Maintenance List",
-        headers: [
-            "Item name",
-            "Classification",
-            "Date sent for Repair",
-            "Repair Status",
-            "Location",
-        ],
-        buttonText: "View Maintenance Section",
-        apiUrl: "/dashboard/get-under-maintenance",
-        targetSection: "reports",
-    },
-    lowstock: {
-        title: "Low Stock Items",
-        headers: [
-            "Item name",
-            "Classification",
-            "Current Quantity",
-            "Minimum Quantity",
-            "Suggested Qty Order",
-        ],
-        buttonText: "View Inventory Section",
-        apiUrl: "/dashboard/get-low-stock-items",
-        targetSection: "inventory",
-    },
-    missing: {
-        title: "Missing Items",
-        headers: [
-            "Item name",
-            "Classification",
-            "Last Known Location",
-            "Date Reported Missing",
-        ],
-        buttonText: "View Inventory Section",
-        apiUrl: "/dashboard/get-missing-items",
-        targetSection: "inventory",
-    },
-};
-
 function openDashboardModal(type) {
+    console.log("clicked", type);
+
     const modal = document.getElementById("dashboardTableModal");
+
+    if (typeof dashboardConfigs === "undefined") {
+        console.warn("Dashboard configurations are still loading...");
+        return;
+    }
+
     const config = dashboardConfigs[type];
 
-    if (!config) return;
+    if (!config) {
+        console.error("Invalid dashboard type:", type);
+        return;
+    }
+
+    console.log(config);
 
     document.getElementById("dt-title").innerText = config.title;
+
     document.getElementById("dt-thead").innerHTML = `
-    <tr>${config.headers.map((h) => `<th>${h}</th>`).join("")}</tr>
-  `;
+        <tr>${config.headers.map((h) => `<th>${h}</th>`).join("")}</tr>
+    `;
 
     const footerBtn = document.querySelector(".btn-view-section");
 
     if (footerBtn) {
         footerBtn.innerText = config.buttonText;
-
-        footerBtn.onclick = () => {
-            openViewSection(config.targetSection);
-        };
+        footerBtn.onclick = () => openViewSection(config.targetSection);
     }
 
     document.getElementById("dt-tbody").innerHTML = `
-    <tr><td colspan="${config.headers.length}">Loading...</td></tr>
-  `;
+        <tr><td colspan="${config.headers.length}">Loading...</td></tr>
+    `;
 
     fetch(config.apiUrl)
         .then((res) => res.json())
@@ -352,8 +363,8 @@ function openDashboardModal(type) {
         })
         .catch(() => {
             document.getElementById("dt-tbody").innerHTML = `
-        <tr><td colspan="${config.headers.length}">Failed to load data</td></tr>
-      `;
+                <tr><td colspan="${config.headers.length}">Failed to load data</td></tr>
+            `;
         });
 
     modal.style.display = "flex";
@@ -381,13 +392,12 @@ function openScannerModal() {
 }
 
 function showItemDetails(item) {
-    // 1. I-populate ang basic info sa modal (Dagdagan natin ng check)
     const elItem = document.getElementById("modal-item");
     const elDisplay = document.getElementById("modal-item-display");
     const elSerial = document.getElementById("modal-serial");
 
     if (elItem) elItem.innerText = item.item_name || "---";
-    if (elDisplay) elDisplay.innerText = item.item_name || "---"; // Hindi na ito mag-eerror kung wala ang ID
+    if (elDisplay) elDisplay.innerText = item.item_name || "---";
     if (elSerial) elSerial.innerText = item.serial_no || "---";
 
     // 2. I-populate ang fund at classification
@@ -398,22 +408,23 @@ function showItemDetails(item) {
     const statusEl = document.getElementById("modal-status");
     if (statusEl) {
         statusEl.innerText = item.status;
-        statusEl.className = "detail-value fw-bold"; // Siguraduhing nandoon ang original class
-        if (item.status === 'Available') statusEl.classList.add("text-success");
-        else if (item.status === 'For Repair') statusEl.classList.add("text-warning");
+        statusEl.className = "detail-value fw-bold";
+        if (item.status === "Available") statusEl.classList.add("text-success");
+        else if (item.status === "For Repair")
+            statusEl.classList.add("text-warning");
         else statusEl.classList.add("text-danger");
     }
 
-    // 4. Date formatting
     const dateEl = document.getElementById("modal-date");
     if (dateEl && item.date_acquired) {
         const d = new Date(item.date_acquired);
         dateEl.innerText = d.toLocaleDateString("en-US", {
-            year: "numeric", month: "long", day: "numeric"
+            year: "numeric",
+            month: "long",
+            day: "numeric",
         });
     }
 
-    // 5. I-update ang QR Code
     const qrImg = document.getElementById("modal-qr");
     if (qrImg) {
         qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${item.serial_no}`;
@@ -449,9 +460,9 @@ function showItemDetails(item) {
 // }
 
 // Ilagay ito sa loob ng dashboard-modal.js
-document.addEventListener('click', function (e) {
+document.addEventListener("click", function (e) {
     // I-check kung ang clinick ay ang button na may class na 'view-btn'
-    if (e.target && e.target.classList.contains('view-btn')) {
+    if (e.target && e.target.classList.contains("view-btn")) {
         console.log("Usage History button clicked!"); // Para makita mo sa Console (F12) kung gumagana
         showUsageHistory();
     }
@@ -462,8 +473,12 @@ function showUsageHistory() {
     const historyModal = document.getElementById("usageHistoryModal");
 
     // 2. Siguraduhin na may data tayong makukuha sa main Item Detail modal
-    const itemName = document.getElementById("modal-item") ? document.getElementById("modal-item").innerText : "---";
-    const serialNo = document.getElementById("modal-serial") ? document.getElementById("modal-serial").innerText : "---";
+    const itemName = document.getElementById("modal-item")
+        ? document.getElementById("modal-item").innerText
+        : "---";
+    const serialNo = document.getElementById("modal-serial")
+        ? document.getElementById("modal-serial").innerText
+        : "---";
 
     // 3. I-populate ang data sa Usage History Modal
     if (document.getElementById("history-item-name")) {
@@ -475,7 +490,7 @@ function showUsageHistory() {
 
     // 4. Ipakita ang modal (Force display)
     if (historyModal) {
-        historyModal.style.setProperty('display', 'flex', 'important');
+        historyModal.style.setProperty("display", "flex", "important");
         loadHistoryData(); // Ito yung function na naglalagay ng rows sa table
     } else {
         alert("Hindi mahanap ang usageHistoryModal sa HTML mo!");
