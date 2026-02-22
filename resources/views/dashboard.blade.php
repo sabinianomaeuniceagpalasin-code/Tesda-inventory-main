@@ -250,11 +250,11 @@
                   <td>{{ \Carbon\Carbon::parse($item->date_acquired)->format('F d, Y') }}</td>
                   <td>
                     <span class="
-                                                                                                  @if($item->status === 'Available') text-green
-                                                                                                  @elseif($item->status === 'For Repair') text-brown
-                                                                                                  @elseif($item->status === 'Issued') text-blue
-                                                                                                  @elseif($item->status === 'Unserviceable' || $item->status === 'Damaged' || $item->status === 'Lost') text-red
-                                                                                                  @endif">
+                                                                                                      @if($item->status === 'Available') text-green
+                                                                                                      @elseif($item->status === 'For Repair') text-brown
+                                                                                                      @elseif($item->status === 'Issued') text-blue
+                                                                                                      @elseif($item->status === 'Unserviceable' || $item->status === 'Damaged' || $item->status === 'Lost') text-red
+                                                                                                      @endif">
                       {{ $item->status }}
                     </span>
                   </td>
@@ -342,6 +342,9 @@
                   <div class="footer-links">
                     <a href="javascript:void(0)" class="usage-history" onclick="showUsageHistory()">View item usage
                       history</a>
+                  </div>
+                  <div class="tesda-custom-footer-group">
+                    <button type="button" class="tesda-btn-off" data-bs-dismiss="modal">Cancel</button>
                   </div>
                 </div>
               </div>
@@ -1136,6 +1139,7 @@
   <script src=" {{ asset('js/dashboard-page-switch.js') }}"></script>
   <script src="{{ asset('js/dashboard-inv-search.js') }}"></script>
   <script src="{{ asset('js/dashboard-form-search.js') }}"></script>
+  <script src="{{ asset('js/dashboard-modal.js') }}"></script>
   <script src="{{ asset('js/dashboard-calc-total.js') }}"></script>
   <script src="{{ asset('js/dashboard-fill-prop-num.js') }}"></script>
   <script src="{{ asset('js/dashboard-form-search.js') }}"></script>
@@ -1162,7 +1166,6 @@
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <script src="{{ asset('js/qr-module.js') }}"></script>
   <script src="{{ asset('js/scanner.js') }}"></script>
-    <script src="{{ asset('js/dashboard-modal.js') }}"></script>
 
 </body>
 

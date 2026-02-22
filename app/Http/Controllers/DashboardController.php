@@ -41,26 +41,34 @@ class DashboardController extends Controller
             ->select('status', 'serial_no', 'item_name', 'source_of_fund', 'classification', DB::raw('DATE(date_acquired) as date_acquired'))
             ->get();
 
+        $latest = DB::table('issuedlog')
+            ->selectRaw('MAX(issue_id) as issue_id')
+            ->groupBy('serial_no');
+
+        // Latest issue_id per serial_no (subquery)
+        $latest = DB::table('issuedlog')
+            ->selectRaw('MAX(issue_id) as issue_id')
+            ->groupBy('serial_no');
+
+        // Main issued items query
         $issuedItemsList = DB::table('issuedlog as i')
+            ->joinSub($latest, 'latest', function ($join) {
+                $join->on('i.issue_id', '=', 'latest.issue_id');
+            })
             ->join('items as it', 'i.serial_no', '=', 'it.serial_no')
-            ->leftJoin('formrecords as f', 'i.reference_no', '=', 'f.reference_no')
+            ->leftJoin('student as s', 'i.student_id', '=', 's.student_id')
+            ->leftJoin('users as u', 'i.issued_by', '=', 'u.user_id')
             ->where('it.status', 'Issued')
-            ->whereRaw('i.issue_id = (
-                SELECT MAX(issue_id) 
-                FROM issuedlog 
-                WHERE serial_no = i.serial_no
-            )')
             ->select(
                 'i.issue_id',
-                'i.property_no',
                 'i.serial_no',
-                'i.return_date',
-                'f.student_name as issued_to',
-                'f.issued_by as issued_by',
                 'i.issued_date',
+                'i.return_date',
                 'it.item_name as item',
+                DB::raw("COALESCE(s.student_name, 'N/A') as issued_to"),
+                DB::raw("COALESCE(CONCAT(u.first_name, ' ', u.last_name), 'N/A') as issued_by")
             )
-            ->orderBy('i.issued_date', 'desc')
+            ->orderByDesc('i.issued_date')
             ->get();
 
         $issuedForms = DB::table('formrecords')
@@ -318,122 +326,45 @@ class DashboardController extends Controller
     {
         $issuedItemsList = DB::table('issuedlog as i')
             ->join('items as it', 'i.serial_no', '=', 'it.serial_no')
-            ->leftJoin('formrecords as f', 'i.reference_no', '=', 'f.reference_no')
+            ->leftJoin('student as s', 'i.student_id', '=', 's.student_id')
+            ->leftJoin('users as u', 'i.issued_by', '=', 'u.user_id')
             ->where('it.status', 'Issued')
-            ->whereRaw('i.issue_id = (
-            SELECT MAX(issue_id)
-            FROM issuedlog
-            WHERE serial_no = i.serial_no
-        )')
+            ->whereRaw('i.issue_id = (SELECT MAX(issue_id) FROM issuedlog WHERE serial_no = i.serial_no)')
             ->select(
                 'i.issue_id',
-                'i.property_no',
                 'i.serial_no',
-                'i.return_date',
-                'f.student_name as issued_to',
-                'f.issued_by as issued_by',
                 'i.issued_date',
+                'i.return_date',
                 'it.item_name as item',
-                'it.classification as classification',
+                DB::raw("COALESCE(s.student_name, 'N/A') as issued_to"),
+                DB::raw("COALESCE(CONCAT(u.first_name, ' ', u.last_name), 'N/A') as issued_by")
             )
-            ->orderBy('i.issued_date', 'desc')
-            ->limit(10)
+            ->orderByDesc('i.issued_date')
             ->get();
 
+        // Prepare HTML for your table
         $html = '';
         foreach ($issuedItemsList as $item) {
             $returnDate = $item->return_date ? Carbon::parse($item->return_date)->format('F d, Y') : '-';
             $html .= "
             <tr>
-                <td>{$item->item}</td>
-                <td>{$item->classification}</td>
+                <td>{$item->serial_no}</td>
                 <td>{$item->issued_to}</td>
+                <td>{$item->issued_by}</td>
                 <td>" . Carbon::parse($item->issued_date)->format('F d, Y') . "</td>
                 <td>{$returnDate}</td>
-            </tr>
-        ";
-        }
-
-        return response()->json(['html' => $html]);
-    }
-
-    public function getUnderMaintenanceListTable()
-    {
-        $records = DB::table('maintenance')
-            ->join('items', 'maintenance.serial_no', '=', 'items.serial_no')
-            ->select(
-                'items.item_name',
-                'items.classification',
-                'maintenance.date_reported',
-                'maintenance.issue_type',
-                'items.remarks'
-            )
-            ->orderBy('maintenance.date_reported', 'desc')
-            ->limit(10)
-            ->get();
-
-        $html = '';
-
-        foreach ($records as $record) {
-            $html .= "
-        <tr>
-            <td>{$record->item_name}</td>
-            <td>{$record->classification}</td>
-            <td>" . ($record->date_reported
-                ? Carbon::parse($record->date_reported)->format('F d, Y')
-                : 'N/A') . "</td>
-            <td>{$record->issue_type}</td>
-            <td>{$record->remarks}</td>
-        </tr>";
-        }
-
-        return response()->json(['html' => $html]);
-    }
-
-    public function getLowStockItems()
-    {
-        $inventory = DB::table('items')
-            ->select('item_name', 'classification', 'stock')
-            ->orderBy('item_name', 'asc')
-            ->limit(10)
-            ->get();
-
-        $html = '';
-
-        foreach ($inventory as $item) {
-
-            $html .= "
-            <tr>
-                <td>{$item->item_name}</td>
-                <td>{$item->classification}</td>
-                <td>{$item->stock}</td>
-                <td>NOT YET</td>
-                <td>NOT YET</td>
-            </tr>
-        ";
-        }
-
-        return response()->json(['html' => $html]);
-    }
-
-    public function getMissingItems()
-    {
-        $inventory = DB::table('items')
-            ->select('item_name', 'classification', 'stock')
-            ->orderBy('item_name', 'asc')
-            ->limit(10)
-            ->get();
-
-        $html = '';
-
-        foreach ($inventory as $item) {
-
-            $html .= "
-            <tr>
-                <td>{$item->item_name}</td>
-                <td>{$item->classification}</td>
-                <td>NOT YET</td>
-                <td>NOT YET</td>
+                <td>{$item->item}</td>
+                <td class='action-buttons-issued'>
+                    <button class='action-btn-issued return-btn-issued' title='Return' data-id='{$item->issue_id}'>
+                        <i class='fas fa-undo'></i>
+                    </button>
+                    <button class='action-btn-issued damaged-btn-issued' data-id='{$item->serial_no}' title='Damaged'>
+                        <i class='fas fa-exclamation-triangle'></i>
+                    </button>
+                    <button class='action-btn-issued unserviceable-btn-issued' title='Unserviceable'>
+                        <i class='fas fa-times-circle'></i>
+                    </button>
+                </td>
             </tr>
         ";
         }

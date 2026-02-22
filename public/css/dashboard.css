@@ -365,7 +365,6 @@ td {
 }
 
 @media (max-width: 992px) {
-
     .top-row,
     .bottom-row {
         grid-template-columns: 1fr;
@@ -2781,7 +2780,7 @@ td {
     height: auto;
 }
 
-.qr-box>div {
+.qr-box > div {
     width: 100%;
     display: flex;
     justify-content: center;
@@ -2868,4 +2867,48 @@ td {
     font-family: inherit;
     font-weight: 500;
     margin: 0;
+}
+
+/* Container para sa mga buttons */
+.tesda-custom-footer-group {
+    display: flex;
+    gap: 12px;
+    padding: 20px;
+    border-top: 1px solid #eee;
+    background: #fff;
+}
+
+/* Cancel / Off Button */
+.tesda-btn-off {
+    flex: 1;
+    padding: 10px 20px;
+    border: 1px solid #d1d5db;
+    background-color: #ffffff;
+    color: #374151;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.tesda-btn-off:hover {
+    background-color: #f9fafb;
+    border-color: #9ca3af;
+}
+
+.tesda-btn-confirm {
+    flex: 1;
+    padding: 10px 20px;
+    border: none;
+    background-color: #004aad; 
+    color: #ffffff;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background-color 0.2s ease;
+}
+
+.tesda-btn-confirm:hover {
+    background-color: #003380;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
