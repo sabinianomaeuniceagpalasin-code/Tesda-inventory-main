@@ -503,3 +503,8 @@ function closeUsageHistory() {
         modal.style.display = "none";
     }
 }
+
+document.getElementById("addFormBtn").addEventListener("click", (e) => {
+    e.preventDefault();
+    openFormTypeModal();
+});
