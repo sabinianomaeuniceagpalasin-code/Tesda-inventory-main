@@ -1,11 +1,7 @@
-/* ============================
-   SUBMIT FORM (AJAX) WITH SWEETALERT
-   ============================ */
 async function submitForm(e) {
     e.preventDefault();
 
     const studentName = document.getElementById("studentSearch").value.trim();
-    const referenceNo = document.getElementById("referenceNo").value.trim();
     const issuedDate = document.getElementById("issuedDate").value;
     const returnDate = document.getElementById("returnDate").value;
     const formType = document.getElementById("form_type_input").value;
@@ -14,20 +10,11 @@ async function submitForm(e) {
         document.querySelectorAll(".serial-checkbox:checked")
     ).map((cb) => cb.dataset.serial);
 
-    if (!studentName || !referenceNo || !issuedDate || !checkedSerials.length) {
+    if (!studentName || !issuedDate || checkedSerials.length === 0) {
         return Swal.fire({
             icon: "warning",
-            title: "Incomplete",
-            text: "Please fill all required fields and select at least one serial.",
-        });
-    }
-
-    const refCheck = document.getElementById("refCheck");
-    if (refCheck.style.display !== "none") {
-        return Swal.fire({
-            icon: "error",
-            title: "Duplicate Reference",
-            text: "Reference number already exists.",
+            title: "Incomplete Data",
+            text: "Please select a student, date, and at least one serial number from the list.",
         });
     }
 
@@ -36,8 +23,7 @@ async function submitForm(e) {
         selected_serials: checkedSerials,
         form_type: formType,
         issued_date: issuedDate,
-        return_date: returnDate,
-        reference_no: referenceNo,
+        return_date: returnDate
     };
 
     try {
@@ -46,37 +32,30 @@ async function submitForm(e) {
             headers: {
                 "Content-Type": "application/json",
                 "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
-                Accept: "application/json",
+                "Accept": "application/json",
             },
             body: JSON.stringify(payload),
         });
 
         const json = await res.json();
 
-        if (!json.success) {
-            return Swal.fire({
-                icon: "error",
-                title: "Failed",
-                text: json.message || "Failed to save form",
+        if (json.success) {
+            Swal.fire({
+                icon: "success",
+                title: "Saved!",
+                text: `Reference No: ${json.reference_no}`,
+            }).then(() => {
+                closeAddFormModal();
+                window.location.reload();
             });
+        } else {
+            throw new Error(json.message);
         }
-
-        Swal.fire({
-            icon: "success",
-            title: "Success",
-            text: "Form saved successfully!",
-            timer: 2000,
-            showConfirmButton: false,
-        });
-
-        closeAddFormModal();
-        setTimeout(() => window.location.reload(), 2000);
     } catch (err) {
-        console.error(err);
         Swal.fire({
             icon: "error",
             title: "Error",
-            text: "Unexpected error saving form: " + err.message,
+            text: err.message
         });
     }
 }

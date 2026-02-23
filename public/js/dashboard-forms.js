@@ -6,22 +6,31 @@ function openAddFormModal(type) {
     if (addModal) {
         if (typeInput) typeInput.value = type;
         if (title) title.textContent = `${type} - New Form`;
+
         closeFormTypeModal();
         addModal.style.display = "flex";
-        if (typeof loadAvailableSerials === "function") loadAvailableSerials();
+
+        if (typeof loadAvailableSerialsForModal === "function") {
+            loadAvailableSerialsForModal();
+        }
     }
 }
 
 function closeAddFormModal() {
-    if (modals.addForm) modals.addForm.style.display = "none";
+    const addModal = document.getElementById("addFormModal");
+    if (addModal) addModal.style.display = "none";
+
     const form = document.getElementById("addForm");
     if (form) form.reset();
-    ['studentSuggestion', 'serialList'].forEach(id => {
+
+    const elementsToClear = ['studentSuggestion', 'serialItemsBody', 'serialSearchFilter'];
+    elementsToClear.forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.innerHTML = "";
+        if (el) {
+            if (el.tagName === 'INPUT') el.value = "";
+            else el.innerHTML = "";
+        }
     });
-    const refCheck = document.getElementById("refCheck");
-    if (refCheck) refCheck.style.display = "none";
 }
 
 function closeViewFormModal() {

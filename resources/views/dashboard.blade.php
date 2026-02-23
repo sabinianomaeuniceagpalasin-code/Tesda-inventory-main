@@ -251,11 +251,11 @@
                   <td>
                     <span
                       class="
-                                                                                                                        @if($item->status === 'Available') text-green
-                                                                                                                        @elseif($item->status === 'For Repair') text-brown
-                                                                                                                        @elseif($item->status === 'Issued') text-blue
-                                                                                                                        @elseif($item->status === 'Unserviceable' || $item->status === 'Damaged' || $item->status === 'Lost') text-red
-                                                                                                                        @endif">
+                                                                                                                              @if($item->status === 'Available') text-green
+                                                                                                                              @elseif($item->status === 'For Repair') text-brown
+                                                                                                                              @elseif($item->status === 'Issued') text-blue
+                                                                                                                              @elseif($item->status === 'Unserviceable' || $item->status === 'Damaged' || $item->status === 'Lost') text-red
+                                                                                                                              @endif">
                       {{ $item->status }}
                     </span>
                   </td>
@@ -820,19 +820,19 @@
                     <label>Student Name</label>
                     <input type="text" id="studentSearch" name="student_name" autocomplete="off"
                       placeholder="Type student name..." required>
-
                     <div id="studentSuggestion" class="suggestion-box"></div>
                   </div>
 
                   <div class="full-width">
-                    <label>Property Number</label>
-                    <input type="text" id="propertyFilter" placeholder="Enter property number..." autocomplete="on">
+                    <label>Search or Scan Serial Number</label>
+                    <input type="text" id="serialSearchFilter" placeholder="Enter or Scan Serial..." autocomplete="off"
+                      style="border: 2px solid #004aad;">
                   </div>
 
                   <div class="full-width">
                     <label>Reference No.</label>
-                    <input type="text" id="referenceNo" name="reference_no" required>
-                    <div id="refCheck" style="color:red;margin-top:6px;display:none;">Reference already exists.</div>
+                    <input type="text" id="referenceNo" name="reference_no" value="[ Auto-generated ]" disabled
+                      style="background-color: #f0f0f0; cursor: not-allowed; font-weight: bold; color: #555;">
                   </div>
 
                   <div class="full-width">
@@ -845,10 +845,29 @@
                     <input type="date" id="returnDate" name="return_date">
                   </div>
 
+                  <div class="full-width" style="margin-top: 10px;">
+                    <label>Available Items (Checked items will be issued)</label>
+                    <div id="serialTableContainer"
+                      style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 5px; border-radius: 5px;">
+                      <table style="width: 100%; font-size: 13px;">
+                        <thead style="position: sticky; top: 0; background: #f9f9f9;">
+                          <tr>
+                            <th>Select</th>
+                            <th>Serial No.</th>
+                            <th>Item Name</th>
+                          </tr>
+                        </thead>
+                        <tbody id="serialItemsBody">
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
                   <div class="form-buttons" style="margin-top:18px; grid-column: 1 / -1;">
                     <button type="submit" class="save-btn">Save Form</button>
                     <button type="button" class="reset-btn" onclick="closeAddFormModal()">Cancel</button>
                   </div>
+                </div>
               </form>
             </div>
           </div>
