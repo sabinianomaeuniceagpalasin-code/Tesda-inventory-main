@@ -2,15 +2,14 @@ const scannerModal = document.getElementById("scannerModal");
 const scannerInput = document.getElementById("scannerInput");
 const scannedList = document.getElementById("scanned-items-list");
 const markReceivedBtn = document.getElementById("markReceivedBtn");
+const addItemBtn = document.getElementById("addItemBtn");
 
-const csrfToken = document
-    .querySelector('meta[name="csrf-token"]')
-    ?.getAttribute("content");
-
-document.getElementById("addItemBtn").addEventListener("click", () => {
-    scannerModal.classList.remove("hidden");
-    scannerInput.focus();
-});
+if (addItemBtn) {
+    addItemBtn.addEventListener("click", () => {
+        scannerModal.classList.remove("hidden");
+        scannerInput.focus();
+    });
+}
 
 function closeScannerModal() {
     scannerModal.classList.add("hidden");
@@ -18,89 +17,43 @@ function closeScannerModal() {
     scannedList.innerHTML = "";
 }
 
-scannerInput.addEventListener("keydown", function (e) {
-    if (e.key === "Enter") {
-        e.preventDefault(); // Prevent form submission if inside a form
+if (scannerInput) {
+    scannerInput.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            const rawData = this.value.trim();
+            this.value = "";
 
-        const rawData = this.value.trim();
-        this.value = "";
+            if (!rawData) return;
 
-        if (!rawData) return;
+            fetch(`/items/scan/${encodeURIComponent(rawData)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.success) return;
 
-        let itemName = "Unknown Item";
-        let serialNo = rawData;
+                    if (document.querySelector(`[data-serial="${data.item.serial_no}"]`)) return;
 
-        // If the QR contains the pipe symbol, split it. Otherwise, use rawData as Serial
-        if (rawData.includes("|")) {
-            const parts = rawData.split("|").map((s) => s.trim());
-            itemName = parts[0];
-            serialNo = parts[1];
+                    const itemRow = document.createElement("div");
+                    itemRow.className = "scanned-item-entry";
+                    itemRow.setAttribute("data-serial", data.item.serial_no);
+                    itemRow.style.cssText = "padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #f0fff4; margin-bottom: 5px; border-radius: 4px; border-left: 5px solid #2ecc71;";
+                    
+                    itemRow.innerHTML = `
+                        <span>
+                            <b style="color: #2c3e50;">${data.item.name}</b><br>
+                            <small style="color: #7f8c8d;">SN: ${data.item.serial_no} | Prop: ${data.item.property_no}</small>
+                        </span>
+                        <span style="color: #27ae60; font-weight: bold; font-size: 0.85em;">✓ ADDED</span>
+                    `;
+                    scannedList.prepend(itemRow);
+                })
+                .catch(err => console.error(err));
         }
-
-        fetch(`/inventory/scan/${encodeURIComponent(serialNo)}`)
-            .then((res) => res.json())
-            .then((data) => {
-                if (!data.success) {
-                    alert(
-                        `Serial Number: ${serialNo} not found in inventory database.`,
-                    );
-                    return;
-                }
-
-                const item = data.item;
-
-                // Prevent duplicate scanning in the same session
-                const existing = Array.from(
-                    scannedList.querySelectorAll(".serial-val"),
-                ).find((el) => el.textContent === serialNo);
-                if (existing) return;
-
-                const row = document.createElement("div");
-                row.className = "scanned-item-entry";
-                row.style.padding = "8px";
-                row.style.borderBottom = "1px solid #eee";
-                row.innerHTML = `
-                    <strong>${item.item_name || itemName}</strong> | 
-                    INV: <span class="serial-val">${serialNo}</span> | 
-                    Status: <span style="color:blue">${item.status}</span>
-                `;
-                scannedList.appendChild(row);
-            })
-            .catch((err) => {
-                console.error("Fetch Error:", err);
-                alert("Database connection error.");
-            });
-    }
-});
-
-markReceivedBtn.addEventListener("click", () => {
-    const entries = scannedList.querySelectorAll(".scanned-item-entry");
-    const serialNumbers = Array.from(entries).map((entry) => {
-        return entry.querySelector(".serial-val").textContent.trim();
     });
+}
 
-    if (serialNumbers.length === 0) {
-        alert("Please scan at least one item first.");
-        return;
-    }
-
-    fetch("/inventory/receive-batch", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "X-CSRF-TOKEN": csrfToken,
-        },
-        body: JSON.stringify({ serial_numbers: serialNumbers }),
-    })
-        .then((res) => res.json())
-        .then((data) => {
-            if (data.success) {
-                alert("Items successfully marked as Received!");
-                closeScannerModal();
-                location.reload(); // Refresh to show updated inventory status
-            } else {
-                alert("Update failed: " + (data.message || "Unknown error"));
-            }
-        })
-        .catch((err) => console.error("Batch Error:", err));
-});
+if (markReceivedBtn) {
+    markReceivedBtn.addEventListener("click", () => {
+        location.reload();
+    });
+}
