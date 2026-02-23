@@ -249,12 +249,13 @@
                   <td>{{ $item->classification }}</td>
                   <td>{{ \Carbon\Carbon::parse($item->date_acquired)->format('F d, Y') }}</td>
                   <td>
-                    <span class="
-                                                                                                          @if($item->status === 'Available') text-green
-                                                                                                          @elseif($item->status === 'For Repair') text-brown
-                                                                                                          @elseif($item->status === 'Issued') text-blue
-                                                                                                          @elseif($item->status === 'Unserviceable' || $item->status === 'Damaged' || $item->status === 'Lost') text-red
-                                                                                                          @endif">
+                    <span
+                      class="
+                                                                                                                        @if($item->status === 'Available') text-green
+                                                                                                                        @elseif($item->status === 'For Repair') text-brown
+                                                                                                                        @elseif($item->status === 'Issued') text-blue
+                                                                                                                        @elseif($item->status === 'Unserviceable' || $item->status === 'Damaged' || $item->status === 'Lost') text-red
+                                                                                                                        @endif">
                       {{ $item->status }}
                     </span>
                   </td>
@@ -1139,12 +1140,17 @@
   <script src=" {{ asset('js/dashboard-page-switch.js') }}"></script>
   <script src="{{ asset('js/dashboard-inv-search.js') }}"></script>
   <script src="{{ asset('js/dashboard-form-search.js') }}"></script>
-  <script src="{{ asset('js/dashboard-modal.js') }}"></script>
+  <script src="{{ asset('js/dashboard-configs.js') }}"></script>
+  <!-- <script src="{{ asset('js/dashboard-modal.js') }}"></script> -->
+  <script src="{{ asset('js/dashboard-forms.js') }}"></script>
+  <script src="{{ asset('js/dashboard.js') }}"></script>
+  <script src="{{ asset('js/dashboard-modals.js') }}"></script>
   <script src="{{ asset('js/dashboard-calc-total.js') }}"></script>
   <script src="{{ asset('js/dashboard-fill-prop-num.js') }}"></script>
   <script src="{{ asset('js/dashboard-form-search.js') }}"></script>
   <script src="{{ asset('js/dashboard-load-avail-serials.js') }}"></script>
   <script src="{{ asset('js/dashboard-prop-filter.js') }}"></script>
+  <script src="{{ asset('js/dashboard-inventory.js') }}"></script>
   <script src="{{ asset('js/dashboard-reference-quick.js') }}"></script>
   <script src="{{ asset('js/dashboard-student-search.js') }}"></script>
   <script src="{{ asset('js/dashboard-submit-form.js') }}"></script>
