@@ -65,7 +65,7 @@
             Maintenance
           </a>
 
-          <a href="#" data-target="Generate">
+          <a href="#" data-target="generate">
             <img src="{{ asset('images/maintenance.png') }}" class="menu-icon">
             QR Generator
           </a>
@@ -187,9 +187,9 @@
           </div>
 
           <div>
-            <div>
+            <!-- <div>
               <button class="modalBtn">MODAL BUTTON</button>
-            </div>
+            </div> -->
           </div>
         </div>
 
@@ -251,11 +251,11 @@
                   <td>
                     <span
                       class="
-                                                                                                                              @if($item->status === 'Available') text-green
-                                                                                                                              @elseif($item->status === 'For Repair') text-brown
-                                                                                                                              @elseif($item->status === 'Issued') text-blue
-                                                                                                                              @elseif($item->status === 'Unserviceable' || $item->status === 'Damaged' || $item->status === 'Lost') text-red
-                                                                                                                              @endif">
+                                                                                                                                    @if($item->status === 'Available') text-green
+                                                                                                                                    @elseif($item->status === 'For Repair') text-brown
+                                                                                                                                    @elseif($item->status === 'Issued') text-blue
+                                                                                                                                    @elseif($item->status === 'Unserviceable' || $item->status === 'Damaged' || $item->status === 'Lost') text-red
+                                                                                                                                    @endif">
                       {{ $item->status }}
                     </span>
                   </td>
@@ -872,77 +872,76 @@
             </div>
           </div>
         </div>
-  </div>
 
-  <!-- GENERATE QR CODE MODULE REQUEST -->
-  <div class="content-section qr-code" id="Generate">
+        <!-- GENERATE QR CODE MODULE REQUEST -->
+        <div class="content-section qr-code" id="generate">
 
-    <div class="qr-container">
+          <div class="qr-container">
 
-      <!-- LEFT PANEL -->
-      <div class="qr-filters">
-        <h3>Add to Queue</h3>
+            <!-- LEFT PANEL -->
+            <div class="qr-filters">
+              <h3>Add to Queue</h3>
 
-        <label>Item Name</label>
-        <input type="text" id="item-name" placeholder="Enter item name">
+              <label>Item Name</label>
+              <input type="text" id="item-name" placeholder="Enter item name">
 
-        <label>Type</label>
-        <select id="item-type">
-          <option value="qr" selected>QR Code</option>
-          <option value="barcode">Barcode</option>
-        </select>
+              <label>Type</label>
+              <select id="item-type">
+                <option value="qr" selected>QR Code</option>
+                <option value="barcode">Barcode</option>
+              </select>
 
-        <label>Quantity</label>
-        <input type="number" id="item-quantity" min="1" placeholder="Enter quantity">
+              <label>Quantity</label>
+              <input type="number" id="item-quantity" min="1" placeholder="Enter quantity">
 
-        <button type="button" id="add-to-queue-btn">
-          Add to Queue
-        </button>
+              <button type="button" id="add-to-queue-btn">
+                Add to Queue
+              </button>
 
-        <p class="note">
-          Items will be queued first before generating codes.
-        </p>
-      </div>
+              <p class="note">
+                Items will be queued first before generating codes.
+              </p>
+            </div>
 
-      <!-- RIGHT PANEL -->
-      <div class="qr-preview">
+            <!-- RIGHT PANEL -->
+            <div class="qr-preview">
 
-        <h3>Generation Queue</h3>
+              <h3>Generation Queue</h3>
 
-        <div class="qr-queue-scroll">
-          <table class="qr-queue-table">
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th>Qty</th>
-                <th>Type</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody id="qr-queue-body"></tbody>
-          </table>
+              <div class="qr-queue-scroll">
+                <table class="qr-queue-table">
+                  <thead>
+                    <tr>
+                      <th>Item</th>
+                      <th>Qty</th>
+                      <th>Type</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="qr-queue-body"></tbody>
+                </table>
+              </div>
+
+              <h3 class="preview-title">Preview</h3>
+
+              <div class="qr-scroll">
+                <div id="qr-result"></div>
+              </div>
+
+              <!-- FOOTER -->
+              <div class="qr-footer">
+                <span class="approval-note">
+                  Items in queue require admin approval
+                </span>
+
+                <button id="send-request-btn" disabled>
+                  Send for Approval
+                </button>
+              </div>
+
+            </div>
+          </div>
         </div>
-
-        <h3 class="preview-title">Preview</h3>
-
-        <div class="qr-scroll">
-          <div id="qr-result"></div>
-        </div>
-
-        <!-- FOOTER -->
-        <div class="qr-footer">
-          <span class="approval-note">
-            Items in queue require admin approval
-          </span>
-
-          <button id="send-request-btn" disabled>
-            Send for Approval
-          </button>
-        </div>
-
-      </div>
-    </div>
-  </div>
   </div>
   <!-- ===============================
      ISSUED ITEMS MODAL

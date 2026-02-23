@@ -1,7 +1,8 @@
 function bindMaintenanceButtons() {
     document.querySelectorAll(".maintenance-btn-issued").forEach((btn) => {
         btn.addEventListener("click", function () {
-            let id = this.getAttribute("data-id");
+            const id = this.getAttribute("data-id");
+            const row = this.closest("tr");
 
             Swal.fire({
                 title: "Move to Maintenance?",
@@ -16,9 +17,7 @@ function bindMaintenanceButtons() {
                     fetch(`/damage/move/${id}`, {
                         method: "POST",
                         headers: {
-                            "X-CSRF-TOKEN": document.querySelector(
-                                'meta[name="csrf-token"]'
-                            ).content,
+                            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
                             Accept: "application/json",
                         },
                     })
@@ -29,6 +28,8 @@ function bindMaintenanceButtons() {
                                 return;
                             }
 
+                            if (row) row.remove();
+
                             Swal.fire({
                                 title: "Success!",
                                 text: data.message,
@@ -37,17 +38,11 @@ function bindMaintenanceButtons() {
                                 showConfirmButton: false,
                             });
 
-                            // reload tables if you have them
-                            // reloadDamageTable();
-                            // reloadMaintenanceTable();
+                            if (typeof reloadDamageTable === "function") reloadDamageTable();
+                            if (typeof reloadMaintenanceTable === "function") reloadMaintenanceTable();
                         })
                         .catch((err) => {
-                            Swal.fire(
-                                "Error",
-                                "Something went wrong.",
-                                "error"
-                            );
-                            console.error(err);
+                            Swal.fire("Error", "Something went wrong.", "error");
                         });
                 }
             });
