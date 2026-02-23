@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", function () {
-    // Initialize UI Listeners
     document.getElementById("chooseIcs")?.addEventListener("click", () => openAddFormModal("ICS"));
     document.getElementById("choosePar")?.addEventListener("click", () => openAddFormModal("PAR"));
 
@@ -11,7 +10,6 @@ document.addEventListener("DOMContentLoaded", function () {
         if (link.textContent.trim() === "View") link.addEventListener("click", handleViewFormClick);
     });
 
-    // Scanner Toggle Logic
     const manualBtn = document.getElementById("manualEntryBtn");
     if (manualBtn) {
         manualBtn.addEventListener("click", function () {
