@@ -16,64 +16,74 @@ class DashboardController extends Controller
         $maintenanceData = $this->getMaintenanceRecords();
         $maintenanceRecords = $maintenanceData['records'];
         $maintenanceCounts = $maintenanceData['counts'];
-        $notifications = Notification::whereIn('role', ['All', auth()->user()->role])->orderByDesc('created_at')->get();
-        $unreadCount = Notification::whereIn('role', ['All', auth()->user()->role])->where('is_read', 0) ->count();
+
+        $notifications = Notification::whereIn('role', ['All', auth()->user()->role])
+            ->orderByDesc('created_at')
+            ->get();
+
+        $unreadCount = Notification::whereIn('role', ['All', auth()->user()->role])
+            ->where('is_read', 0)
+            ->count();
+
         $damageData = $this->getDamageReports();
-        $items = Item::orderBy('item_name')->get();
         $damageReports = $damageData['damageReports'];
-        $damageCounts = $damageData['damageCounts'];
-        $damageReports = DamageReport::with('item')->orderBy('reported_at', 'desc')->get();
+        $damageCounts  = $damageData['damageCounts'];
+
+        $items = Item::orderBy('item_name')->get();
+
         $totalIssuedItems = DB::table('issuedlog')->count();
         $totalItems = DB::table('items')->count();
         $availableItems = DB::table('items')->where('status', 'Available')->count();
         $issuedItems = DB::table('items')->where('status', 'Issued')->count();
         $forRepair = DB::table('items')->whereIn('status', ['For Repair', 'Damaged'])->count();
         $missingItems = DB::table('items')->where('status', 'Lost')->count();
+
         $lowStockThreshold = 5;
         $lowStock = DB::table('propertyinventory')->where('quantity', '<', $lowStockThreshold)->count();
+
         $itemsUsage = DB::table('issuedlog')
-            ->select(
-                'serial_no',
-                DB::raw('SUM(usage_hours) as total_usage_hours')
-            )
+            ->select('serial_no', DB::raw('SUM(usage_hours) as total_usage_hours'))
             ->groupBy('serial_no');
 
         $inventory = DB::table('items')
             ->select('status', 'serial_no', 'item_name', 'source_of_fund', 'classification', DB::raw('DATE(date_acquired) as date_acquired'))
             ->get();
 
-        $latest = DB::table('issuedlog')
-            ->selectRaw('MAX(issue_id) as issue_id')
-            ->groupBy('serial_no');
-
         // Latest issue_id per serial_no (subquery)
         $latest = DB::table('issuedlog')
             ->selectRaw('MAX(issue_id) as issue_id')
             ->groupBy('serial_no');
 
-        // Main issued items query
+        /**
+         * ✅ ISSUED ITEMS LIST (Latest per serial)
+         * - Removed student join
+         * - Uses i.borrower_name
+         */
         $issuedItemsList = DB::table('issuedlog as i')
             ->joinSub($latest, 'latest', function ($join) {
                 $join->on('i.issue_id', '=', 'latest.issue_id');
             })
             ->join('items as it', 'i.serial_no', '=', 'it.serial_no')
-            ->leftJoin('student as s', 'i.student_id', '=', 's.student_id')
             ->leftJoin('users as u', 'i.issued_by', '=', 'u.user_id')
-            ->where('it.status', 'Issued')
+            ->where('it.status', '=', 'Issued')
             ->select(
                 'i.issue_id',
                 'i.serial_no',
                 'i.issued_date',
                 'i.return_date',
                 'it.item_name as item',
-                DB::raw("COALESCE(s.student_name, 'N/A') as issued_to"),
-                DB::raw("COALESCE(CONCAT(u.first_name, ' ', u.last_name), 'N/A') as issued_by")
+                DB::raw("COALESCE(i.borrower_name, 'N/A') as issued_to"),
+                DB::raw("COALESCE(CONCAT(u.first_name, ' ', u.last_name, ' (', UPPER(u.role), ')'), 'N/A') as issued_by")
             )
             ->orderByDesc('i.issued_date')
             ->get();
 
+        /**
+         * ✅ FORMS LIST
+         * NOTE: This assumes formrecords column is borrower_name.
+         */
         $issuedForms = DB::table('formrecords')
-            ->select('form_id', 'form_type', 'reference_no', 'created_at', 'student_name', 'item_count', 'status')
+            ->select('form_id', 'form_type', 'reference_no', 'created_at', 'borrower_name', 'item_count', 'status')
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -112,22 +122,22 @@ class DashboardController extends Controller
             )
             ->get();
 
+        // Keep your counts logic
         $maintenanceCounts = [
             'total' => $maintenanceRecords->count(),
             'pending' => $maintenanceRecords->where('status', 'Pending')->count(),
             'completed' => $maintenanceRecords->where('status', 'Completed')->count(),
-            'upcoming' => $maintenanceRecords->where('date', '>', now())->count(),
+            'upcoming' => $maintenanceRecords->where('expected_completion', '>', now())->count(),
         ];
 
         $overdueMaintenance = $maintenanceForecast
             ->filter(fn($item) => $item->next_maintenance_date && Carbon::parse($item->next_maintenance_date)->isPast());
 
         $upcomingMaintenance = $maintenanceForecast
-            ->filter(
-                fn($item) => $item->next_maintenance_date
-                && Carbon::parse($item->next_maintenance_date)->between(now(), now()->addDays(7))
+            ->filter(fn($item) =>
+                $item->next_maintenance_date &&
+                Carbon::parse($item->next_maintenance_date)->between(now(), now()->addDays(7))
             );
-
 
         $usageAlerts = DB::table('items')
             ->leftJoinSub($itemsUsage, 'usage', function ($join) {
@@ -145,9 +155,10 @@ class DashboardController extends Controller
             ->get();
 
         $highRiskItems = $maintenanceForecast
-            ->filter(fn($item) => ($item->maintenance_threshold_usage > 0 && $item->total_usage_hours >= $item->maintenance_threshold_usage)
-                || ($item->next_maintenance_date && Carbon::parse($item->next_maintenance_date)->isPast()));
-
+            ->filter(fn($item) =>
+                ($item->maintenance_threshold_usage > 0 && $item->total_usage_hours >= $item->maintenance_threshold_usage)
+                || ($item->next_maintenance_date && Carbon::parse($item->next_maintenance_date)->isPast())
+            );
 
         return view('dashboard', compact(
             'totalItems',
@@ -182,9 +193,7 @@ class DashboardController extends Controller
     {
         DB::table('formrecords')
             ->where('form_id', $id)
-            ->update([
-                'status' => $request->status
-            ]);
+            ->update(['status' => $request->status]);
 
         return back()->with('success', 'Form status updated successfully.');
     }
@@ -192,7 +201,7 @@ class DashboardController extends Controller
     public function getFormTable()
     {
         $issuedForms = DB::table('formrecords')
-            ->select('form_id', 'form_type', 'reference_no', 'created_at', 'student_name', 'item_count', 'status')
+            ->select('form_id', 'form_type', 'reference_no', 'created_at', 'borrower_name', 'item_count', 'status')
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -200,19 +209,19 @@ class DashboardController extends Controller
 
         foreach ($issuedForms as $form) {
             $statusClass = strtolower($form->status);
-            $createdAt = \Carbon\Carbon::parse($form->created_at)->format('F d, Y');
+            $createdAt = Carbon::parse($form->created_at)->format('F d, Y');
 
             $html .= "
-            <tr>
-                <td>{$form->form_type}</td>
-                <td>{$form->reference_no}</td>
-                <td>{$createdAt}</td>
-                <td>{$form->student_name}</td>
-                <td>{$form->item_count}</td>
-                <td><span class='status {$statusClass}'>{$form->status}</span></td>
-                <td><a href='#'>View</a></td>
-            </tr>
-        ";
+                <tr>
+                    <td>{$form->form_type}</td>
+                    <td>{$form->reference_no}</td>
+                    <td>{$createdAt}</td>
+                    <td>{$form->borrower_name}</td>
+                    <td>{$form->item_count}</td>
+                    <td><span class='status {$statusClass}'>{$form->status}</span></td>
+                    <td><a href='#'>View</a></td>
+                </tr>
+            ";
         }
 
         return response()->json(['html' => $html]);
@@ -229,34 +238,28 @@ class DashboardController extends Controller
         $html = '';
 
         foreach ($inventory as $item) {
+            if ($item->status === 'Available') $statusClass = 'text-green';
+            elseif ($item->status === 'For Repair') $statusClass = 'text-brown';
+            elseif ($item->status === 'Issued') $statusClass = 'text-blue';
+            elseif ($item->status === 'Damaged' || $item->status === 'Lost') $statusClass = 'text-red';
+            else $statusClass = '';
 
-            if ($item->status === 'Available')
-                $statusClass = 'text-green';
-            elseif ($item->status === 'For Repair')
-                $statusClass = 'text-brown';
-            elseif ($item->status === 'Issued')
-                $statusClass = 'text-blue';
-            elseif ($item->status === 'Damaged' || $item->status === 'Lost')
-                $statusClass = 'text-red';
-            else
-                $statusClass = '';
-
-            $dateAcquired = $item->date_acquired ? \Carbon\Carbon::parse($item->date_acquired)->format('F d, Y') : '-';
+            $dateAcquired = $item->date_acquired ? Carbon::parse($item->date_acquired)->format('F d, Y') : '-';
 
             $html .= "
-            <tr>
-                <td>{$item->serial_no}</td>
-                <td>{$item->item_name}</td>
-                <td>{$item->source_of_fund}</td>
-                <td>{$item->classification}</td>
-                <td>{$dateAcquired}</td>
-                <td><span class='{$statusClass}'>{$item->status}</span></td>
-                <td class='action-buttons'>
-                    <button class='edit-btn'>✏️</button>
-                    <button class='delete-btn'>🗑️</button>
-                </td>
-            </tr>
-        ";
+                <tr>
+                    <td>{$item->serial_no}</td>
+                    <td>{$item->item_name}</td>
+                    <td>{$item->source_of_fund}</td>
+                    <td>{$item->classification}</td>
+                    <td>{$dateAcquired}</td>
+                    <td><span class='{$statusClass}'>{$item->status}</span></td>
+                    <td class='action-buttons'>
+                        <button class='edit-btn'>✏️</button>
+                        <button class='delete-btn'>🗑️</button>
+                    </td>
+                </tr>
+            ";
         }
 
         return response()->json(['html' => $html]);
@@ -273,27 +276,21 @@ class DashboardController extends Controller
         $html = '';
 
         foreach ($inventory as $item) {
-
-            if ($item->status === 'Available')
-                $statusClass = 'text-green';
-            elseif ($item->status === 'For Repair')
-                $statusClass = 'text-brown';
-            elseif ($item->status === 'Issued')
-                $statusClass = 'text-blue';
-            elseif ($item->status === 'Damaged' || $item->status === 'Lost')
-                $statusClass = 'text-red';
-            else
-                $statusClass = '';
+            if ($item->status === 'Available') $statusClass = 'text-green';
+            elseif ($item->status === 'For Repair') $statusClass = 'text-brown';
+            elseif ($item->status === 'Issued') $statusClass = 'text-blue';
+            elseif ($item->status === 'Damaged' || $item->status === 'Lost') $statusClass = 'text-red';
+            else $statusClass = '';
 
             $html .= "
-            <tr>
-                <td>{$item->item_name}</td>
-                <td>{$item->classification}</td>
-                <td>{$item->stock}</td>
-                <td>{$item->remarks}</td>
-                <td><span class='{$statusClass}'>{$item->status}</span></td>
-            </tr>
-        ";
+                <tr>
+                    <td>{$item->item_name}</td>
+                    <td>{$item->classification}</td>
+                    <td>{$item->stock}</td>
+                    <td>{$item->remarks}</td>
+                    <td><span class='{$statusClass}'>{$item->status}</span></td>
+                </tr>
+            ";
         }
 
         return response()->json(['html' => $html]);
@@ -308,17 +305,15 @@ class DashboardController extends Controller
             ->get();
 
         $html = '';
-
         foreach ($inventory as $item) {
-
             $html .= "
-            <tr>
-                <td>{$item->item_name}</td>
-                <td>{$item->classification}</td>
-                <td>{$item->stock}</td>
-                <td>{$item->remarks}</td>
-            </tr>
-        ";
+                <tr>
+                    <td>{$item->item_name}</td>
+                    <td>{$item->classification}</td>
+                    <td>{$item->stock}</td>
+                    <td>{$item->remarks}</td>
+                </tr>
+            ";
         }
 
         return response()->json(['html' => $html]);
@@ -328,9 +323,8 @@ class DashboardController extends Controller
     {
         $issuedItemsList = DB::table('issuedlog as i')
             ->join('items as it', 'i.serial_no', '=', 'it.serial_no')
-            ->leftJoin('student as s', 'i.student_id', '=', 's.student_id')
             ->leftJoin('users as u', 'i.issued_by', '=', 'u.user_id')
-            ->where('it.status', 'Issued')
+            ->where('it.status', '=', 'Issued')
             ->whereRaw('i.issue_id = (SELECT MAX(issue_id) FROM issuedlog WHERE serial_no = i.serial_no)')
             ->select(
                 'i.issue_id',
@@ -338,37 +332,36 @@ class DashboardController extends Controller
                 'i.issued_date',
                 'i.return_date',
                 'it.item_name as item',
-                DB::raw("COALESCE(s.student_name, 'N/A') as issued_to"),
+                DB::raw("COALESCE(i.borrower_name, 'N/A') as issued_to"),
                 DB::raw("COALESCE(CONCAT(u.first_name, ' ', u.last_name), 'N/A') as issued_by")
             )
             ->orderByDesc('i.issued_date')
             ->get();
 
-        // Prepare HTML for your table
         $html = '';
         foreach ($issuedItemsList as $item) {
             $returnDate = $item->return_date ? Carbon::parse($item->return_date)->format('F d, Y') : '-';
             $html .= "
-            <tr>
-                <td>{$item->serial_no}</td>
-                <td>{$item->issued_to}</td>
-                <td>{$item->issued_by}</td>
-                <td>" . Carbon::parse($item->issued_date)->format('F d, Y') . "</td>
-                <td>{$returnDate}</td>
-                <td>{$item->item}</td>
-                <td class='action-buttons-issued'>
-                    <button class='action-btn-issued return-btn-issued' title='Return' data-id='{$item->issue_id}'>
-                        <i class='fas fa-undo'></i>
-                    </button>
-                    <button class='action-btn-issued damaged-btn-issued' data-id='{$item->serial_no}' title='Damaged'>
-                        <i class='fas fa-exclamation-triangle'></i>
-                    </button>
-                    <button class='action-btn-issued unserviceable-btn-issued' title='Unserviceable'>
-                        <i class='fas fa-times-circle'></i>
-                    </button>
-                </td>
-            </tr>
-        ";
+                <tr>
+                    <td>{$item->serial_no}</td>
+                    <td>{$item->issued_to}</td>
+                    <td>{$item->issued_by}</td>
+                    <td>" . Carbon::parse($item->issued_date)->format('F d, Y') . "</td>
+                    <td>{$returnDate}</td>
+                    <td>{$item->item}</td>
+                    <td class='action-buttons-issued'>
+                        <button class='action-btn-issued return-btn-issued' title='Return' data-id='{$item->issue_id}'>
+                            <i class='fas fa-undo'></i>
+                        </button>
+                        <button class='action-btn-issued damaged-btn-issued' data-id='{$item->serial_no}' title='Damaged'>
+                            <i class='fas fa-exclamation-triangle'></i>
+                        </button>
+                        <button class='action-btn-issued unserviceable-btn-issued' title='Unserviceable'>
+                            <i class='fas fa-times-circle'></i>
+                        </button>
+                    </td>
+                </tr>
+            ";
         }
 
         return response()->json(['html' => $html]);
@@ -379,21 +372,21 @@ class DashboardController extends Controller
         $issuedItemsList = DB::table('issuedlog as i')
             ->join('items as it', 'i.serial_no', '=', 'it.serial_no')
             ->leftJoin('formrecords as f', 'i.reference_no', '=', 'f.reference_no')
-            ->where('it.status', 'Issued')
+            ->where('it.status', '=', 'Issued')
             ->whereRaw('i.issue_id = (
-            SELECT MAX(issue_id)
-            FROM issuedlog
-            WHERE serial_no = i.serial_no
-        )')
+                SELECT MAX(issue_id)
+                FROM issuedlog
+                WHERE serial_no = i.serial_no
+            )')
             ->select(
                 'i.issue_id',
                 'i.property_no',
                 'i.serial_no',
                 'i.return_date',
-                'f.student_name as issued_to',
+                'f.borrower_name as issued_to',
                 'f.issued_by as issued_by',
                 'i.issued_date',
-                'it.item_name as item',
+                'it.item_name as item'
             )
             ->orderBy('i.issued_date', 'desc')
             ->get();
@@ -402,26 +395,26 @@ class DashboardController extends Controller
         foreach ($issuedItemsList as $item) {
             $returnDate = $item->return_date ? Carbon::parse($item->return_date)->format('F d, Y') : '-';
             $html .= "
-            <tr>
-                <td>{$item->serial_no}</td>
-                <td>{$item->issued_to}</td>
-                <td>{$item->issued_by}</td>
-                <td>" . \Carbon\Carbon::parse($item->issued_date)->format('F d, Y') . "</td>
-                <td>{$returnDate}</td>
-                <td>{$item->item}</td>
-                <td class='action-buttons-issued'>
-                    <button class='action-btn-issued return-btn-issued' title='Return' data-id='{$item->issue_id}'>
-                        <i class='fas fa-undo'></i>
-                    </button>
-                    <button class='action-btn-issued damaged-btn-issued' title='Damaged'>
-                        <i class='fas fa-exclamation-triangle'></i>
-                    </button>
-                    <button class='action-btn-issued unserviceable-btn-issued' title='Unserviceable'>
-                        <i class='fas fa-times-circle'></i>
-                    </button>
-                </td>
-            </tr>
-        ";
+                <tr>
+                    <td>{$item->serial_no}</td>
+                    <td>{$item->issued_to}</td>
+                    <td>{$item->issued_by}</td>
+                    <td>" . Carbon::parse($item->issued_date)->format('F d, Y') . "</td>
+                    <td>{$returnDate}</td>
+                    <td>{$item->item}</td>
+                    <td class='action-buttons-issued'>
+                        <button class='action-btn-issued return-btn-issued' title='Return' data-id='{$item->issue_id}'>
+                            <i class='fas fa-undo'></i>
+                        </button>
+                        <button class='action-btn-issued damaged-btn-issued' title='Damaged'>
+                            <i class='fas fa-exclamation-triangle'></i>
+                        </button>
+                        <button class='action-btn-issued unserviceable-btn-issued' title='Unserviceable'>
+                            <i class='fas fa-times-circle'></i>
+                        </button>
+                    </td>
+                </tr>
+            ";
         }
 
         return response()->json(['html' => $html]);
@@ -444,18 +437,15 @@ class DashboardController extends Controller
         ];
     }
 
+    // ---- the rest of your methods below are unchanged ----
 
     public function storeDamageReport(Request $request)
     {
         $serialNo = $request->input('serial_no');
-
         $item = Item::where('serial_no', $serialNo)->first();
 
         if (!$item) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Item not found.'
-            ]);
+            return response()->json(['success' => false, 'message' => 'Item not found.']);
         }
 
         $item->status = 'Damaged';
@@ -502,10 +492,7 @@ class DashboardController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => $validator->errors()->first(),
-            ]);
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()]);
         }
 
         try {
@@ -520,16 +507,9 @@ class DashboardController extends Controller
                 'updated_at' => now(),
             ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Maintenance record added successfully!',
-                'maintenance_id' => $maintenanceId
-            ]);
+            return response()->json(['success' => true, 'message' => 'Maintenance record added successfully!', 'maintenance_id' => $maintenanceId]);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to create maintenance record: ' . $e->getMessage(),
-            ]);
+            return response()->json(['success' => false, 'message' => 'Failed to create maintenance record: ' . $e->getMessage()]);
         }
     }
 
@@ -554,16 +534,13 @@ class DashboardController extends Controller
             return response()->json(['success' => false, 'message' => 'Record not found']);
         }
 
-        // Format date for <input type="date">
-        $record->date_reported = \Carbon\Carbon::parse($record->date_reported)->format('Y-m-d');
+        $record->date_reported = Carbon::parse($record->date_reported)->format('Y-m-d');
         if ($record->expected_completion) {
-            $record->expected_completion = \Carbon\Carbon::parse($record->expected_completion)->format('Y-m-d');
+            $record->expected_completion = Carbon::parse($record->expected_completion)->format('Y-m-d');
         }
 
         return response()->json(['success' => true, 'record' => $record]);
     }
-
-
 
     public function updateMaintenance(Request $request, $id)
     {
@@ -589,6 +566,7 @@ class DashboardController extends Controller
             'repair_cost' => $data['repair_cost'],
             'expected_completion' => $data['expected_completion'] ?? null,
             'remarks' => $data['remarks'] ?? null,
+            'updated_at' => now(),
         ]);
 
         if (!$updated) {
@@ -600,10 +578,12 @@ class DashboardController extends Controller
 
     public function destroyMaintenance($id)
     {
-        $deleted = DB::table('maintenance')->where('id', $id)->delete();
+        // NOTE: your table uses maintenance_id, not id
+        $deleted = DB::table('maintenance')->where('maintenance_id', $id)->delete();
 
-        if (!$deleted)
+        if (!$deleted) {
             return response()->json(['success' => false, 'message' => 'Failed to delete record']);
+        }
 
         return response()->json(['success' => true, 'message' => 'Maintenance record deleted']);
     }
@@ -623,10 +603,7 @@ class DashboardController extends Controller
             'upcoming' => $maintenanceRecords->where('expected_completion', '>', now())->count(),
         ];
 
-        return [
-            'records' => $maintenanceRecords,
-            'counts' => $maintenanceCounts,
-        ];
+        return ['records' => $maintenanceRecords, 'counts' => $maintenanceCounts];
     }
 
     public function getLatestDamageReport($serialNo)
@@ -637,10 +614,7 @@ class DashboardController extends Controller
             ->first();
 
         if (!$damage) {
-            return response()->json([
-                'success' => true,
-                'damage' => null,
-            ]);
+            return response()->json(['success' => true, 'damage' => null]);
         }
 
         return response()->json([
@@ -665,7 +639,6 @@ class DashboardController extends Controller
 
         DB::table('maintenance')->insert([
             'serial_no' => $damage->serial_no,
-            'item_name' => $damage->item_name,
             'issue_type' => $damage->damage_type,
             'date_reported' => now(),
             'repair_cost' => $damage->repair_cost ?? 0,
@@ -675,9 +648,7 @@ class DashboardController extends Controller
             'updated_at' => now()
         ]);
 
-        return response()->json([
-            'message' => 'Item successfully reported to maintenance!'
-        ]);
+        return response()->json(['message' => 'Item successfully reported to maintenance!']);
     }
 
     public function moveDamageToMaintenance($id)
@@ -695,6 +666,8 @@ class DashboardController extends Controller
             'repair_cost' => 0,
             'expected_completion' => now()->addDays(3),
             'remarks' => 'Auto-transferred from damage report',
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
         DB::table('damagereports')->where('id', $id)->delete();
@@ -712,11 +685,13 @@ class DashboardController extends Controller
             }
 
             DB::table('items')->where('serial_no', $serial)->update([
-                'status' => 'Available'
+                'status' => 'Available',
+                'updated_at' => now(),
             ]);
 
             DB::table('maintenance')->where('serial_no', $serial)->update([
                 'remarks' => 'Item is now available',
+                'updated_at' => now(),
             ]);
 
             return response()->json(['message' => 'Item status updated to Available successfully!']);
@@ -724,7 +699,6 @@ class DashboardController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
-
 
     public function getMaintenanceHistory($serial)
     {
@@ -739,10 +713,7 @@ class DashboardController extends Controller
                 ->orderBy('reported_at', 'desc')
                 ->get();
 
-            return response()->json([
-                'maintenance' => $maintenance,
-                'damage' => $damage,
-            ]);
+            return response()->json(['maintenance' => $maintenance, 'damage' => $damage]);
         } catch (\Exception $e) {
             \Log::error('Maintenance history error: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to fetch history'], 500);
@@ -752,17 +723,16 @@ class DashboardController extends Controller
     public function getDashboardSummary($type)
     {
         switch ($type) {
-
             case 'total':
                 return response()->json([
                     'title' => 'Total Items & Equipment',
                     'summary' => 'Total items: <strong>' . DB::table('items')->count() . '</strong>',
                     'label' => 'Breakdown:',
                     'list' => '
-                    <li>• Available: ' . DB::table('items')->where('status', 'Available')->count() . '</li>
-                    <li>• Issued: ' . DB::table('items')->where('status', 'Issued')->count() . '</li>
-                    <li>• For Repair: ' . DB::table('items')->whereIn('status', ['For Repair', 'Damaged'])->count() . '</li>
-                ',
+                        <li>• Available: ' . DB::table('items')->where('status', 'Available')->count() . '</li>
+                        <li>• Issued: ' . DB::table('items')->where('status', 'Issued')->count() . '</li>
+                        <li>• For Repair: ' . DB::table('items')->whereIn('status', ['For Repair', 'Damaged'])->count() . '</li>
+                    ',
                     'footer' => '',
                 ]);
 
@@ -771,9 +741,7 @@ class DashboardController extends Controller
                     'title' => 'Issued Items',
                     'summary' => 'Currently issued: <strong>' . DB::table('items')->where('status', 'Issued')->count() . '</strong>',
                     'label' => 'Issuance Status:',
-                    'list' => '
-                    <li>• Active Issuances</li>
-                ',
+                    'list' => '<li>• Active Issuances</li>',
                     'footer' => '',
                 ]);
 
@@ -781,6 +749,4 @@ class DashboardController extends Controller
                 return response()->json(['error' => 'Invalid type'], 404);
         }
     }
-
-
 }

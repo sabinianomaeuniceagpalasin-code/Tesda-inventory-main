@@ -775,7 +775,7 @@
                     <td>{{ $form->form_type }}</td>
                     <td>{{ $form->reference_no }}</td>
                     <td>{{ \Carbon\Carbon::parse($form->created_at)->format('F d, Y') }}</td>
-                    <td>{{ $form->student_name }}</td>
+                    <td>{{ $form->borrower_name }}</td>
                     <td>{{ $form->item_count }}</td>
                     <td><span class="status {{ strtolower($form->status) }}">{{ $form->status }}</span></td>
                     <td><a href="#">View</a></td>
@@ -817,9 +817,14 @@
 
                 <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 12px;">
                   <div class="full-width" style="position:relative;">
-                    <label>Student Name</label>
-                    <input type="text" id="studentSearch" name="student_name" autocomplete="off"
-                          placeholder="Type student name..." required>
+                    <label>Borrower Name</label>
+                          <input
+                            type="text"
+                            name="borrower_name"
+                            id="borrowerName"
+                            placeholder="Enter borrower name"
+                            required
+                          >
                     <div id="studentSuggestion" class="suggestion-box"></div>
                   </div>
 
@@ -1077,67 +1082,122 @@
   </div>
 
   <script>
-    function printFormModal() {
-      const modal = document.getElementById('viewFormModal');
-      const modalContent = modal.querySelector('.modal-body').cloneNode(true);
+  function escapeHtml(str) {
+    return String(str || '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
 
-      let formType = modal.dataset.formType || '';
-      if (formType === 'ICS') formType = 'Inventory Custodian Slip (ICS)';
-      if (formType === 'PAR') formType = 'Property Acknowledgement Receipt (PAR)';
+  function printFormModal() {
+    const modal = document.getElementById('viewFormModal');
+    const bodyEl = modal.querySelector('.modal-body');
 
-      const printHTML = `
-    <html>
-    <head>
+    // Clone content safely
+    const modalContent = bodyEl ? bodyEl.cloneNode(true) : document.createElement('div');
+
+    // ✅ Read from dataset (recommended)
+    const borrowerName = modal.dataset.borrowerName || modal.dataset.borrower || '';
+    const issuedByName = modal.dataset.issuedBy || '';
+    let formType = modal.dataset.formType || '';
+
+    // Friendly form type header
+    let formTypeLabel = '';
+    if (formType === 'ICS') formTypeLabel = 'Inventory Custodian Slip (ICS)';
+    else if (formType === 'PAR') formTypeLabel = 'Property Acknowledgement Receipt (PAR)';
+    else formTypeLabel = formType;
+
+    // Fallbacks if dataset not set (optional)
+    // Try to find text nodes like "Issued To:" inside modal content
+    const borrowerSafe = borrowerName ? borrowerName : '__________________________';
+    const issuedBySafe = issuedByName ? issuedByName : '__________________________';
+
+    const printHTML = `
+      <html>
+      <head>
+        <title>TESDA Form</title>
         <style>
-            body { font-family: Arial, sans-serif; margin: 20px; color:#000; }
-            h2 { text-align: center; color: #004aad; margin-bottom: 20px; }
-            p { margin: 5px 0; }
-            u { text-decoration: underline; }
-            table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-            table, th, td { border: 1px solid #000; }
-            th, td { padding: 8px; text-align: left; }
-            .signature-block { display: flex; justify-content: space-between; margin-top: 50px; }
-            .signature-block div { width: 45%; }
-            .signature-block .line { border-bottom: 1px solid #000; height: 1px; margin: 40px 0 5px 0; }
-            .form-header { text-align: center; font-weight: bold; line-height: 1.4; margin-bottom: 20px; }
+          body { font-family: Arial, sans-serif; margin: 20px; color:#000; }
+          .form-header { text-align: center; font-weight: bold; line-height: 1.4; margin-bottom: 14px; }
+          .meta { margin: 10px 0 14px 0; font-size: 14px; }
+          .meta-row { display:flex; justify-content: space-between; gap: 20px; }
+          .meta-row div { flex: 1; }
+          .label { font-weight: bold; }
+          table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+          table, th, td { border: 1px solid #000; }
+          th, td { padding: 8px; text-align: left; }
+          .signature-block { display: flex; justify-content: space-between; margin-top: 50px; gap: 30px; }
+          .signature-block div { width: 50%; }
+          .line { border-bottom: 1px solid #000; height: 1px; margin: 35px 0 6px 0; }
+          .sig-title { margin-bottom: 4px; }
+          .small { font-size: 12px; }
+          @media print {
+            .no-print { display: none !important; }
+          }
+          .issued-meta {
+            width: 100%;
+            margin-bottom: 10px;
+            display: grid;
+            grid-template-columns: 1fr;
+            text-align: left;
+          }
+
+          .issued-meta div {
+            margin: 2px 0;
+          }
         </style>
-    </head>
-    <body>
+      </head>
+      <body>
         <div class="form-header">
-            TESDA<br>
-            Property and Supply Management Section<br>
-            ${formType ? `<span style="font-size:16px;">${formType}</span>` : ''}
+          TESDA<br>
+          Property and Supply Management Section<br>
+          ${formTypeLabel ? `<span style="font-size:16px;">${escapeHtml(formTypeLabel)}</span>` : ''}
         </div>
 
+        <!-- ✅ Top meta info -->
+        <div class="meta">
+          <div class="meta-row">
+            <div><span class="label">Issued To:</span> ${escapeHtml(borrowerName || 'N/A')}</div>
+            <div><span class="label">Processed By:</span> ${escapeHtml(issuedByName || 'N/A')}</div>
+          </div>
+        </div>
+
+        <!-- Main form body -->
         <div>${modalContent.innerHTML}</div>
 
+        <!-- ✅ Signatures with printed names -->
         <div class="signature-block">
-            <div>
-                Issued By:<br>
-                <div class="line"></div>
-                Signature over printed name<br>
-                Date: __________
-            </div>
-            <div>
-                Issued To:<br>
-                <div class="line"></div>
-                Signature over printed name<br>
-                Date: __________
-            </div>
+          <div>
+            <div class="sig-title"><span class="label">Issued By (Processed By):</span></div>
+            <div class="line"></div>
+            <div><strong>${escapeHtml(issuedByName || '')}</strong></div>
+            <div class="small">Signature over printed name</div>
+            <div class="small">Date: __________</div>
+          </div>
+
+          <div>
+            <div class="sig-title"><span class="label">Issued To (Borrower):</span></div>
+            <div class="line"></div>
+            <div><strong>${escapeHtml(borrowerName || '')}</strong></div>
+            <div class="small">Signature over printed name</div>
+            <div class="small">Date: __________</div>
+          </div>
         </div>
-    </body>
-    </html>
+      </body>
+      </html>
     `;
 
-      const printWindow = window.open('TESDA', 'TESDA', 'width=900,height=700');
-      printWindow.document.write(printHTML);
-      printWindow.document.close();
-      printWindow.focus();
-      printWindow.print();
-      printWindow.close();
-    }
-
-  </script>
+    const printWindow = window.open('', 'TESDA', 'width=900,height=700');
+    printWindow.document.open();
+    printWindow.document.write(printHTML);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
+  }
+</script>
 
   <script>
     // Usage Data

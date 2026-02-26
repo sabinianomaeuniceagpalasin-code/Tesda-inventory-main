@@ -6,113 +6,158 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
-use Carbon\Carbon;
 
 class IssuedLogController extends Controller
 {
-
     public function store(Request $request)
     {
+        // Scanner sends serials[]
+        $serials = $request->input('serials', []);
+
         $data = $request->validate([
-            'student_name' => 'required|string',
-            'selected_serials' => 'required|array|min:1',
-            'selected_serials.*' => 'required|string|exists:items,serial_no',
+            'borrower_name' => 'required|string|max:255',
             'form_type' => ['required', Rule::in(['ICS', 'PAR'])],
             'issued_date' => 'required|date',
             'return_date' => 'nullable|date|after_or_equal:issued_date',
         ]);
 
+        if (!is_array($serials) || count($serials) < 1) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please scan at least one item.'
+            ], 422);
+        }
+
+        // Clean serial list
+        $serials = array_values(array_unique(array_map('trim', $serials)));
+
+        // Generate reference number
         $year = date('Y');
         $type = $data['form_type'];
+
         $lastRecord = DB::table('formrecords')
             ->where('form_type', $type)
             ->where('reference_no', 'LIKE', "{$year}-{$type}-%")
             ->orderBy('form_id', 'desc')
             ->first();
 
-        $nextNum = $lastRecord ? str_pad(((int) explode('-', $lastRecord->reference_no)[2]) + 1, 4, '0', STR_PAD_LEFT) : '0001';
-        $autoReferenceNo = "{$year}-{$type}-{$nextNum}";
+        $nextNum = $lastRecord
+            ? str_pad(((int) explode('-', $lastRecord->reference_no)[2]) + 1, 4, '0', STR_PAD_LEFT)
+            : '0001';
 
-        $student = DB::table('student')->where('student_name', $data['student_name'])->first();
-        if (!$student) {
-            return response()->json(['success' => false, 'message' => 'Student not found.'], 400);
-        }
+        $referenceNo = "{$year}-{$type}-{$nextNum}";
 
         DB::beginTransaction();
         try {
-            foreach ($data['selected_serials'] as $serial) {
-                $item = DB::table('items')->where('serial_no', $serial)->first();
+            // Lock items
+            $items = DB::table('items')
+                ->whereIn('serial_no', $serials)
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('serial_no');
+
+            // Validate existence + availability
+            foreach ($serials as $sn) {
+                if (!isset($items[$sn])) {
+                    throw new \Exception("Serial {$sn} does not exist.");
+                }
+                if (strtolower($items[$sn]->status) !== 'available') {
+                    throw new \Exception("Serial {$sn} is not available.");
+                }
+            }
+
+            // Insert issued logs
+            foreach ($serials as $sn) {
+                $item = $items[$sn];
 
                 DB::table('issuedlog')->insert([
-                    'student_id' => $student->student_id,
-                    'serial_no' => $serial,
+                    'borrower_name' => $data['borrower_name'],
+                    'serial_no' => $sn,
                     'property_no' => $item->property_no,
                     'form_type' => $type,
                     'issued_date' => $data['issued_date'],
                     'return_date' => $data['return_date'],
-                    'reference_no' => $autoReferenceNo,
+                    'reference_no' => $referenceNo,
                     'usage_hours' => 0,
+                    'issued_by' => Auth::id(),
                     'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
 
-                DB::table('items')->where('serial_no', $serial)->update([
+                DB::table('items')->where('serial_no', $sn)->update([
                     'status' => 'Issued',
-                    'usage_count' => DB::raw('COALESCE(usage_count, 0) + 1'),
-                    'updated_at' => now()
+                    'usage_count' => DB::raw('COALESCE(usage_count,0) + 1'),
+                    'updated_at' => now(),
                 ]);
             }
 
+            // Insert summary
             DB::table('formrecords')->insert([
                 'form_type' => $type,
-                'student_name' => $data['student_name'],
-                'item_count' => count($data['selected_serials']),
+                'borrower_name' => $data['borrower_name'],
+                'item_count' => count($serials),
                 'issued_by' => Auth::user()->full_name ?? 'Admin',
                 'status' => 'Active',
-                'reference_no' => $autoReferenceNo,
+                'reference_no' => $referenceNo,
                 'created_at' => now(),
+                'updated_at' => now(),
             ]);
 
             DB::commit();
-            return response()->json(['success' => true, 'reference_no' => $autoReferenceNo]);
+            return response()->json([
+                'success' => true,
+                'reference_no' => $referenceNo
+            ]);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
 
     public function view($reference_no)
-    {
-        $summary = DB::table('formrecords')->where('reference_no', $reference_no)->first();
-        if (!$summary) {
-            return response()->json(['error' => 'Record not found'], 404);
-        }
-
-        $issuedLogs = DB::table('issuedlog')->where('reference_no', $reference_no)->get();
-        if ($issuedLogs->isEmpty()) {
-            return response()->json(['error' => 'No issued items found'], 404);
-        }
-
-        $details = [];
-        foreach ($issuedLogs as $log) {
-            $tool = DB::table('items')->where('serial_no', $log->serial_no)->first();
-            $inventory = DB::table('propertyinventory')->where('property_no', $log->property_no)->first();
-
-            $details[] = [
-                'property_no' => $log->property_no,
-                'tool_name' => $tool ? $tool->item_name : 'N/A',
-                'quantity' => 1,
-                'unit_cost' => $inventory ? (float) $inventory->unit_cost : 0,
-                'total_cost' => $inventory ? (float) $inventory->unit_cost : 0,
-                'serial_no' => $log->serial_no
-            ];
-        }
-
-        return response()->json([
-            'issued_to' => $summary->student_name,
-            'form_type' => $summary->form_type,
-            'reference_no' => $summary->reference_no,
-            'details' => $details
-        ]);
+{
+    $summary = DB::table('formrecords')->where('reference_no', $reference_no)->first();
+    if (!$summary) {
+        return response()->json(['error' => 'Record not found'], 404);
     }
+
+    $logs = DB::table('issuedlog')->where('reference_no', $reference_no)->get();
+
+    $details = [];
+    foreach ($logs as $log) {
+        $item = DB::table('items')->where('serial_no', $log->serial_no)->first();
+        $inv = DB::table('propertyinventory')->where('property_no', $log->property_no)->first();
+
+        $unit = $inv ? (float) $inv->unit_cost : 0;
+
+        $details[] = [
+            'property_no' => $log->property_no,
+            'tool_name' => $item?->item_name ?? 'N/A',
+            'quantity' => 1,
+            'unit_cost' => $unit,
+            'total_cost' => $unit,
+            'serial_no' => $log->serial_no,
+        ];
+    }
+
+    // ✅ get processor from issuedlog → join users → format "NAME (ROLE)"
+    $processor = DB::table('issuedlog as i')
+        ->leftJoin('users as u', 'i.issued_by', '=', 'u.user_id')
+        ->where('i.reference_no', $reference_no)
+        ->orderByDesc('i.issue_id')
+        ->select(DB::raw("COALESCE(CONCAT(u.first_name,' ',u.last_name,' (',UPPER(u.role),')'), 'N/A') as processed_by"))
+        ->first();
+
+    return response()->json([
+        'borrower_name' => $summary->borrower_name,
+        'issued_by' => $processor?->processed_by ?? 'N/A',  // ✅ CJ SADSAD (ADMIN)
+        'form_type' => $summary->form_type,
+        'reference_no' => $summary->reference_no,
+        'details' => $details
+    ]);
+}
 }
