@@ -10,62 +10,6 @@ use Carbon\Carbon;
 
 class IssuedLogController extends Controller
 {
-    public function searchStudents(Request $request)
-    {
-        $q = $request->get('query', '');
-        if (strlen($q) < 1) {
-            return response()->json([]);
-        }
-
-        $students = DB::table('student')
-            ->select('student_id', 'student_name', 'student_number', 'batch')
-            ->where('student_name', 'LIKE', "%{$q}%")
-            ->limit(10)
-            ->get();
-
-        return response()->json($students);
-    }
-
-    public function availableSerials(Request $request)
-    {
-        $formType = $request->get('form_type', 'ICS');
-        $propertyNo = $request->get('property_no');
-
-        $query = DB::table('items')
-            ->leftJoin('propertyinventory', 'items.property_no', '=', 'propertyinventory.property_no')
-            ->whereRaw("TRIM(LOWER(items.status)) = ?", ['available'])
-            ->select('items.serial_no', 'items.item_name', 'propertyinventory.unit_cost', 'items.property_no');
-
-        if ($propertyNo && $propertyNo !== 'ALL') {
-            $query->where('items.property_no', $propertyNo);
-        }
-
-        $items = $query->get();
-
-        $filtered = $items->filter(function ($item) use ($formType) {
-            $cost = floatval(str_replace(',', '', $item->unit_cost ?? '0'));
-
-            if ($cost === 0.0)
-                return true;
-
-            if ($formType === 'ICS') {
-                return $cost < 50000;
-            }
-
-            return $cost >= 50000;
-        })->values();
-
-        return response()->json($filtered);
-    }
-
-    public function checkReference($reference)
-    {
-        $exists = DB::table('formrecords')
-            ->where('reference_no', $reference)
-            ->exists();
-
-        return response()->json(['exists' => $exists]);
-    }
 
     public function store(Request $request)
     {

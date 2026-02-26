@@ -17,6 +17,7 @@ use App\Http\Controllers\IssuedUnserviceableController;
 use App\Http\Controllers\IssuedDamageController;
 use App\Http\Controllers\SerialController;
 use App\Http\Controllers\ItemApprovalRequestController;
+use App\Http\Controllers\FormRecordsItemScanController;
 
 Route::get('/', fn() => redirect()->route('login'));
 
@@ -55,6 +56,8 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('/forms/{id}/update-status', [DashboardController::class, 'updateStatus'])->name('forms.updateStatus');
     Route::post('/issued/return/{id}', [IssuedReturnController::class, 'returnItem'])->name('issued.return');
     Route::post('/chatbot/message', [ChatbotController::class, 'chat'])->name('chatbot.message');
+
+    Route::get('/items/scan', [FormRecordsItemScanController::class, 'scan'])->name('items.scan');
     
     Route::post('/notifications/{id}/read', [NotificationController::class, 'MarkAsRead'])->name('notifications.read');
 

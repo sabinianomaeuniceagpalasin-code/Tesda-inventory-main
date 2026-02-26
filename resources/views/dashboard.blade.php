@@ -819,20 +819,14 @@
                   <div class="full-width" style="position:relative;">
                     <label>Student Name</label>
                     <input type="text" id="studentSearch" name="student_name" autocomplete="off"
-                      placeholder="Type student name..." required>
+                          placeholder="Type student name..." required>
                     <div id="studentSuggestion" class="suggestion-box"></div>
-                  </div>
-
-                  <div class="full-width">
-                    <label>Search or Scan Serial Number</label>
-                    <input type="text" id="serialSearchFilter" placeholder="Enter or Scan Serial..." autocomplete="off"
-                      style="border: 2px solid #004aad;">
                   </div>
 
                   <div class="full-width">
                     <label>Reference No.</label>
                     <input type="text" id="referenceNo" name="reference_no" value="[ Auto-generated ]" disabled
-                      style="background-color: #f0f0f0; cursor: not-allowed; font-weight: bold; color: #555;">
+                          style="background-color: #f0f0f0; cursor: not-allowed; font-weight: bold; color: #555;">
                   </div>
 
                   <div class="full-width">
@@ -845,21 +839,25 @@
                     <input type="date" id="returnDate" name="return_date">
                   </div>
 
+                  <!-- ✅ SCAN AREA -->
                   <div class="full-width" style="margin-top: 10px;">
-                    <label>Available Items (Checked items will be issued)</label>
-                    <div id="serialTableContainer"
-                      style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 5px; border-radius: 5px;">
-                      <table style="width: 100%; font-size: 13px;">
-                        <thead style="position: sticky; top: 0; background: #f9f9f9;">
-                          <tr>
-                            <th>Select</th>
-                            <th>Serial No.</th>
-                            <th>Item Name</th>
-                          </tr>
-                        </thead>
-                        <tbody id="serialItemsBody">
-                        </tbody>
-                      </table>
+                    <label>Scan or Enter Serial / QR / Barcode</label>
+
+                    <div class="scan-input-wrap">
+                      <input
+                        type="text"
+                        id="serialScannerInput"
+                        placeholder="Scan here then press Enter..."
+                        autocomplete="off"
+                      />
+                      <button type="button" class="scan-add-btn" onclick="handleScanAdd()">Add</button>
+                    </div>
+
+                    <div id="scanMessage" class="scan-message" style="display:none;"></div>
+
+                    <div style="margin-top: 10px;">
+                      <label>Scanned Items</label>
+                      <div id="scannedItems" class="scanned-items"></div>
                     </div>
                   </div>
 
@@ -1187,6 +1185,8 @@
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <script src="{{ asset('js/qr-module.js') }}"></script>
   <script src="{{ asset('js/scanner.js') }}"></script>
+  <script src="{{ asset('js/form-records-scanner.js') }}"></script>
+
 
 </body>
 

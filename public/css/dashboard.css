@@ -2912,3 +2912,86 @@ td {
     background-color: #003380;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+
+.scan-input-wrap{
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+
+#serialScannerInput{
+  width:100%;
+  font-size:18px;
+  padding:14px 16px;
+  border:2px solid #004aad;
+  border-radius:10px;
+  outline:none;
+}
+
+#serialScannerInput:focus{
+  box-shadow: 0 0 0 3px rgba(0,74,173,0.15);
+}
+
+.scan-add-btn{
+  border:none;
+  background:#004aad;
+  color:#fff;
+  padding:12px 18px;
+  border-radius:10px;
+  font-weight:700;
+  cursor:pointer;
+  white-space:nowrap;
+}
+
+.scan-add-btn:hover{
+  background:#003a88;
+}
+
+.scan-message{
+  margin-top:10px;
+  padding:10px 12px;
+  border-radius:10px;
+  font-weight:600;
+  font-size:14px;
+}
+
+.scan-message.ok{ background:#e9f7ef; color:#1e7e34; border:1px solid #b7ebc6; }
+.scan-message.err{ background:#fdecea; color:#b02a37; border:1px solid #f5c2c7; }
+
+.scanned-items{
+  min-height:44px;
+  padding:10px;
+  border:1px solid #ccc;
+  border-radius:10px;
+  background:#f9f9f9;
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+.scanned-chip{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  background:#d0e6ff;
+  border-radius:999px;
+  padding:8px 10px;
+  font-size:13px;
+}
+
+.scanned-chip .meta{
+  display:flex;
+  flex-direction:column;
+  line-height:1.1;
+}
+
+.scanned-chip .meta small{
+  opacity:0.8;
+}
+
+.scanned-chip .remove{
+  cursor:pointer;
+  font-weight:900;
+  color:#c00;
+  padding:0 6px;
+}
