@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
+
 class ItemApprovalRequestController extends Controller
 {
     public function store(Request $request)
@@ -19,37 +20,57 @@ class ItemApprovalRequestController extends Controller
         DB::beginTransaction();
 
         try {
-            // 🔹 GROUP ITEMS (name + type)
+
+            // ===============================
+            // GROUP ITEMS (name + type)
+            // ===============================
             $groups = [];
 
             foreach ($request->items as $item) {
+
                 $key = $item['name'] . '|' . $item['type'];
 
                 if (!isset($groups[$key])) {
                     $groups[$key] = [
-                        'item_name'     => $item['name'],
-                        'request_type'  => $item['type'],
-                        'serial_start'  => $item['serial'], // first serial
-                        'quantity'      => 0,
+                        'item_name'    => $item['name'],
+                        'request_type' => $item['type'],
+                        'serials'      => [],
                     ];
                 }
 
-                $groups[$key]['quantity']++;
+                // Collect ALL serial numbers
+                $groups[$key]['serials'][] = $item['serial'];
             }
 
-            // 🔹 INSERT ONE ROW PER GROUP
+            // ===============================
+            // INSERT ONE ROW PER GROUP
+            // ===============================
             foreach ($groups as $group) {
-                DB::table('item_approval_requests')->insert([
-                    'item_name'     => $group['item_name'],
-                    'serial_number' => $group['serial_start'],
-                    'quantity'      => $group['quantity'],
-                    'request_type'  => $group['request_type'],
-                    'status'        => 'pending',
-                    'requested_at'  => now(),
-                    'created_at'    => now(),
-                    'updated_at'    => now(),
-                ]);
-            }
+            $itemRequestId = DB::table('item_approval_requests')->insertGetId([
+                'item_name'     => $group['item_name'],
+                'serial_number' => implode(', ', $group['serials']),
+                'quantity'      => count($group['serials']),
+                'request_type'  => $group['request_type'],
+                'status'        => 'pending',
+                'requested_at'  => now(),
+                'created_at'    => now(),
+                'updated_at'    => now(),
+            ]);
+
+            // Insert notification properly
+            DB::table('notifications')->insert([
+                'item_id'    => $itemRequestId,          // ✅ required
+                'user_id'    => auth()->id(),            // ✅ who sent it
+                'title'      => 'Item Needs Approval',
+                'message'    => $group['item_name'] . 
+                                ' (' . count($group['serials']) . ') request submitted.',
+                'type'       => 'approval',
+                'role'       => 'Admin',
+                'is_read'    => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
 
             DB::commit();
 
@@ -59,11 +80,13 @@ class ItemApprovalRequestController extends Controller
             ]);
 
         } catch (\Throwable $e) {
+
             DB::rollBack();
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to submit approval request'
+                'message' => 'Failed to submit approval request',
+                'error'   => $e->getMessage()
             ], 500);
         }
     }

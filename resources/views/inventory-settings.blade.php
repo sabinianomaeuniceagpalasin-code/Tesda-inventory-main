@@ -3,6 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inventory Settings - TESDA</title>
 
@@ -198,27 +199,27 @@
                                     <h6 class="fw-semibold small mb-2">Access Scope</h6>
                                     <div class="small">
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="pc1" checked disabled>
+                                            <input class="form-check-input" type="checkbox" id="pc1" checked>
                                             <label class="form-check-label" for="pc1">View dashboard</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="pc2" checked disabled>
+                                            <input class="form-check-input" type="checkbox" id="pc2" checked>
                                             <label class="form-check-label" for="pc2">Manage inventory items</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="pc3" checked disabled>
+                                            <input class="form-check-input" type="checkbox" id="pc3" checked>
                                             <label class="form-check-label" for="pc3">Mark items</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="pc4" checked disabled>
+                                            <input class="form-check-input" type="checkbox" id="pc4" checked>
                                             <label class="form-check-label" for="pc4">Generate ICS/PAR forms</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="pc5" checked disabled>
+                                            <input class="form-check-input" type="checkbox" id="pc5" checked>
                                             <label class="form-check-label" for="pc5">Update repair status</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="pc6" checked disabled>
+                                            <input class="form-check-input" type="checkbox" id="pc6" checked>
                                             <label class="form-check-label" for="pc6">Export inventory reports</label>
                                         </div>
                                     </div>
@@ -239,23 +240,23 @@
                                     <h6 class="fw-semibold small mb-2">Access Scope</h6>
                                     <div class="small">
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="re1" checked disabled>
+                                            <input class="form-check-input" type="checkbox" id="re1" checked>
                                             <label class="form-check-label" for="re1">View dashboard summary</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="re2" checked disabled>
+                                            <input class="form-check-input" type="checkbox" id="re2" checked>
                                             <label class="form-check-label" for="re2">View inventory (read-only)</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="re3" checked disabled>
+                                            <input class="form-check-input" type="checkbox" id="re3" checked>
                                             <label class="form-check-label" for="re3">View issued items</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="re4" checked disabled>
+                                            <input class="form-check-input" type="checkbox" id="re4" checked>
                                             <label class="form-check-label" for="re4">View ICS/PAR records</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="re5" checked disabled>
+                                            <input class="form-check-input" type="checkbox" id="re5" checked>
                                             <label class="form-check-label" for="re5">Download or print form copy</label>
                                         </div>
                                     </div>
@@ -290,14 +291,21 @@
                                             <td>{{ $user->created_at->format('F d, Y') }}</td>
                                             <td>
                                                 <div class="d-flex justify-content-center align-items-center gap-2">
-                                                    <form action="{{ route('user.approve', $user->user_id) }}" method="POST" style="display:inline;">
+
+                                                    <form action="{{ route('user.approve', $user->user_id) }}" method="POST" class="approve-user-form">
                                                         @csrf
-                                                        <button type="submit" class="btn action-btn btn-approve"><i>✔</i></button>
+                                                        <button type="button" class="btn action-btn btn-approve approve-user">
+                                                            <i>✔</i>
+                                                        </button>
                                                     </form>
-                                                    <form action="{{ route('user.reject', $user->user_id) }}" method="POST" style="display:inline;">
+
+                                                    <form action="{{ route('user.reject', $user->user_id) }}" method="POST" class="reject-user-form">
                                                         @csrf
-                                                        <button type="submit" class="btn action-btn btn-reject"><i>✖</i></button>
+                                                        <button type="button" class="btn action-btn btn-reject reject-user">
+                                                            <i>✖</i>
+                                                        </button>
                                                     </form>
+
                                                 </div>
                                             </td>
                                         </tr>
@@ -331,45 +339,72 @@
             </div>
 
             <!-- Tabs -->
-            <div class="px-4 pt-3">
-                <ul class="nav nav-tabs" id="approvalTabs">
-                    <li class="nav-item">
-                        <button class="nav-link active">QR Code Requests</button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link">Bar Code Requests</button>
-                    </li>
-                </ul>
-            </div>
+            <ul class="nav nav-tabs" id="approvalTabs" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active" id="qr-tab" data-bs-toggle="tab" data-bs-target="#qrRequests" type="button">
+                        QR Code Requests
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="barcode-tab" data-bs-toggle="tab" data-bs-target="#barcodeRequests" type="button">
+                        Bar Code Requests
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archiveRequests" type="button">
+                        Item Approval Archive
+                    </button>
+                </li>
+            </ul>
 
-            <!-- Modal Body -->
+            <!-- Modal Body / Tab Content -->
             <div class="modal-body px-4">
-
-                
-
                 <div class="tab-content mt-3">
 
                     <!-- QR Code Requests Tab -->
-                    <div class="tab-pane fade show active" id="qrRequests">
+                    <div class="tab-pane fade show active" id="qrRequests" role="tabpanel">
                         <div class="alert alert-warning small mb-3">
                             {{ $itemRequests->where('request_type', 'qr')->count() }} new QR request(s) pending approval
                         </div>
+
+                        <!-- QR FILTERS -->
+                            <div class="row g-3 mb-3 align-items-end">
+
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">From</label>
+                                    <input type="date" class="form-control form-control-sm" id="qrFromDate">
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-semibold">To</label>
+                                    <input type="date" class="form-control form-control-sm" id="qrToDate">
+                                </div>
+
+                                <div class="col-md-2">
+                                    <button class="btn btn-outline-secondary btn-sm w-100" id="qrResetBtn">
+                                      <i class="bi bi-arrow-counterclockwise"></i>Reset
+                                    </button>
+                                </div>
+
+                            </div>
+
+
                         @foreach ($itemRequests->where('request_type', 'qr') as $request)
                             @php
-                                preg_match('/^(.+?)(\d+)$/', $request->serial_number, $m);
-                                $prefix = $m[1];
-                                $start  = (int)$m[2];
+                                $dateValue = \Carbon\Carbon::parse($request->requested_at)->format('Y-m-d');
                             @endphp
-                            <div class="approval-card mb-3">
+
+                            <div class="approval-card mb-3 qr-card" data-date="{{ $dateValue }}">
                                 <div class="row align-items-center">
                                     <div class="col-md-6">
                                         <div class="fw-semibold">Item: {{ $request->item_name }}</div>
+                                        @php
+                                            $serials = array_map('trim', explode(',', $request->serial_number));
+                                            $firstSerial = $serials[0] ?? '';
+                                            $lastSerial  = end($serials);
+                                        @endphp
                                         <div class="text-muted small">
-                                            SN:
-                                            {{ $request->quantity > 1
-                                                ? $request->serial_number . ' - ' . $prefix . str_pad($start + $request->quantity - 1, strlen($m[2]), '0', STR_PAD_LEFT)
-                                                : $request->serial_number
-                                            }}
+                                            SN: {{ count($serials) > 1 ? "$firstSerial - $lastSerial" : $firstSerial }}
                                         </div>
                                     </div>
                                     <div class="col-md-3 text-center">
@@ -379,19 +414,28 @@
                                         </div>
                                     </div>
                                     <div class="col-md-3 text-center d-flex justify-content-center gap-2 flex-wrap">
-                                        <button type="button" class="btn btn-outline-primary btn-sm"
+                                        <!-- View Button -->
+                                        <button type="button"
+                                                class="btn btn-outline-primary btn-sm"
                                                 data-bs-toggle="modal"
                                                 data-bs-target="#qrModal-{{ $request->request_id }}">
                                             View QR
                                         </button>
-                                        <form method="POST" action="{{ route('item.approve', $request->request_id) }}">
-                                            @csrf
-                                            <button class="btn btn-success btn-sm">Approve</button>
-                                        </form>
-                                        <form method="POST" action="{{ route('item.reject', $request->request_id) }}">
-                                            @csrf
-                                            <button class="btn btn-danger btn-sm">Decline</button>
-                                        </form>
+
+                                        <!-- Approve Button -->
+                                        <button type="button"
+                                                class="btn btn-success btn-sm approve-item"
+                                                data-id="{{ $request->request_id }}">
+                                            Approve
+                                        </button>
+
+                                        <!-- Reject Button -->
+                                        <button type="button"
+                                                class="btn btn-danger btn-sm reject-item"
+                                                data-id="{{ $request->request_id }}">
+                                            Decline
+                                        </button>
+
                                     </div>
                                 </div>
                             </div>
@@ -399,26 +443,49 @@
                     </div>
 
                     <!-- Barcode Requests Tab -->
-                    <div class="tab-pane fade" id="barcodeRequests">
+                    <div class="tab-pane fade" id="barcodeRequests" role="tabpanel">
                         <div class="alert alert-warning small mb-3">
                             {{ $itemRequests->where('request_type', 'barcode')->count() }} new Barcode request(s) pending approval
                         </div>
+
+                        <!-- BARCODE FILTERS -->
+                    <div class="row g-3 mb-3 align-items-end">
+
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">From</label>
+                            <input type="date" class="form-control form-control-sm" id="barcodeFromDate">
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">To</label>
+                            <input type="date" class="form-control form-control-sm" id="barcodeToDate">
+                        </div>
+
+                        <div class="col-md-2">
+                            <button class="btn btn-outline-secondary btn-sm w-100" id="barcodeResetBtn">
+                                <i class="bi bi-arrow-counterclockwise"></i> Reset
+                            </button>
+                        </div>
+
+                    </div>
+
+
                         @foreach ($itemRequests->where('request_type', 'barcode') as $request)
                             @php
-                                preg_match('/^(.+?)(\d+)$/', $request->serial_number, $m);
-                                $prefix = $m[1];
-                                $start  = (int)$m[2];
+                                $dateValue = \Carbon\Carbon::parse($request->requested_at)->format('Y-m-d');
                             @endphp
-                            <div class="approval-card mb-3">
+
+                            <div class="approval-card mb-3 qr-card" data-date="{{ $dateValue }}">
                                 <div class="row align-items-center">
                                     <div class="col-md-6">
                                         <div class="fw-semibold">Item: {{ $request->item_name }}</div>
+                                        @php
+                                            $serials = array_map('trim', explode(',', $request->serial_number));
+                                            $firstSerial = $serials[0] ?? '';
+                                            $lastSerial  = end($serials);
+                                        @endphp
                                         <div class="text-muted small">
-                                            SN:
-                                            {{ $request->quantity > 1
-                                                ? $request->serial_number . ' - ' . $prefix . str_pad($start + $request->quantity - 1, strlen($m[2]), '0', STR_PAD_LEFT)
-                                                : $request->serial_number
-                                            }}
+                                            SN: {{ count($serials) > 1 ? "$firstSerial - $lastSerial" : $firstSerial }}
                                         </div>
                                     </div>
                                     <div class="col-md-3 text-center">
@@ -447,11 +514,121 @@
                         @endforeach
                     </div>
 
+                    <!-- Archive Tab -->
+                <div class="tab-pane fade" id="archiveRequests" role="tabpanel">
+
+                    <!-- FILTER SECTION -->
+                <div class="row g-3 mb-3 mt-2 align-items-end">
+
+                    <!-- Status Dropdown -->
+                    <div class="col-md-3" style="margin-top: -50px;">
+                        <label class="form-label fw-semibold small">Filter by Status</label>
+                        <select class="form-select form-select-sm" id="archiveStatusFilter">
+                            <option value="all">Show All</option>
+                            <option value="approved">Approved</option>
+                            <option value="rejected">Rejected</option>
+                            <option value="pending">Pending</option>
+                        </select>
+                    </div>
+
+                    <!-- Specific Date -->
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold small">Specific Date</label>
+                        <input type="date" class="form-control form-control-sm" id="archiveSpecificDate">
+                    </div>
+
+                    <!-- From Date -->
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold small">From</label>
+                        <input type="date" class="form-control form-control-sm" id="archiveFromDate">
+                    </div>
+
+                    <!-- To Date -->
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold small">To</label>
+                        <input type="date" class="form-control form-control-sm" id="archiveToDate">
+                    </div>
+
+                    <!-- Reset Button -->
+                    <div class="col-md-2">
+                        <button class="btn btn-outline-secondary btn-sm w-100" id="archiveResetBtn">
+                            <i class="bi bi-arrow-counterclockwise"></i> Reset Filters
+                        </button>
+                    </div>
+
+                </div>
+
+                    @if($archiveRequests->count() > 0)
+                        <table class="table table-bordered table-striped mt-2" id="archiveTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Item Name</th>
+                                    <th>Serial Number</th>
+                                    <th>Quantity</th>
+                                    <th>Request Type</th>
+                                    <th>Requested Date</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($archiveRequests as $request)
+                                    @php
+                                        $serials = array_map('trim', explode(',', $request->serial_number));
+                                        $first = $serials[0] ?? '';
+                                        $last = end($serials);
+                                        $serialDisplay = count($serials) > 1 ? "$first - $last" : $first;
+                                        $dateValue = \Carbon\Carbon::parse($request->requested_at)->format('Y-m-d');
+                                    @endphp
+                                    <tr 
+                                        data-status="{{ $request->status }}"
+                                        data-date="{{ $dateValue }}"
+                                    >
+                                        <td>{{ $request->item_name }}</td>
+                                        <td>{{ $serialDisplay }}</td>
+                                        <td>{{ $request->quantity }}</td>
+                                        <td>{{ ucfirst($request->request_type) }}</td>
+                                        <td>{{ \Carbon\Carbon::parse($request->requested_at)->format('d M Y') }}</td>
+                                        <td>
+                                            @if($request->status == 'approved')
+                                                <span class="badge bg-success">Approved</span>
+                                            @elseif($request->status == 'rejected')
+                                                <span class="badge bg-danger">Rejected</span>
+                                            @else
+                                                <span class="badge bg-secondary">Pending</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if($request->status == 'approved')
+                                                <button 
+                                                    class="btn btn-sm btn-primary openPrintModal"
+                                                    data-item="{{ $request->item_name }}"
+                                                    data-serials="{{ $request->serial_number }}"
+                                                    data-type="{{ $request->request_type }}"
+                                                >
+                                                    <i class="bi bi-printer"></i> Print
+                                                </button>
+                                            @else
+                                                <span class="text-muted">—</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    @else
+                        <div class="text-center text-muted mt-3">No requests in archive.</div>
+                    @endif
+                </div>
+
+
                 </div> <!-- tab-content -->
             </div> <!-- modal-body -->
         </div>
     </div>
 </div>
+
+
 
 <!-- QR Modals -->
 @foreach ($itemRequests->where('request_type', 'qr') as $request)
@@ -468,15 +645,24 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body d-flex flex-wrap gap-3">
-                    @for ($i = 0; $i < $request->quantity; $i++)
-                        @php
-                            $serial = $prefix . str_pad($start + $i, strlen($m[2]), '0', STR_PAD_LEFT);
-                        @endphp
-                        <div class="text-center border rounded p-2" style="width:120px">
-                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data={{ $serial }}" alt="QR {{ $serial }}">
-                            <div class="small mt-1">{{ $serial }}</div>
-                        </div>
-                    @endfor
+                   @php
+                    $serials = array_map('trim', explode(',', $request->serial_number));
+                    @endphp
+                    <div class="modal-body d-flex flex-wrap gap-3">
+                        @foreach ($serials as $serial)
+                            <div class="text-center border rounded p-2" style="width:120px">
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data={{ urlencode($serial) }}" alt="QR {{ $serial }}">
+                                <div class="small mt-1">{{ $serial }}</div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-start">
+                    <button type="button"
+                            class="btn btn-secondary btn-sm"
+                            onclick="returnToApproval('qrModal-{{ $request->request_id }}', 'qrRequests')">
+                        ← Back
+                    </button>
                 </div>
             </div>
         </div>
@@ -494,44 +680,77 @@
         <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Barcodes — {{ $request->item_name }}</h5>
+                    <h5 class="modal-title">Barcodes — {{ $request->item_name }}</h5> 
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body d-flex flex-wrap gap-3">
-                    @for ($i = 0; $i < $request->quantity; $i++)
-                        @php
-                            $serial = $prefix . str_pad($start + $i, strlen($m[2]), '0', STR_PAD_LEFT);
-                        @endphp
-                        <div class="text-center border rounded p-2" style="width:120px">
-                            <img src="https://barcode.tec-it.com/barcode.ashx?data={{ $serial }}&code=Code128&multiplebarcodes=false&translate-esc=false" 
+                    @php
+                        $serials = array_map('trim', explode(',', $request->serial_number));
+                    @endphp
+                    <div class="modal-body d-flex flex-wrap gap-3">
+                        @foreach ($serials as $serial)
+                            <div class="text-center border rounded p-2" style="width:120px">
+                                <img src="https://barcode.tec-it.com/barcode.ashx?data={{ urlencode($serial) }}&code=Code128&multiplebarcodes=false&translate-esc=false" 
                                     alt="Barcode {{ $serial }}"
                                     style="max-width:100%; height:auto;">
-                            <div class="small mt-1">{{ $serial }}</div>
-                        </div>
-                    @endfor
+                                <div class="small mt-1">{{ $serial }}</div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-start">
+                    <button type="button"
+                            class="btn btn-secondary btn-sm"
+                            onclick="returnToApproval('barcodeModal-{{ $request->request_id }}', 'barcodeRequests')">
+                        ← Back
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 @endforeach
 
+<div class="modal fade" id="printPreviewModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">QR Print Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <div id="printArea" class="print-bond p-3">
+                    <div class="d-flex flex-wrap gap-3" id="qrContainer"></div>
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button class="btn btn-success" onclick="printPreview()">Print</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+    <!-- SWEET ALERT -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Custom JS -->
     <script src="inventory-settings.js"></script>
-    <!-- JAVASCRIPT FOR THE CLOSING MODAL OF QR CODE GO BACK TO LIST OF ITEM REQUESTS -->
-     <script>
-        function backToList(requestId) {
-            // Hide the QR modal
-            const qrModal = bootstrap.Modal.getInstance(document.getElementById('qrModal-' + requestId));
-            qrModal.hide();
+    <script src="{{ asset('js/item-approval-request-modal.js') }}"></script>
+    <script src="{{ asset('js/inventory-settings-user-approval.js') }}"></script>
+    <script src="{{ asset('js/inventory-settings-item-approve-reject.js') }}"></script>
+    <script src="{{ asset('js/archive-filters.js') }}"></script>
+    <script src="{{ asset('js/inventory-settings-print.js') }}"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
-            // Show the main Item Approval modal
-            const mainModal = new bootstrap.Modal(document.getElementById('itemApprovalModal'));
-            mainModal.show();
-        }
-    </script>
-    <script src="{{ asset('js/inventory-settings-switch-modal.js') }}"></script>
 
 
 </body>

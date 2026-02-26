@@ -38,7 +38,26 @@ class InventorySettingsController extends Controller
             ->orderBy('requested_at', 'desc')
             ->get();
 
-        return view('Inventory-settings', compact('users', 'itemRequests'));
+            // ===============================
+            // ARCHIVE REQUESTS
+            // ===============================
+            $archiveRequests = DB::table('item_approval_requests')
+                ->select(
+                    'item_name',
+                    'serial_number',
+                    DB::raw('SUM(quantity) as quantity'),
+                    DB::raw('MIN(request_id) as request_id'),
+                    'request_type',
+                    'requested_at',
+                    'status'
+                )
+                ->whereIn('status', ['approved', 'rejected', 'pending'])
+                ->groupBy('item_name', 'serial_number', 'request_type', 'requested_at', 'status')
+                ->orderBy('requested_at', 'desc')
+                ->get();
+
+
+        return view('Inventory-settings', compact('users', 'itemRequests', 'archiveRequests'));
     }
 
     /* ================================
@@ -76,14 +95,15 @@ class InventorySettingsController extends Controller
         DB::table('item_approval_requests')
             ->where('request_id', $id)
             ->update([
-                'status'       => 'approved',
-                'approved_at'  => now(),
-                'updated_at'   => now(),
+                'status'      => 'approved',
+                'approved_at' => now(),
+                'updated_at'  => now(),
             ]);
 
-        // OPTIONAL: generate QR code / inventory entry here
-
-        return back()->with('success', 'Item request approved.');
+        return response()->json([
+            'success' => true,
+            'message' => 'Item request approved.'
+        ]);
     }
 
     public function rejectItem($id)
@@ -96,6 +116,9 @@ class InventorySettingsController extends Controller
                 'updated_at'   => now(),
             ]);
 
-        return back()->with('success', 'Item request rejected.');
+        return response()->json([
+            'success' => true,
+            'message' => 'Item request rejected.'
+        ]);
     }
 }

@@ -16,7 +16,8 @@ class DashboardController extends Controller
         $maintenanceData = $this->getMaintenanceRecords();
         $maintenanceRecords = $maintenanceData['records'];
         $maintenanceCounts = $maintenanceData['counts'];
-        $notifications = Notification::latest()->get();
+        $notifications = Notification::whereIn('role', ['All', auth()->user()->role])->orderByDesc('created_at')->get();
+        $unreadCount = Notification::whereIn('role', ['All', auth()->user()->role])->where('is_read', 0) ->count();
         $damageData = $this->getDamageReports();
         $items = Item::orderBy('item_name')->get();
         $damageReports = $damageData['damageReports'];
@@ -170,6 +171,7 @@ class DashboardController extends Controller
             'usageAlerts',
             'highRiskItems',
             'notifications',
+            'unreadCount',
             'damageReports',
             'damageCounts',
             'items',

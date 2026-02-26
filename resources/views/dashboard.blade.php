@@ -930,10 +930,6 @@
 
               <!-- FOOTER -->
               <div class="qr-footer">
-                <span class="approval-note">
-                  Items in queue require admin approval
-                </span>
-
                 <button id="send-request-btn" disabled>
                   Send for Approval
                 </button>
@@ -942,6 +938,7 @@
             </div>
           </div>
         </div>
+        
   </div>
   <!-- ===============================
      ISSUED ITEMS MODAL

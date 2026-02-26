@@ -55,15 +55,18 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('/forms/{id}/update-status', [DashboardController::class, 'updateStatus'])->name('forms.updateStatus');
     Route::post('/issued/return/{id}', [IssuedReturnController::class, 'returnItem'])->name('issued.return');
     Route::post('/chatbot/message', [ChatbotController::class, 'chat'])->name('chatbot.message');
+    
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'MarkAsRead'])->name('notifications.read');
 
     Route::post('/item-approval/request', [ItemApprovalRequestController::class, 'store'])->name('item-approval.request');
+
+    Route::post('/item-approval/{request_id}/approve', [InventorySettingsController::class, 'approveItem'])->name('item.approve');
+    Route::post('/item-approval/{request_id}/reject', [InventorySettingsController::class, 'rejectItem'])->name('item.reject');
 
     Route::middleware(['role:Admin'])->group(function () {
 
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-
-        Route::post('/item-approval/{request_id}/approve', [InventorySettingsController::class, 'approveItem'])->name('item.approve');
-        Route::post('/item-approval/{request_id}/reject', [InventorySettingsController::class, 'rejectItem'])->name('item.reject');
+        
 
         Route::get('/dashboard/summary/{type}', [DashboardController::class, 'getDashboardSummary']);
         Route::get('/dashboard/inventory', [DashboardController::class, 'inventory'])->name('dashboard.inventory');

@@ -40,7 +40,7 @@ if (scannerInput) {
                     
                     itemRow.innerHTML = `
                         <span>
-                            <b style="color: #2c3e50;">${data.item.name}</b><br>
+                            <b style="color: #2c3e50;">${data.item.item_name}</b><br>
                             <small style="color: #7f8c8d;">SN: ${data.item.serial_no} | Prop: ${data.item.property_no}</small>
                         </span>
                         <span style="color: #27ae60; font-weight: bold; font-size: 0.85em;">✓ ADDED</span>
