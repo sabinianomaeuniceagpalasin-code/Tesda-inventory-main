@@ -18,6 +18,7 @@ use App\Http\Controllers\IssuedDamageController;
 use App\Http\Controllers\SerialController;
 use App\Http\Controllers\ItemApprovalRequestController;
 use App\Http\Controllers\FormRecordsItemScanController;
+use App\Http\Controllers\ProfileController;
 
 Route::get('/', fn() => redirect()->route('login'));
 
@@ -70,6 +71,11 @@ Route::middleware(['auth'])->group(function () {
 
     Route::post('/item-approval/{request_id}/approve', [InventorySettingsController::class, 'approveItem'])->name('item.approve');
     Route::post('/item-approval/{request_id}/reject', [InventorySettingsController::class, 'rejectItem'])->name('item.reject');
+
+    Route::get('/account-settings', [ProfileController::class, 'edit'])->name('profile-settings');
+    Route::post('/account-settings', [ProfileController::class, 'update'])->name('profile.update');
+
+    Route::get('/login-history', [ProfileController::class, 'loginHistory'])->name('login-history');
 
     Route::middleware(['role:Admin'])->group(function () {
 
