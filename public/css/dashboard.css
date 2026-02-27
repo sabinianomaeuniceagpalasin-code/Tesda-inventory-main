@@ -655,7 +655,8 @@ td {
 }
 
 .left-buttons button,
-.right-buttons button {
+.right-buttons button,
+.filter-select {
     border: 1px solid #004aad;
     background-color: white;
     color: #004aad;
@@ -666,7 +667,8 @@ td {
 }
 
 .left-buttons button:hover,
-.right-buttons button:hover {
+.right-buttons button:hover,
+.filter-select:hover {
     background-color: #004aad;
     color: white;
 }
@@ -2994,4 +2996,16 @@ td {
   font-weight:900;
   color:#c00;
   padding:0 6px;
+}
+
+.table-search {
+  margin-bottom: 10px;
+}
+
+.table-search input {
+  width: 300px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 14px;
 }

@@ -50,22 +50,23 @@ document.addEventListener("click", function (e) {
     }
 });
 
-document.addEventListener("DOMContentLoaded", function () {
-    document.addEventListener("click", function (e) {
-        const cell = e.target.closest(".serial-cell");
-        if (!cell) return;
+// ✅ Works even after table is replaced by AJAX
+document.addEventListener("click", function (e) {
+  const row = e.target.closest("#inventoryTable tbody tr.inventory-row");
+  if (!row) return;
 
-        const data = cell.dataset;
-        const itemObj = {
-            item_name: data.item,
-            serial_no: data.serial,
-            source_of_fund: data.fund,
-            status: data.status,
-            date_acquired: data.date
-        };
+  // Prevent opening modal when clicking buttons
+  if (e.target.closest("button")) return;
 
-        window.showItemDetails(itemObj);
-    });
+  const raw = row.getAttribute("data-item");
+  if (!raw) return;
+
+  try {
+    const item = JSON.parse(raw);
+    window.showItemDetails(item);
+  } catch (err) {
+    console.error("Failed to parse data-item:", raw, err);
+  }
 });
 
 window.showUsageHistory = function () {

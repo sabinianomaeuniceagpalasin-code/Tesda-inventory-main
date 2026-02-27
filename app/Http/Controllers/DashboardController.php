@@ -227,43 +227,59 @@ class DashboardController extends Controller
         return response()->json(['html' => $html]);
     }
 
-    public function getInventoryTable()
-    {
-        $inventory = DB::table('items')
-            ->select('serial_no', 'item_name', 'source_of_fund', 'classification', 'date_acquired', 'status')
-            ->orderBy('item_name', 'asc')
-            ->limit(10)
-            ->get();
+    public function getInventoryTable(Request $request)
+        {
+            $status = $request->query('status', 'All');
 
-        $html = '';
+            $query = DB::table('items')
+                ->select('serial_no', 'item_name', 'source_of_fund', 'classification', 'date_acquired', 'status')
+                ->orderBy('item_name', 'asc');
 
-        foreach ($inventory as $item) {
-            if ($item->status === 'Available') $statusClass = 'text-green';
-            elseif ($item->status === 'For Repair') $statusClass = 'text-brown';
-            elseif ($item->status === 'Issued') $statusClass = 'text-blue';
-            elseif ($item->status === 'Damaged' || $item->status === 'Lost') $statusClass = 'text-red';
-            else $statusClass = '';
+            // Map "Missing" filter to your DB value.
+            // If your DB uses 'Lost', keep 'Lost'.
+            // If your DB uses 'Missing', change to 'Missing'.
+            if ($status !== 'All') {
+                if ($status === 'Missing') {
+                    $query->whereIn('status', ['Lost', 'Missing']);
+                } else {
+                    $query->where('status', $status);
+                }
+            }
 
-            $dateAcquired = $item->date_acquired ? Carbon::parse($item->date_acquired)->format('F d, Y') : '-';
+            $inventory = $query->limit(10)->get();
 
-            $html .= "
-                <tr>
-                    <td>{$item->serial_no}</td>
-                    <td>{$item->item_name}</td>
-                    <td>{$item->source_of_fund}</td>
-                    <td>{$item->classification}</td>
-                    <td>{$dateAcquired}</td>
-                    <td><span class='{$statusClass}'>{$item->status}</span></td>
-                    <td class='action-buttons'>
-                        <button class='edit-btn'>✏️</button>
-                        <button class='delete-btn'>🗑️</button>
-                    </td>
-                </tr>
-            ";
+            $html = '';
+
+            foreach ($inventory as $item) {
+                if ($item->status === 'Available') $statusClass = 'text-green';
+                elseif ($item->status === 'For Repair') $statusClass = 'text-brown';
+                elseif ($item->status === 'Issued') $statusClass = 'text-blue';
+                elseif (in_array($item->status, ['Unserviceable', 'Damaged', 'Lost', 'Missing'])) $statusClass = 'text-red';
+                else $statusClass = '';
+
+                $dateAcquired = $item->date_acquired ? Carbon::parse($item->date_acquired)->format('F d, Y') : '-';
+
+                // ✅ Encode item into attribute safely
+                $itemJson = htmlspecialchars(json_encode($item), ENT_QUOTES, 'UTF-8');
+
+                $html .= "
+                    <tr class='inventory-row' data-item='{$itemJson}' style='cursor:pointer;'>
+                        <td>{$item->serial_no}</td>
+                        <td>{$item->item_name}</td>
+                        <td>{$item->source_of_fund}</td>
+                        <td>{$item->classification}</td>
+                        <td>{$dateAcquired}</td>
+                        <td><span class='{$statusClass}'>{$item->status}</span></td>
+                        <td class='action-buttons'>
+                            <button class='edit-btn' onclick='event.stopPropagation();'>✏️</button>
+                            <button class='delete-btn' onclick='event.stopPropagation();'>🗑️</button>
+                        </td>
+                    </tr>
+                ";
+            }
+
+            return response()->json(['html' => $html]);
         }
-
-        return response()->json(['html' => $html]);
-    }
 
     public function getListOfAllItemsTable()
     {

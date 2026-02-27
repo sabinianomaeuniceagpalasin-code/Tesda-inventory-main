@@ -9,7 +9,8 @@ class IssuedLog extends Model
     protected $table = 'issuedlog';
     protected $primaryKey = 'issue_id';
     protected $fillable = [
-        'student_id',
+        'borrower_name',
+        'issued_by',
         'serial_no',
         'property_no',
         'form_type',

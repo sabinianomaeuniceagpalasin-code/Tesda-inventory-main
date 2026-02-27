@@ -1,6 +1,8 @@
 @php
   $user = auth()->user();
   $isAdmin = $user && $user->role === 'Admin';
+  $isPropertyCustodian = $user && $user->role === 'Property Custodian';
+  $isRegularEmployee = $user && $user->role === 'Regular Employee';
 @endphp
 
 <!DOCTYPE html>
@@ -57,19 +59,19 @@
           <img src="{{ asset('images/form.png') }}" class="menu-icon">
           Damage Report
         </a>
+        
+      @if($isAdmin || $isPropertyCustodian)
+        <a href="#" data-target="reports">
+          <img src="{{ asset('images/maintenance.png') }}" class="menu-icon">
+          Maintenance
+        </a>
 
-        <!-- ADMIN ONLY -->
-        @if($isAdmin)
-          <a href="#" data-target="reports">
-            <img src="{{ asset('images/maintenance.png') }}" class="menu-icon">
-            Maintenance
-          </a>
-
-          <a href="#" data-target="generate">
-            <img src="{{ asset('images/maintenance.png') }}" class="menu-icon">
-            QR Generator
-          </a>
-        @endif
+        <a href="#" data-target="generate">
+          <img src="{{ asset('images/maintenance.png') }}" class="menu-icon">
+          QR Generator
+        </a>
+      @endif
+        
 
       </nav>
 
@@ -218,9 +220,15 @@
 
           <div class="inventory-controls">
             <div class="left-buttons">
-              <button>Sort by fields</button>
+              <select id="inventoryStatusFilter" class="filter-select">
+                <option value="All">All</option>
+                <option value="Available">Available</option>
+                <option value="Damaged">Damaged</option>
+                <option value="Unserviceable">Unserviceable</option>
+                <option value="Missing">Missing</option>
+              </select>
               <button>+ Export</button>
-              <button>Clear filters</button>
+              <button type="button" id="clearInventoryFiltersBtn">Clear filters</button>
             </div>
             <div class="right-buttons">
               <input type="text" id="inventorySearchInput" placeholder="Search Item Name...">
@@ -242,7 +250,7 @@
             </thead>
             <tbody>
               @foreach ($inventory as $item)
-                <tr onclick="showItemDetails({{ json_encode($item) }})" style="cursor: pointer;">
+                <tr data-item='@json($item)' style="cursor: pointer;">
                   <td>{{ $item->serial_no }}</td>
                   <td>{{ $item->item_name }}</td>
                   <td>{{ $item->source_of_fund }}</td>
@@ -461,11 +469,22 @@
                 </div>
               </div>
 
+              <div class="table-search">
+              <input
+                type="text"
+                id="issuedSearchInput"
+                placeholder="Scan or type Serial # / Borrower name"
+                autofocus
+                autocomplete="off"
+                oninput="filterIssuedTable()"
+                onkeydown="handleScanEnter(event)"
+              />
+              </div>
+
               <!-- Issued Table -->
-              <div class="issued-table-section">
+              <div class="issued-table-section" >
                 <div class="table-header">
                   <h4>Issued item list</h4>
-                  <a href="#">View all</a>
                 </div>
                 <table class="issued-table">
                   <thead>
@@ -678,11 +697,12 @@
                   <h4>Damage Report List</h4>
                 </div>
 
-                <table class="issued-table">
+                <table class="issued-table" id="damageTable">
                   <thead>
                     <tr>
                       <th>Serial #</th>
                       <th>Item</th>
+                      <th>Observation</th>
                       <th>Date Reported</th>
                       <th>Actions</th>
                     </tr>
@@ -693,6 +713,7 @@
                       <tr>
                         <td>{{ $report->serial_no }}</td>
                         <td>{{ $report->item->item_name ?? '-' }}</td>
+                        <td>{{ $report->observation ?? '-' }}</td>
                         <td>{{ \Carbon\Carbon::parse($report->reported_at)->format('F d, Y') }}</td>
                         <td>
                           <div class="button-container">
@@ -1246,6 +1267,9 @@
   <script src="{{ asset('js/qr-module.js') }}"></script>
   <script src="{{ asset('js/scanner.js') }}"></script>
   <script src="{{ asset('js/form-records-scanner.js') }}"></script>
+  <script src="{{ asset('js/issued-borrower-search.js') }}"></script>
+  <script src="{{ asset('js/dashboard-inventory-filter.js') }}"></script>
+
 
 
 </body>

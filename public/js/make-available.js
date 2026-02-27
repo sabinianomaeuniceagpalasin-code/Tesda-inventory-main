@@ -43,7 +43,6 @@ function bindMakeAvailableButtons() {
 
                             // Optional: reload Maintenance and Inventory tables
                             reloadMaintenanceTable();
-                            reloadInventoryTable();
                         })
                         .catch((err) => {
                             Swal.fire(
@@ -65,13 +64,5 @@ function reloadMaintenanceTable() {
         .then((html) => {
             document.querySelector(".form-table tbody").innerHTML = html;
             bindMakeAvailableButtons(); 
-        });
-}
-
-function reloadInventoryTable() {
-    fetch("/dashboard/inventory/table")
-        .then((res) => res.text())
-        .then((html) => {
-            document.querySelector("#inventoryTable tbody").innerHTML = html;
         });
 }

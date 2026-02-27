@@ -62,11 +62,14 @@ function reloadIssuedTable() {
 }
 
 function reloadInventoryTable() {
-    fetch('/dashboard/inventory/table')
-        .then(res => res.text())
-        .then(html => {
-            document.querySelector('#inventoryTable tbody').innerHTML = html;
-        });
+  fetch('/dashboard/inventory/table', {
+    headers: { "Accept": "application/json" }
+  })
+    .then(res => res.json())
+    .then(data => {
+      document.querySelector('#inventoryTable tbody').innerHTML = data.html;
+    })
+    .catch(err => console.error("Error loading inventory table:", err));
 }
 
 function refreshFormTable() {

@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\IssuedLog;
 use App\Models\Item;
-use App\Models\FormRecord;
 use App\Models\Notification;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Services\FormArchiveService;
 
 class IssuedReturnController extends Controller
 {
@@ -17,45 +16,35 @@ class IssuedReturnController extends Controller
         DB::beginTransaction();
 
         try {
-            // 1️⃣ Get issued record
+            // 1) Get issued record
             $issued = IssuedLog::findOrFail($id);
 
             // Mark return datetime
             $issued->actual_return_date = now();
             $issued->save();
 
-            // 2️⃣ Update Item status
+            // 2) Update Item status to Available
             $item = Item::where('serial_no', $issued->serial_no)->first();
             if ($item) {
                 $item->status = "Available";
                 $item->save();
             }
 
-            // 3️⃣ Add Notification
+            // 3) Notification (user_id is required in your table)
             Notification::create([
                 'item_id' => $item->item_id ?? null,
+                'user_id' => Auth::id(),
                 'title'   => 'Item Returned',
                 'message' => 'Serial No. ' . $issued->serial_no . ' has been returned.',
                 'type'    => 'inventory',
+                'role'    => 'Admin', // adjust to your system if needed
+                'is_read' => 0,
             ]);
 
-            // 4️⃣ Archive form if all items are completed (returned or actioned)
+            // 4) Archive check using the service
             $reference = $issued->reference_no;
-
-            $totalItems = IssuedLog::where('reference_no', $reference)->count();
-
-            $completedItems = DB::table('issuedlog as i')
-                ->join('items as it', 'i.serial_no', '=', 'it.serial_no')
-                ->where('i.reference_no', $reference)
-                ->where(function ($q) {
-                    $q->whereNotNull('i.actual_return_date')
-                      ->orWhereIn('it.status', ['Unserviceable', 'Damaged', 'Lost']);
-                })
-                ->count();
-
-            if ($totalItems > 0 && $totalItems == $completedItems) {
-                FormRecord::where('reference_no', $reference)
-                    ->update(['status' => 'Archived', 'updated_at' => now()]);
+            if ($reference) {
+                FormArchiveService::tryArchiveByReference($reference);
             }
 
             DB::commit();
@@ -65,9 +54,9 @@ class IssuedReturnController extends Controller
                 'message' => 'Item returned successfully.',
                 'reference_no' => $reference
             ]);
-
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
                 'error' => $e->getMessage(),

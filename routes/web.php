@@ -57,6 +57,11 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/issued/return/{id}', [IssuedReturnController::class, 'returnItem'])->name('issued.return');
     Route::post('/chatbot/message', [ChatbotController::class, 'chat'])->name('chatbot.message');
 
+    Route::post('/damage-reports/store', [IssuedDamageController::class, 'store']);
+
+    Route::get('/damage-reports/table', [IssuedDamageController::class, 'table']);
+    Route::get('/damage-reports/{serialNo}', [IssuedDamageController::class, 'showBySerial']);
+
     Route::get('/items/scan', [FormRecordsItemScanController::class, 'scan'])->name('items.scan');
     
     Route::post('/notifications/{id}/read', [NotificationController::class, 'MarkAsRead'])->name('notifications.read');
@@ -68,7 +73,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::middleware(['role:Admin'])->group(function () {
 
-        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
         
 
         Route::get('/dashboard/summary/{type}', [DashboardController::class, 'getDashboardSummary']);
@@ -90,7 +95,7 @@ Route::middleware(['auth'])->group(function () {
         });
 
         Route::get('/damage-reports', [DashboardController::class, 'getDamageReports'])->name('damage.index');
-        Route::post('/damage-reports/store', [DashboardController::class, 'storeDamageReport'])->name('damage.store');
+    //  Route::post('/damage-reports/store', [DashboardController::class, 'storeDamageReport'])->name('damage.store');
         Route::post('/damage/move/{id}', [DashboardController::class, 'moveDamageToMaintenance']);
 
         Route::post('/maintenance/store', [DashboardController::class, 'storeMaintenance'])->name('maintenance.store');

@@ -1,87 +1,80 @@
 // issued-unserviceable.js
 
 function bindUnserviceableButtons() {
-    document.querySelectorAll(".unserviceable-btn-issued").forEach(btn => {
-        btn.addEventListener("click", function () {
-            // Get the issue_id from the corresponding return button
-            let id = this.closest('tr').querySelector('.return-btn-issued').getAttribute("data-id");
+  document.addEventListener("click", async function (e) {
+    const btn = e.target.closest(".unserviceable-btn-issued");
+    if (!btn) return;
 
-            Swal.fire({
-                title: "Mark Unserviceable?",
-                text: "Are you sure you want to mark this item as unserviceable?",
-                icon: "question",
-                showCancelButton: true,
-                confirmButtonColor: "#3085d6",
-                cancelButtonColor: "#d33",
-                confirmButtonText: "Yes, mark it"
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    fetch(`/issued/unserviceable/${id}`, {
-                        method: "POST",
-                        headers: {
-                            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
-                            "Accept": "application/json"
-                        }
-                    })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.status === "error") {
-                            Swal.fire("Error", data.message, "error");
-                            return;
-                        }
+    // issue_id is stored in return button
+    const row = btn.closest("tr");
+    const issueId = row.querySelector(".return-btn-issued")?.dataset.id;
 
-                        Swal.fire({
-                            title: "Success!",
-                            text: data.message,
-                            icon: "success",
-                            timer: 1500,
-                            showConfirmButton: false
-                        });
+    if (!issueId) {
+      Swal.fire("Error", "Issue ID not found.", "error");
+      return;
+    }
 
-                        // Reload tables
-                        reloadIssuedTable();
-                        reloadInventoryTable();
-                        refreshFormTable();
-                    })
-                    .catch(err => {
-                        Swal.fire("Error", "Something went wrong, try again.", "error");
-                        console.error(err);
-                    });
-                }
-            });
-        });
+    const result = await Swal.fire({
+      title: "Mark Item as Unserviceable",
+      html: `
+        <textarea id="unserviceableReason"
+          class="swal2-textarea"
+          placeholder="Enter reason why item is unserviceable (required)"></textarea>
+      `,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Submit",
+      cancelButtonText: "Cancel",
+      preConfirm: () => {
+        const reason = document.getElementById("unserviceableReason").value.trim();
+        if (!reason) {
+          Swal.showValidationMessage("Reason is required.");
+          return false;
+        }
+        return reason;
+      }
+    });
+
+    if (result.isConfirmed) {
+      submitUnserviceable(issueId, result.value);
+    }
+  });
+}
+
+function submitUnserviceable(issueId, reason) {
+  fetch(`/issued/unserviceable/${issueId}`, {
+    method: "POST",
+    headers: {
+      "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    },
+    body: JSON.stringify({ reason })
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === "error") {
+        Swal.fire("Error", data.message, "error");
+        return;
+      }
+
+      Swal.fire({
+        title: "Success",
+        text: data.message,
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false
+      });
+
+      reloadIssuedTable();
+      refreshFormTable();
+    })
+    .catch(err => {
+      console.error(err);
+      Swal.fire("Error", "Something went wrong.", "error");
     });
 }
 
-function reloadIssuedTable() {
-    fetch(`/dashboard/issued/items-table`)
-        .then(res => res.json())
-        .then(data => {
-            document.querySelector(".issued-table tbody").innerHTML = data.html;
-            bindReturnButtons();         // re-bind return buttons
-            bindUnserviceableButtons();  // re-bind unserviceable buttons
-        });
-}
-
-function reloadInventoryTable() {
-    fetch('/dashboard/inventory/table')
-        .then(res => res.text())
-        .then(html => {
-            document.querySelector('#inventoryTable tbody').innerHTML = html;
-        });
-}
-
-function refreshFormTable() {
-    fetch('/dashboard/form/table')
-        .then(res => res.json())
-        .then(data => {
-            document.querySelector(".form-table tbody").innerHTML = data.html;
-        })
-        .catch(err => console.error("Error loading forms:", err));
-}
-
-// Initialize on page load
-document.addEventListener("DOMContentLoaded", function() {
-    bindReturnButtons();          // existing return buttons
-    bindUnserviceableButtons();   // new unserviceable buttons
+document.addEventListener("DOMContentLoaded", function () {
+  bindUnserviceableButtons();
 });
