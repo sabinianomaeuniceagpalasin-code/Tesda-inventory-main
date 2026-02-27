@@ -27,26 +27,47 @@ if (scannerInput) {
             if (!rawData) return;
 
             fetch(`/items/scan/${encodeURIComponent(rawData)}`)
-                .then(res => res.json())
+                    .then(async res => {
+                        const data = await res.json().catch(() => ({}));
+                        if (!res.ok) return { success: false, message: data.message || "Scan blocked." };
+                        return data;
+                    })
                 .then(data => {
-                    if (!data.success) return;
+                        if (!data.success) {
+                            const errRow = document.createElement("div");
+                            errRow.className = "scanned-item-entry";
+                            errRow.style.cssText =
+                                "padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fff5f5; margin-bottom: 5px; border-radius: 4px; border-left: 5px solid #e74c3c;";
 
-                    if (document.querySelector(`[data-serial="${data.item.serial_no}"]`)) return;
+                            errRow.innerHTML = `
+                                <span>
+                                    <b style="color:#c0392b;">NOT ADDED</b><br>
+                                    <small style="color:#7f8c8d;">${data.message || "Not allowed."}</small>
+                                </span>
+                                <span style="color:#c0392b; font-weight:bold; font-size:0.85em;">✗ BLOCKED</span>
+                            `;
+                            scannedList.prepend(errRow);
+                            return;
+                        }
 
-                    const itemRow = document.createElement("div");
-                    itemRow.className = "scanned-item-entry";
-                    itemRow.setAttribute("data-serial", data.item.serial_no);
-                    itemRow.style.cssText = "padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #f0fff4; margin-bottom: 5px; border-radius: 4px; border-left: 5px solid #2ecc71;";
-                    
-                    itemRow.innerHTML = `
-                        <span>
-                            <b style="color: #2c3e50;">${data.item.item_name}</b><br>
-                            <small style="color: #7f8c8d;">SN: ${data.item.serial_no} | Prop: ${data.item.property_no}</small>
-                        </span>
-                        <span style="color: #27ae60; font-weight: bold; font-size: 0.85em;">✓ ADDED</span>
-                    `;
-                    scannedList.prepend(itemRow);
-                })
+                        // prevent duplicates
+                        if (document.querySelector(`[data-serial="${data.item.serial_no}"]`)) return;
+
+                        const itemRow = document.createElement("div");
+                        itemRow.className = "scanned-item-entry";
+                        itemRow.setAttribute("data-serial", data.item.serial_no);
+                        itemRow.style.cssText =
+                            "padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #f0fff4; margin-bottom: 5px; border-radius: 4px; border-left: 5px solid #2ecc71;";
+
+                        itemRow.innerHTML = `
+                            <span>
+                                <b style="color: #2c3e50;">${data.item.item_name}</b><br>
+                                <small style="color: #7f8c8d;">SN: ${data.item.serial_no} | Prop: ${data.item.property_no}</small>
+                            </span>
+                            <span style="color: #27ae60; font-weight: bold; font-size: 0.85em;">✓ ADDED</span>
+                        `;
+                        scannedList.prepend(itemRow);
+                    })
                 .catch(err => console.error(err));
         }
     });

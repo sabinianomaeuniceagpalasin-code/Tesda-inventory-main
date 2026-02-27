@@ -144,12 +144,44 @@ class InventoryController extends Controller
             $itemName = 'Auto-Added Item';
             $serial_no = $input_data;
 
+            // If QR format is "Item Name|SERIAL"
             if (str_contains($input_data, '|')) {
-                $parts = explode('|', $input_data);
+                $parts = explode('|', $input_data, 2);
                 $itemName = trim($parts[0]);
                 $serial_no = trim($parts[1]);
             }
 
+            if (!$serial_no) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid scan. No serial number detected.'
+                ], 422);
+            }
+
+            // ✅ VALIDATION: Must exist in item_approval_requests AND must be Approved
+            $approval = DB::table('item_approval_requests')
+                ->where('serial_number', $serial_no)
+                ->orderByDesc('request_id')
+                ->first();
+
+            // If you want to require an approval record:
+            if (!$approval) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Serial {$serial_no} is not in approval requests. Please request approval first."
+                ], 403);
+            }
+
+            // Normalize compare (handles "Approved", "approved", "APPROVED")
+            $approvalStatus = strtolower(trim((string) $approval->status));
+            if ($approvalStatus !== 'approved') {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Serial {$serial_no} is not approved yet. Current status: {$approval->status}"
+                ], 403);
+            }
+
+            // ✅ If approved, continue your existing logic
             $item = DB::table('items')->where('serial_no', $serial_no)->first();
 
             if (!$item) {
@@ -207,7 +239,7 @@ class InventoryController extends Controller
             return response()->json([
                 'success' => true,
                 'item' => [
-                    'name' => $item->item_name,
+                    'item_name' => $item->item_name,
                     'serial_no' => $item->serial_no,
                     'property_no' => $item->property_no
                 ]
