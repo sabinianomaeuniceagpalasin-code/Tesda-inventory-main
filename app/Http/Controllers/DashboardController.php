@@ -284,7 +284,7 @@ class DashboardController extends Controller
     public function getListOfAllItemsTable()
     {
         $inventory = DB::table('items')
-            ->select('item_name', 'classification', 'stock', 'remarks', 'status')
+            ->select('serial_no', 'item_name', 'status')
             ->orderBy('item_name', 'asc')
             ->limit(10)
             ->get();
@@ -300,10 +300,8 @@ class DashboardController extends Controller
 
             $html .= "
                 <tr>
+                    <td>{$item->serial_no}</td>
                     <td>{$item->item_name}</td>
-                    <td>{$item->classification}</td>
-                    <td>{$item->stock}</td>
-                    <td>{$item->remarks}</td>
                     <td><span class='{$statusClass}'>{$item->status}</span></td>
                 </tr>
             ";
@@ -315,7 +313,7 @@ class DashboardController extends Controller
     public function getListofAllAvailableItemsTable()
     {
         $inventory = DB::table('items')
-            ->select('item_name', 'classification', 'stock', 'remarks')
+            ->select('serial_no', 'item_name', 'stock', 'remarks')
             ->orderBy('item_name', 'asc')
             ->limit(10)
             ->get();
@@ -324,10 +322,8 @@ class DashboardController extends Controller
         foreach ($inventory as $item) {
             $html .= "
                 <tr>
+                    <td>{$item->serial_no}</td>
                     <td>{$item->item_name}</td>
-                    <td>{$item->classification}</td>
-                    <td>{$item->stock}</td>
-                    <td>{$item->remarks}</td>
                 </tr>
             ";
         }
@@ -620,6 +616,59 @@ class DashboardController extends Controller
         ];
 
         return ['records' => $maintenanceRecords, 'counts' => $maintenanceCounts];
+    }
+
+    public function getUnderMaintenanceListTable()
+    {
+        $issuedItemsList = DB::table('issuedlog as i')
+            ->join('items as it', 'i.serial_no', '=', 'it.serial_no')
+            ->leftJoin('formrecords as f', 'i.reference_no', '=', 'f.reference_no')
+            ->where('it.status', '=', 'Issued')
+            ->whereRaw('i.issue_id = (
+                SELECT MAX(issue_id)
+                FROM issuedlog
+                WHERE serial_no = i.serial_no
+            )')
+            ->select(
+                'i.issue_id',
+                'i.property_no',
+                'i.serial_no',
+                'i.return_date',
+                'f.borrower_name as issued_to',
+                'f.issued_by as issued_by',
+                'i.issued_date',
+                'it.item_name as item'
+            )
+            ->orderBy('i.issued_date', 'desc')
+            ->get();
+
+        $html = '';
+        foreach ($issuedItemsList as $item) {
+            $returnDate = $item->return_date ? Carbon::parse($item->return_date)->format('F d, Y') : '-';
+            $html .= "
+                <tr>
+                    <td>{$item->serial_no}</td>
+                    <td>{$item->issued_to}</td>
+                    <td>{$item->issued_by}</td>
+                    <td>" . Carbon::parse($item->issued_date)->format('F d, Y') . "</td>
+                    <td>{$returnDate}</td>
+                    <td>{$item->item}</td>
+                    <td class='action-buttons-issued'>
+                        <button class='action-btn-issued return-btn-issued' title='Return' data-id='{$item->issue_id}'>
+                            <i class='fas fa-undo'></i>
+                        </button>
+                        <button class='action-btn-issued damaged-btn-issued' title='Damaged'>
+                            <i class='fas fa-exclamation-triangle'></i>
+                        </button>
+                        <button class='action-btn-issued unserviceable-btn-issued' title='Unserviceable'>
+                            <i class='fas fa-times-circle'></i>
+                        </button>
+                    </td>
+                </tr>
+            ";
+        }
+
+        return response()->json(['html' => $html]);
     }
 
     public function getLatestDamageReport($serialNo)

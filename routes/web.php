@@ -50,13 +50,12 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::middleware(['auth'])->group(function () {
 
-        Route::get('/profile-settings', function () {
-            return view('profile.settings'); // or any view you have
-        })->name('profile-settings');
+    Route::get('/profile-settings', [ProfileController::class, 'edit'])->name('profile-settings');
 
-        Route::get('/login-history', function () {
-            return view('profile.login-history'); // or any view you have
-        })->name('login-history');
+    Route::post('/profile-settings', [ProfileController::class, 'update'])
+    ->name('profile.update');
+
+    Route::get('/login-history', [ProfileController::class, 'loginHistory'])->name('login-history');
 
     Route::get('/issued/search-students', [IssuedLogController::class, 'searchStudents']);
     Route::get('/issued/available-serials', [IssuedLogController::class, 'availableSerials']);
@@ -138,7 +137,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/get-total-items-and-equipment', [DashboardController::class, 'getListOfAllItemsTable']);
     Route::get('/dashboard/get-available-items', [DashboardController::class, 'getListofAllAvailableItemsTable']);
     Route::get('/dashboard/get-issued-items', [DashboardController::class, 'getListofIssuedItemsTable']);
-    Route::get('/dashboard/get-under-maintenance', [DashboardController::class, 'getUnderMaintenanceListTable']);
+    Route::get('/dashboard/get-under-maintenance', [DashboardController::class, 'getMaintenanceRecords']);
     Route::get('/dashboard/get-low-stock-items', [DashboardController::class, 'getLowStockItems']);
     Route::get('/dashboard/get-missing-items', [DashboardController::class, 'getMissingItems']);
     Route::get('/dashboard/items', [DashboardController::class, 'items']);

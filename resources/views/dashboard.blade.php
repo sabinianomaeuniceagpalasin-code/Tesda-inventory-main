@@ -282,7 +282,7 @@
             </button>
           </div>
 
-          <div class="modal fade" id="inventoryModal" tabindex="-1">
+          <div class="modal fade" id="ik tabindex="-1">
             <div class="modal-dialog modal-md modal-side-right">
               <div class="modal-content item-detail-modal">
                 <div class="modal-header-custom">
