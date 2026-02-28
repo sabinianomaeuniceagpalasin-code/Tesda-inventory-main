@@ -1,3 +1,5 @@
+// damage.js (FULL REPLACEMENT)
+
 const DamageHandler = (() => {
   async function reportDamage(serialNo, observation) {
     try {
@@ -14,17 +16,20 @@ const DamageHandler = (() => {
         })
       });
 
-      // If Laravel returns 401/403, show a clear message
       if (res.status === 401 || res.status === 403) {
         Swal.fire("Unauthorized", "You are not allowed to do this action.", "error");
         return;
       }
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
       if (data.success) {
         Swal.fire("Success", data.message, "success");
-        reloadIssuedTable();
+
+        // Reload tables (issued + damage)
+        if (typeof window.reloadIssuedTable === "function") {
+          window.reloadIssuedTable();
+        }
         reloadDamageTable();
 
       } else {
@@ -36,39 +41,37 @@ const DamageHandler = (() => {
     }
   }
 
-  function reloadIssuedTable() {
-  fetch("/dashboard/issued/items-table", { headers: { "Accept": "application/json" } })
-    .then(res => res.json())
-    .then(data => {
-      const tbody = document.querySelector(".issued-table tbody");
-      if (!tbody) return;
-      tbody.innerHTML = data.html;
+  function reloadDamageTable() {
+    fetch("/damage-reports/table", { headers: { "Accept": "text/html" } })
+      .then(res => res.text())
+      .then(html => {
+        const tbody = document.querySelector("#damageTable tbody");
+        if (tbody) tbody.innerHTML = html;
+      })
+      .catch(err => console.error("Damage table reload error:", err));
+  }
 
-      // Rebind buttons if you use direct listeners (return/unserviceable)
-      if (typeof bindReturnButtons === "function") bindReturnButtons();
-      if (typeof bindUnserviceableButtons === "function") bindUnserviceableButtons();
-      // Damage uses event delegation, so it’s fine
-    })
-    .catch(err => console.error("Issued table reload error:", err));
-}
+  // ✅ Always get serial safely (works after reload)
+  function getSerialFromButton(btn) {
+    // 1) preferred: data-id on button
+    let serial = btn.dataset.id;
 
-        function reloadDamageTable() {
-        fetch("/damage-reports/table")
-            .then(res => res.text())
-            .then(html => {
-            const tbody = document.querySelector("#damageTable tbody");
-            if (tbody) tbody.innerHTML = html;
-            })
-            .catch(err => console.error("Damage table reload error:", err));
-        }
+    // 2) fallback: read first td (Serial # column)
+    if (!serial) {
+      const row = btn.closest("tr");
+      serial = row?.querySelector("td")?.textContent?.trim();
+    }
+
+    return serial || null;
+  }
 
   function bindDamageButtons() {
-    // Event delegation so it still works after table reload
+    // ✅ Event delegation (works even after AJAX table replacement)
     document.addEventListener("click", async (e) => {
       const btn = e.target.closest(".damaged-btn-issued");
       if (!btn) return;
 
-      const serialNo = btn.dataset.id;
+      const serialNo = getSerialFromButton(btn);
       if (!serialNo) {
         Swal.fire("Error", "Serial number missing!", "error");
         return;
@@ -96,8 +99,7 @@ const DamageHandler = (() => {
       });
 
       if (result.isConfirmed) {
-        const observation = result.value;
-        reportDamage(serialNo, observation);
+        reportDamage(serialNo, result.value);
       }
     });
   }

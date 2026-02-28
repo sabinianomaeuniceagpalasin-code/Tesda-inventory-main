@@ -1,80 +1,193 @@
-const scannerModal = document.getElementById("scannerModal");
-const scannerInput = document.getElementById("scannerInput");
-const scannedList = document.getElementById("scanned-items-list");
-const markReceivedBtn = document.getElementById("markReceivedBtn");
-const addItemBtn = document.getElementById("addItemBtn");
+// public/js/scanner.js
+// Inventory scanner modal
+// POST /items/scan/validate
+// POST /items/receive-batch
 
-if (addItemBtn) {
-    addItemBtn.addEventListener("click", () => {
-        scannerModal.classList.remove("hidden");
-        scannerInput.focus();
+(() => {
+  const scannerModal = document.getElementById("scannerModal");
+  const scannerInput = document.getElementById("scannerInput");
+  const scannedList = document.getElementById("scanned-items-list");
+  const markReceivedBtn = document.getElementById("markReceivedBtn");
+  const addItemBtn = document.getElementById("addItemBtn");
+
+  // Must exist
+  if (!scannerModal || !scannerInput || !scannedList || !markReceivedBtn || !addItemBtn) {
+    console.warn("[scanner.js] Missing elements:", {
+      scannerModal: !!scannerModal,
+      scannerInput: !!scannerInput,
+      scannedList: !!scannedList,
+      markReceivedBtn: !!markReceivedBtn,
+      addItemBtn: !!addItemBtn,
     });
-}
+    return;
+  }
 
-function closeScannerModal() {
-    scannerModal.classList.add("hidden");
+  const scannedSerials = new Set();
+
+  const getCSRFToken = () =>
+    document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+
+  const closeBtn = scannerModal.querySelector(".scanner-modal__close");
+  const cancelBtn = scannerModal.querySelector(".scanner-btn--cancel");
+
+  const showInfoRow = (title, message, ok = true) => {
+    const row = document.createElement("div");
+    row.className = "scanned-item-entry";
+    row.style.cssText =
+      "padding:12px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;border-radius:4px;border-left:5px solid;"
+      + (ok ? "background:#f0fff4;border-left-color:#2ecc71;" : "background:#fff5f5;border-left-color:#e74c3c;");
+
+    row.innerHTML = `
+      <span>
+        <b style="color:${ok ? "#2c3e50" : "#c0392b"};">${title}</b><br>
+        <small style="color:#7f8c8d;">${message || ""}</small>
+      </span>
+      <span style="color:${ok ? "#27ae60" : "#c0392b"};font-weight:bold;font-size:0.85em;">
+        ${ok ? "✓" : "✗"}
+      </span>
+    `;
+    scannedList.prepend(row);
+  };
+
+  const resetModal = () => {
     scannerInput.value = "";
     scannedList.innerHTML = "";
-}
+    scannedSerials.clear();
+    markReceivedBtn.disabled = true;
+    markReceivedBtn.textContent = "Mark as Received";
+  };
 
-if (scannerInput) {
-    scannerInput.addEventListener("keydown", function (e) {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            const rawData = this.value.trim();
-            this.value = "";
+  const openModal = () => {
+    scannerModal.classList.remove("hidden");
+    // focus after render
+    setTimeout(() => scannerInput.focus(), 0);
+  };
 
-            if (!rawData) return;
+  const closeModal = () => {
+    scannerModal.classList.add("hidden");
+    resetModal();
+  };
 
-            fetch(`/items/scan/${encodeURIComponent(rawData)}`)
-                    .then(async res => {
-                        const data = await res.json().catch(() => ({}));
-                        if (!res.ok) return { success: false, message: data.message || "Scan blocked." };
-                        return data;
-                    })
-                .then(data => {
-                        if (!data.success) {
-                            const errRow = document.createElement("div");
-                            errRow.className = "scanned-item-entry";
-                            errRow.style.cssText =
-                                "padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fff5f5; margin-bottom: 5px; border-radius: 4px; border-left: 5px solid #e74c3c;";
+  // OPEN
+  addItemBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    openModal();
+  });
 
-                            errRow.innerHTML = `
-                                <span>
-                                    <b style="color:#c0392b;">NOT ADDED</b><br>
-                                    <small style="color:#7f8c8d;">${data.message || "Not allowed."}</small>
-                                </span>
-                                <span style="color:#c0392b; font-weight:bold; font-size:0.85em;">✗ BLOCKED</span>
-                            `;
-                            scannedList.prepend(errRow);
-                            return;
-                        }
+  // CLOSE
+  closeBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    closeModal();
+  });
 
-                        // prevent duplicates
-                        if (document.querySelector(`[data-serial="${data.item.serial_no}"]`)) return;
+  cancelBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    closeModal();
+  });
 
-                        const itemRow = document.createElement("div");
-                        itemRow.className = "scanned-item-entry";
-                        itemRow.setAttribute("data-serial", data.item.serial_no);
-                        itemRow.style.cssText =
-                            "padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #f0fff4; margin-bottom: 5px; border-radius: 4px; border-left: 5px solid #2ecc71;";
+  // click outside closes
+  scannerModal.addEventListener("click", (e) => {
+    if (e.target === scannerModal) closeModal();
+  });
 
-                        itemRow.innerHTML = `
-                            <span>
-                                <b style="color: #2c3e50;">${data.item.item_name}</b><br>
-                                <small style="color: #7f8c8d;">SN: ${data.item.serial_no} | Prop: ${data.item.property_no}</small>
-                            </span>
-                            <span style="color: #27ae60; font-weight: bold; font-size: 0.85em;">✓ ADDED</span>
-                        `;
-                        scannedList.prepend(itemRow);
-                    })
-                .catch(err => console.error(err));
-        }
+  const postJSON = async (url, body) => {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "X-CSRF-TOKEN": getCSRFToken(),
+      },
+      body: JSON.stringify(body),
     });
-}
 
-if (markReceivedBtn) {
-    markReceivedBtn.addEventListener("click", () => {
-        location.reload();
-    });
-}
+    const contentType = res.headers.get("content-type") || "";
+
+    // IMPORTANT: detect HTML (login redirect or 419 page)
+    if (!contentType.includes("application/json")) {
+      const text = await res.text().catch(() => "");
+      return {
+        ok: false,
+        data: {
+          success: false,
+          message: `Server returned non-JSON (${res.status}). Likely 419 CSRF or redirected to login.`,
+          _debug: text.slice(0, 200),
+        },
+        status: res.status,
+      };
+    }
+
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok, data, status: res.status };
+  };
+
+  // SCAN (validate only)
+  scannerInput.addEventListener("keydown", async (e) => {
+    // scanners sometimes send "NumpadEnter"
+    if (!(e.key === "Enter" || e.code === "Enter" || e.code === "NumpadEnter")) return;
+
+    e.preventDefault();
+
+    const rawData = scannerInput.value.trim();
+    scannerInput.value = "";
+
+    console.log("[scanner.js] Enter detected, raw:", rawData);
+
+    if (!rawData) return;
+
+    const { ok, data, status } = await postJSON("/items/scan/validate", { input: rawData });
+
+    if (!ok || !data.success) {
+      showInfoRow("NOT ADDED", `${data.message || "Scan blocked."} (HTTP ${status})`, false);
+      return;
+    }
+
+    const item = data.item || {};
+    const serial = item.serial_no;
+
+    if (!serial) {
+      showInfoRow("NOT ADDED", `Missing serial_no from server response (HTTP ${status})`, false);
+      return;
+    }
+
+    // prevent duplicates
+    if (scannedSerials.has(serial)) return;
+
+    scannedSerials.add(serial);
+    showInfoRow(
+      item.item_name || "READY",
+      `SN: ${serial} | Prop: ${item.property_no || "—"}`,
+      true
+    );
+
+    markReceivedBtn.disabled = scannedSerials.size === 0;
+  });
+
+  // COMMIT
+  markReceivedBtn.disabled = true;
+
+  markReceivedBtn.addEventListener("click", async (e) => {
+    e.preventDefault();
+
+    if (scannedSerials.size === 0) return;
+
+    markReceivedBtn.disabled = true;
+    markReceivedBtn.textContent = "Processing...";
+
+    const serials = Array.from(scannedSerials);
+
+    const { ok, data, status } = await postJSON("/items/receive-batch", { serials });
+
+    if (!ok || !data.success) {
+      showInfoRow("FAILED", `${data.message || "Failed to mark received."} (HTTP ${status})`, false);
+      markReceivedBtn.disabled = false;
+      markReceivedBtn.textContent = "Mark as Received";
+      return;
+    }
+
+    closeModal();
+    location.reload();
+  });
+
+  console.log("[scanner.js] Loaded OK");
+})();

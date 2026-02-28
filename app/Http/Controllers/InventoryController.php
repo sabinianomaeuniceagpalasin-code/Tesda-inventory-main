@@ -139,122 +139,286 @@ class InventoryController extends Controller
     }
 
     public function scanItem($input_data)
-    {
-        try {
-            $itemName = 'Auto-Added Item';
-            $serial_no = $input_data;
+{
+    try {
+        // 1) Extract serial only
+        $serial_no = $input_data;
 
-            // If QR format is "Item Name|SERIAL"
-            if (str_contains($input_data, '|')) {
-                $parts = explode('|', $input_data, 2);
-                $itemName = trim($parts[0]);
-                $serial_no = trim($parts[1]);
+        // QR format could be "Item Name|SERIAL" — ignore name, only take serial
+        if (str_contains($input_data, '|')) {
+            $parts = explode('|', $input_data, 2);
+            $serial_no = trim($parts[1] ?? '');
+        }
+
+        $serial_no = strtoupper(trim($serial_no));
+        $serial_no_nospace = str_replace(' ', '', $serial_no);
+
+        if (!$serial_no) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid scan. No serial number detected.'
+            ], 422);
+        }
+
+        // 2) Find approval request that contains this serial (supports exact / CSV / contains)
+        $approval = DB::table('item_approval_requests')
+            ->where(function ($q) use ($serial_no_nospace) {
+                $q->whereRaw("REPLACE(UPPER(serial_number),' ','') = ?", [$serial_no_nospace])
+                  ->orWhereRaw("FIND_IN_SET(?, REPLACE(UPPER(serial_number),' ','')) > 0", [$serial_no_nospace])
+                  ->orWhereRaw("REPLACE(UPPER(serial_number),' ','') LIKE ?", ['%'.$serial_no_nospace.'%']);
+            })
+            ->orderByDesc('request_id')
+            ->first();
+
+        if (!$approval) {
+            return response()->json([
+                'success' => false,
+                'message' => "Serial {$serial_no} is not in approval requests. Please request approval first."
+            ], 403);
+        }
+
+        $approvalStatus = strtolower(trim((string) $approval->status));
+        if ($approvalStatus !== 'approved') {
+            return response()->json([
+                'success' => false,
+                'message' => "Serial {$serial_no} is not approved yet. Current status: {$approval->status}"
+            ], 403);
+        }
+
+        // ✅ 3) Always use item name from approval request
+        $itemName = $approval->item_name;
+
+        // 4) Continue logic
+        $item = DB::table('items')->where('serial_no', $serial_no)->first();
+
+        if (!$item) {
+            $tempPropNo = 'AUTO-' . strtoupper(substr(md5(time()), 0, 6));
+            $lastId = DB::table('items')->max('item_id') ?? 0;
+            $newId = $lastId + 1;
+
+            $newItemData = [
+                'item_id' => $newId,
+                'item_name' => $itemName,
+                'classification' => 'Equipment',
+                'source_of_fund' => 'Scanned Entry',
+                'date_acquired' => now(),
+                'property_no' => $tempPropNo,
+                'serial_no' => $serial_no,
+                'stock' => 1,
+                'status' => 'Available',
+                'created_at' => now(),
+                'updated_at' => now()
+            ];
+
+            if (Schema::hasColumn('items', 'total_usage_hours')) {
+                $newItemData['total_usage_hours'] = 0;
             }
 
-            if (!$serial_no) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Invalid scan. No serial number detected.'
-                ], 422);
-            }
+            DB::table('items')->insert($newItemData);
 
-            // ✅ VALIDATION: Must exist in item_approval_requests AND must be Approved
-            $approval = DB::table('item_approval_requests')
-                ->where('serial_number', $serial_no)
-                ->orderByDesc('request_id')
-                ->first();
-
-            // If you want to require an approval record:
-            if (!$approval) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Serial {$serial_no} is not in approval requests. Please request approval first."
-                ], 403);
-            }
-
-            // Normalize compare (handles "Approved", "approved", "APPROVED")
-            $approvalStatus = strtolower(trim((string) $approval->status));
-            if ($approvalStatus !== 'approved') {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Serial {$serial_no} is not approved yet. Current status: {$approval->status}"
-                ], 403);
-            }
-
-            // ✅ If approved, continue your existing logic
-            $item = DB::table('items')->where('serial_no', $serial_no)->first();
-
-            if (!$item) {
-                $tempPropNo = 'AUTO-' . strtoupper(substr(md5(time()), 0, 6));
-                $lastId = DB::table('items')->max('item_id') ?? 0;
-                $newId = $lastId + 1;
-
-                $newItemData = [
-                    'item_id' => $newId,
+            // ✅ Insert/Update propertyinventory too
+            DB::table('propertyinventory')->updateOrInsert(
+                ['property_no' => $tempPropNo],
+                [
                     'item_name' => $itemName,
-                    'classification' => 'Equipment',
-                    'source_of_fund' => 'Scanned Entry',
-                    'date_acquired' => now(),
-                    'property_no' => $tempPropNo,
-                    'serial_no' => $serial_no,
-                    'stock' => 1,
-                    'status' => 'Available',
-                    'created_at' => now(),
-                    'updated_at' => now()
-                ];
-
-                if (Schema::hasColumn('items', 'total_usage_hours')) {
-                    $newItemData['total_usage_hours'] = 0;
-                }
-
-                DB::table('items')->insert($newItemData);
-
-                DB::table('propertyinventory')->insert([
-                    'property_no' => $tempPropNo,
-                    'item_name' => $itemName,
-                    'quantity' => 1,
+                    'quantity' => DB::raw('COALESCE(quantity,0) + 1'),
                     'unit_cost' => 0,
                     'sources_of_fund' => 'Scanned Entry',
                     'classification' => 'Equipment',
                     'date_acquired' => now(),
                     'status' => 'Available',
                     'created_at' => now(),
+                    'updated_at' => now(),
+                ]
+            );
+
+            $item = DB::table('items')->where('serial_no', $serial_no)->first();
+        } else {
+            // If it exists, ensure item_name is correct (optional but good)
+            if ($item->item_name !== $itemName) {
+                DB::table('items')->where('serial_no', $serial_no)->update([
+                    'item_name' => $itemName,
+                    'updated_at' => now()
+                ]);
+                $item->item_name = $itemName;
+            }
+
+            if ($item->status !== 'Available') {
+                DB::table('items')->where('serial_no', $serial_no)->update([
+                    'status' => 'Available',
                     'updated_at' => now()
                 ]);
 
-                $item = DB::table('items')->where('serial_no', $serial_no)->first();
-            } else {
-                if ($item->status !== 'Available') {
-                    DB::table('items')->where('serial_no', $serial_no)->update([
+                // ✅ Ensure propertyinventory row exists + increment
+                DB::table('propertyinventory')->updateOrInsert(
+                    ['property_no' => $item->property_no],
+                    [
+                        'item_name' => $itemName,
+                        'quantity' => DB::raw('COALESCE(quantity,0) + 1'),
+                        'unit_cost' => 0,
+                        'sources_of_fund' => $item->source_of_fund ?? 'Scanned Entry',
+                        'classification' => $item->classification ?? 'Equipment',
+                        'date_acquired' => $item->date_acquired ?? now(),
                         'status' => 'Available',
-                        'updated_at' => now()
-                    ]);
-
-                    DB::table('propertyinventory')
-                        ->where('property_no', $item->property_no)
-                        ->increment('quantity', 1);
-                }
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]
+                );
             }
-
-            return response()->json([
-                'success' => true,
-                'item' => [
-                    'item_name' => $item->item_name,
-                    'serial_no' => $item->serial_no,
-                    'property_no' => $item->property_no
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 500);
         }
+
+        return response()->json([
+            'success' => true,
+            'item' => [
+                'item_name' => $item->item_name,
+                'serial_no' => $item->serial_no,
+                'property_no' => $item->property_no
+            ]
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => $e->getMessage()
+        ], 500);
     }
+}
+
+public function validateScan(Request $request)
+{
+    $request->validate(['input' => 'required|string']);
+
+    $input_data = $request->input('input');
+
+    // extract serial
+    $serial_no = $input_data;
+    if (str_contains($input_data, '|')) {
+        $parts = explode('|', $input_data, 2);
+        $serial_no = trim($parts[1] ?? '');
+    }
+
+    $serial_no = strtoupper(trim($serial_no));
+    $serial_no_nospace = str_replace(' ', '', $serial_no);
+
+    if (!$serial_no) {
+        return response()->json(['success' => false, 'message' => 'Invalid scan.'], 422);
+    }
+
+    // check approved
+    $approval = DB::table('item_approval_requests')
+        ->where(function ($q) use ($serial_no_nospace) {
+            $q->whereRaw("REPLACE(UPPER(serial_number),' ','') = ?", [$serial_no_nospace])
+              ->orWhereRaw("FIND_IN_SET(?, REPLACE(UPPER(serial_number),' ','')) > 0", [$serial_no_nospace])
+              ->orWhereRaw("REPLACE(UPPER(serial_number),' ','') LIKE ?", ['%'.$serial_no_nospace.'%']);
+        })
+        ->orderByDesc('request_id')
+        ->first();
+
+    if (!$approval) {
+        return response()->json(['success' => false, 'message' => "Serial {$serial_no} is not in approval requests."], 403);
+    }
+
+    if (strtolower(trim($approval->status)) !== 'approved') {
+        return response()->json(['success' => false, 'message' => "Serial {$serial_no} is not approved yet."], 403);
+    }
+
+    // return preview info (NO INSERT)
+    $existing = DB::table('items')->where('serial_no', $serial_no)->first();
+
+    return response()->json([
+        'success' => true,
+        'item' => [
+            'item_name' => $approval->item_name,
+            'serial_no' => $serial_no,
+            'property_no' => $existing->property_no ?? null,
+            'exists' => (bool) $existing,
+        ]
+    ]);
+}
+
+
 
     public function receiveBatch(Request $request)
-    {
-        return response()->json(['success' => true]);
-    }
+        {
+            $request->validate([
+                'serials' => 'required|array|min:1',
+                'serials.*' => 'required|string'
+            ]);
+
+            $serials = array_values(array_unique(array_map(fn($s) => strtoupper(trim($s)), $request->serials)));
+
+            DB::transaction(function () use ($serials) {
+
+                foreach ($serials as $serial_no) {
+
+                    // 🔍 approval check
+                    $approval = DB::table('item_approval_requests')
+                        ->whereRaw("REPLACE(UPPER(serial_number),' ','') LIKE ?", ['%' . str_replace(' ', '', $serial_no) . '%'])
+                        ->orderByDesc('request_id')
+                        ->first();
+
+                    if (!$approval || strtolower($approval->status) !== 'approved') {
+                        continue;
+                    }
+
+                    $itemName = $approval->item_name;
+
+                    // 🔍 LOOKUP DATA (THIS IS THE KEY FIX)
+                    $lookup = DB::table('items_lookup')
+                        ->whereRaw('LOWER(item_name) = ?', [strtolower($itemName)])
+                        ->first();
+
+                    if (!$lookup) {
+                        continue; // no lookup = do not insert
+                    }
+
+                    $propertyNo = $lookup->property_no;
+                    $unitCost   = $lookup->unit_cost ?? 0;
+                    $sof        = $lookup->source_of_fund ?? 'N/A';
+                    $class      = $lookup->classification ?? 'N/A';
+
+                    // ❌ prevent duplicate serials
+                    if (DB::table('items')->where('serial_no', $serial_no)->exists()) {
+                        continue;
+                    }
+
+                    // 🧾 INSERT ITEM (ONE ROW PER SERIAL)
+                    DB::table('items')->insert([
+                        'item_name' => $itemName,
+                        'classification' => $class,
+                        'source_of_fund' => $sof,
+                        'date_acquired' => now(),
+                        'property_no' => $propertyNo,   // ✅ REAL PROPERTY NO
+                        'serial_no' => $serial_no,
+                        'stock' => 1,
+                        'status' => 'Available',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+
+                    // 🔢 COUNT ITEMS FOR THIS PROPERTY
+                    $count = DB::table('items')
+                        ->where('property_no', $propertyNo)
+                        ->count();
+
+                    // 📦 UPDATE PROPERTY INVENTORY (ONE ROW ONLY)
+                    DB::table('propertyinventory')->updateOrInsert(
+                        ['property_no' => $propertyNo],
+                        [
+                            'item_name' => $itemName,
+                            'quantity' => $count,         // ✅ COUNT OF SERIALS
+                            'unit_cost' => $unitCost,     // ✅ FROM LOOKUP
+                            'sources_of_fund' => $sof,
+                            'classification' => $class,
+                            'date_acquired' => now(),
+                            'status' => 'Available',
+                            'updated_at' => now(),
+                            'created_at' => now(),
+                        ]
+                    );
+                }
+            });
+
+            return response()->json(['success' => true]);
+        }
 }

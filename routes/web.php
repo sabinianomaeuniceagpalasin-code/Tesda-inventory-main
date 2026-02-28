@@ -71,6 +71,9 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/item-approval/{request_id}/approve', [InventorySettingsController::class, 'approveItem'])->name('item.approve');
     Route::post('/item-approval/{request_id}/reject', [InventorySettingsController::class, 'rejectItem'])->name('item.reject');
 
+    Route::post('/items/scan/validate', [InventoryController::class, 'validateScan']);
+    Route::post('/items/receive-batch', [InventoryController::class, 'receiveBatch']);
+
     Route::middleware(['role:Admin'])->group(function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -85,8 +88,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');
         Route::get('/inventory/settings', [InventorySettingsController::class, 'index'])->name('inventory.settings');
         Route::post('/inventory/store', [InventoryController::class, 'store'])->name('inventory.store');
-        Route::get('/items/scan/{input_data}', [InventoryController::class, 'scanItem'])->where('input_data', '.*');
-        Route::post('/inventory/receive-batch', [InventoryController::class, 'receiveBatch']);
+
         Route::get('/inventory/get-tool/{tool_name}', [InventoryController::class, 'getTool']);
         Route::get('/check-property-no/{property_no}', [InventoryController::class, 'checkPropertyNo']);
         Route::get('/check-serial-no/{serial_no}', function ($serial_no) {

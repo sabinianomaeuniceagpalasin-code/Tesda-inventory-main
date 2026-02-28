@@ -418,7 +418,7 @@
             <div class="scanner-modal__box">
               <div class="scanner-modal__header">
                 <h2>Scan Item</h2>
-                <button onclick="closeScannerModal()" class="scanner-modal__close">&times;</button>
+                <button class="scanner-modal__close">&times;</button>
               </div>
               <div class="scanner-modal__body">
                 <input id="scannerInput" type="text" placeholder="Scan QR/Barcode here" autofocus>
@@ -426,7 +426,7 @@
                 <div id="scanned-items-list" class="scanned-items-container"></div>
               </div>
               <div class="scanner-modal__footer">
-                <button onclick="closeScannerModal()" class="scanner-btn scanner-btn--cancel">Cancel</button>
+                <button class="scanner-btn scanner-btn--cancel">Cancel</button>
                 <button id="markReceivedBtn" class="scanner-btn scanner-btn--confirm">Mark as Received</button>
               </div>
             </div>
@@ -512,8 +512,8 @@
                             data-id="{{ $item->issue_id }}">
                             <i class="fas fa-undo"></i>
                           </button>
-                          <button class="action-btn-issued damaged-btn-issued" data-id="{{ $item->serial_no }}"
-                            title="Damaged">
+                          <button class="action-btn-issued damaged-btn-issued" 
+                                  data-id="{{ $item->serial_no }}" title="Damaged">
                             <i class="fas fa-exclamation-triangle"></i>
                           </button>
                           <button class="action-btn-issued unserviceable-btn-issued" title="Unserviceable">
@@ -1265,8 +1265,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <script src="{{ asset('js/qr-module.js') }}"></script>
-  <script src="{{ asset('js/scanner.js') }}"></script>
   <script src="{{ asset('js/form-records-scanner.js') }}"></script>
+  <script src="{{ asset('js/scanner.js') }}"></script>
   <script src="{{ asset('js/issued-borrower-search.js') }}"></script>
   <script src="{{ asset('js/dashboard-inventory-filter.js') }}"></script>
 

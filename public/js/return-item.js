@@ -53,12 +53,20 @@ function bindReturnButtons() {
 }
 
 function reloadIssuedTable() {
-    fetch(`/dashboard/issued/items-table`)
-        .then(res => res.json())
-        .then(data => {
-            document.querySelector(".issued-table tbody").innerHTML = data.html;
-            bindReturnButtons(); // re-bind buttons
-        });
+  fetch(`/dashboard/issued/items-table`)
+    .then(res => res.json())
+    .then(data => {
+      document.querySelector(".issued-table tbody").innerHTML = data.html;
+
+      // ✅ rebind return (direct)
+      bindReturnButtons();
+
+      // ✅ unserviceable uses event delegation, but calling won't hurt if you want:
+      if (typeof bindUnserviceableButtons === "function") {
+        // DO NOT call repeatedly if it uses document.addEventListener (it will duplicate)
+        // So only call it once on DOMContentLoaded (recommended)
+      }
+    });
 }
 
 function reloadInventoryTable() {
