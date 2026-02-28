@@ -50,6 +50,14 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::middleware(['auth'])->group(function () {
 
+        Route::get('/profile-settings', function () {
+            return view('profile.settings'); // or any view you have
+        })->name('profile-settings');
+
+        Route::get('/login-history', function () {
+            return view('profile.login-history'); // or any view you have
+        })->name('login-history');
+
     Route::get('/issued/search-students', [IssuedLogController::class, 'searchStudents']);
     Route::get('/issued/available-serials', [IssuedLogController::class, 'availableSerials']);
     Route::get('/issued/check-ref/{reference}', [IssuedLogController::class, 'checkReference']);
@@ -62,6 +70,9 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/damage-reports/table', [IssuedDamageController::class, 'table']);
     Route::get('/damage-reports/{serialNo}', [IssuedDamageController::class, 'showBySerial']);
+
+    Route::post('/items/scan/validate', [InventoryController::class, 'validateScan']);
+    Route::post('/items/receive-batch', [InventoryController::class, 'receiveBatch']);
 
     Route::get('/items/scan', [FormRecordsItemScanController::class, 'scan'])->name('items.scan');
     
