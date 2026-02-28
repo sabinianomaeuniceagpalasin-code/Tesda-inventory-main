@@ -30,12 +30,15 @@
   const closeBtn = scannerModal.querySelector(".scanner-modal__close");
   const cancelBtn = scannerModal.querySelector(".scanner-btn--cancel");
 
-  const showInfoRow = (title, message, ok = true) => {
+  // ✅ show row + optionally auto remove after X ms
+  const showInfoRow = (title, message, ok = true, autoRemoveMs = 0) => {
     const row = document.createElement("div");
     row.className = "scanned-item-entry";
     row.style.cssText =
       "padding:12px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;border-radius:4px;border-left:5px solid;"
-      + (ok ? "background:#f0fff4;border-left-color:#2ecc71;" : "background:#fff5f5;border-left-color:#e74c3c;");
+      + (ok
+          ? "background:#f0fff4;border-left-color:#2ecc71;"
+          : "background:#fff5f5;border-left-color:#e74c3c;");
 
     row.innerHTML = `
       <span>
@@ -46,7 +49,19 @@
         ${ok ? "✓" : "✗"}
       </span>
     `;
+
     scannedList.prepend(row);
+
+    // ✅ Auto remove after X ms (nice fade)
+    if (autoRemoveMs > 0) {
+      setTimeout(() => {
+        row.style.transition = "opacity 250ms ease";
+        row.style.opacity = "0";
+        setTimeout(() => row.remove(), 260);
+      }, autoRemoveMs);
+    }
+
+    return row;
   };
 
   const resetModal = () => {
@@ -59,7 +74,6 @@
 
   const openModal = () => {
     scannerModal.classList.remove("hidden");
-    // focus after render
     setTimeout(() => scannerInput.focus(), 0);
   };
 
@@ -103,13 +117,13 @@
 
     const contentType = res.headers.get("content-type") || "";
 
-    // IMPORTANT: detect HTML (login redirect or 419 page)
     if (!contentType.includes("application/json")) {
       const text = await res.text().catch(() => "");
       return {
         ok: false,
         data: {
           success: false,
+          code: "non_json",
           message: `Server returned non-JSON (${res.status}). Likely 419 CSRF or redirected to login.`,
           _debug: text.slice(0, 200),
         },
@@ -123,22 +137,31 @@
 
   // SCAN (validate only)
   scannerInput.addEventListener("keydown", async (e) => {
-    // scanners sometimes send "NumpadEnter"
     if (!(e.key === "Enter" || e.code === "Enter" || e.code === "NumpadEnter")) return;
 
     e.preventDefault();
 
     const rawData = scannerInput.value.trim();
     scannerInput.value = "";
-
-    console.log("[scanner.js] Enter detected, raw:", rawData);
-
     if (!rawData) return;
 
     const { ok, data, status } = await postJSON("/items/scan/validate", { input: rawData });
 
+    // ✅ blocked cases: auto-remove after 3 seconds
     if (!ok || !data.success) {
-      showInfoRow("NOT ADDED", `${data.message || "Scan blocked."} (HTTP ${status})`, false);
+      const code = data?.code || "blocked";
+
+      if (code === "already_exists") {
+        showInfoRow("ALREADY EXISTS", data.message || "This serial already exists.", false, 1000);
+        return;
+      }
+
+      if (code === "rejected") {
+        showInfoRow("REJECTED", data.message || "This serial was rejected.", false, 1000);
+        return;
+      }
+
+      showInfoRow("NOT ADDED", `${data.message || "Scan blocked."} (HTTP ${status})`, false, 1000);
       return;
     }
 
@@ -146,18 +169,19 @@
     const serial = item.serial_no;
 
     if (!serial) {
-      showInfoRow("NOT ADDED", `Missing serial_no from server response (HTTP ${status})`, false);
+      showInfoRow("NOT ADDED", `Missing serial_no from server response (HTTP ${status})`, false, 1000);
       return;
     }
 
-    // prevent duplicates
+    // prevent duplicates (READY items stay)
     if (scannedSerials.has(serial)) return;
 
     scannedSerials.add(serial);
     showInfoRow(
       item.item_name || "READY",
       `SN: ${serial} | Prop: ${item.property_no || "—"}`,
-      true
+      true,
+      0 // ✅ do not auto-remove READY rows
     );
 
     markReceivedBtn.disabled = scannedSerials.size === 0;
@@ -175,11 +199,10 @@
     markReceivedBtn.textContent = "Processing...";
 
     const serials = Array.from(scannedSerials);
-
     const { ok, data, status } = await postJSON("/items/receive-batch", { serials });
 
     if (!ok || !data.success) {
-      showInfoRow("FAILED", `${data.message || "Failed to mark received."} (HTTP ${status})`, false);
+      showInfoRow("FAILED", `${data.message || "Failed to mark received."} (HTTP ${status})`, false, 1000);
       markReceivedBtn.disabled = false;
       markReceivedBtn.textContent = "Mark as Received";
       return;

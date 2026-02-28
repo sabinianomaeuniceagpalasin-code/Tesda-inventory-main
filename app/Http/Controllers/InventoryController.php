@@ -301,10 +301,14 @@ public function validateScan(Request $request)
     $serial_no_nospace = str_replace(' ', '', $serial_no);
 
     if (!$serial_no) {
-        return response()->json(['success' => false, 'message' => 'Invalid scan.'], 422);
+        return response()->json([
+            'success' => false,
+            'code' => 'invalid',
+            'message' => 'Invalid scan. No serial detected.'
+        ], 422);
     }
 
-    // check approved
+    // find approval request
     $approval = DB::table('item_approval_requests')
         ->where(function ($q) use ($serial_no_nospace) {
             $q->whereRaw("REPLACE(UPPER(serial_number),' ','') = ?", [$serial_no_nospace])
@@ -315,23 +319,48 @@ public function validateScan(Request $request)
         ->first();
 
     if (!$approval) {
-        return response()->json(['success' => false, 'message' => "Serial {$serial_no} is not in approval requests."], 403);
+        return response()->json([
+            'success' => false,
+            'code' => 'no_request',
+            'message' => "Serial {$serial_no} is not in approval requests."
+        ], 403);
     }
 
-    if (strtolower(trim($approval->status)) !== 'approved') {
-        return response()->json(['success' => false, 'message' => "Serial {$serial_no} is not approved yet."], 403);
+    $status = strtolower(trim((string)$approval->status));
+
+    if ($status === 'rejected') {
+        return response()->json([
+            'success' => false,
+            'code' => 'rejected',
+            'message' => "Serial {$serial_no} was REJECTED. You cannot receive this item."
+        ], 403);
     }
 
-    // return preview info (NO INSERT)
+    if ($status !== 'approved') {
+        return response()->json([
+            'success' => false,
+            'code' => 'not_approved',
+            'message' => "Serial {$serial_no} is not approved yet. Current status: {$approval->status}"
+        ], 403);
+    }
+
+    // ✅ check if already exists in items
     $existing = DB::table('items')->where('serial_no', $serial_no)->first();
+    if ($existing) {
+        return response()->json([
+            'success' => false,
+            'code' => 'already_exists',
+            'message' => "Serial {$serial_no} already exists in ITEMS (already received)."
+        ], 409);
+    }
 
+    // OK preview only (NO INSERT)
     return response()->json([
         'success' => true,
         'item' => [
             'item_name' => $approval->item_name,
             'serial_no' => $serial_no,
-            'property_no' => $existing->property_no ?? null,
-            'exists' => (bool) $existing,
+            'property_no' => null,
         ]
     ]);
 }
