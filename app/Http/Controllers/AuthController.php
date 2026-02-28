@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
 use Carbon\Carbon;
+use App\Models\LoginHistory;
 
 class AuthController extends Controller
 {
@@ -28,6 +29,13 @@ class AuthController extends Controller
                 $request->session()->regenerate(); // ← This creates the session properly
 
                 $user = Auth::user();
+
+                LoginHistory::create([
+                    'user_id' => $user->user_id,
+                    'logged_in_at' => now(),
+                    'ip_address' => request()->ip(),
+                    'user_agent' => request()->userAgent(),
+                ]);
 
                 if (!$user->is_verified) {
                     Auth::logout();
@@ -58,7 +66,8 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $request->validate([
-            'full_name' => 'required|string|max:255',
+            'first_name' => 'required|string|max:255',
+            'last_name'  => 'required|string|max:255',
             'contact_no' => 'required|string|max:20',
             'role' => 'required|string',
             'email' => 'required|email|unique:users,email',
@@ -70,7 +79,8 @@ class AuthController extends Controller
 
         // Create user (not verified or approved yet)
         $user = User::create([
-            'full_name' => $request->full_name,
+            'first_name' => $request->first_name,
+            'last_name' => $request->last_name,
             'contact_no' => $request->contact_no,
             'role' => $request->role,
             'email' => $request->email,
