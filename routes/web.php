@@ -2,12 +2,11 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
+
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\IssuedLogController;
-use App\Http\Controllers\AnalyticsController;
-use App\Http\Controllers\StudentController;
 use App\Http\Controllers\MaintenanceController;
 use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\PredictiveAnalyticsController;
@@ -19,6 +18,8 @@ use App\Http\Controllers\SerialController;
 use App\Http\Controllers\ItemApprovalRequestController;
 use App\Http\Controllers\FormRecordsItemScanController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\DamageReportController;
+use App\Http\Controllers\NotificationController; // ✅ added
 
 Route::get('/', fn() => redirect()->route('login'));
 
@@ -50,42 +51,105 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::middleware(['auth'])->group(function () {
 
+    // =========================
+    // PROFILE
+    // =========================
     Route::get('/profile-settings', [ProfileController::class, 'edit'])->name('profile-settings');
-
-    Route::post('/profile-settings', [ProfileController::class, 'update'])
-    ->name('profile.update');
-
+    Route::post('/profile-settings', [ProfileController::class, 'update'])->name('profile.update');
     Route::get('/login-history', [ProfileController::class, 'loginHistory'])->name('login-history');
 
+    // =========================
+    // HTML TABLE RELOAD ROUTES (AJAX)
+    // =========================
+    Route::get('/dashboard/issued/table-html', [DashboardController::class, 'issuedTableHtml']);
+    Route::get('/dashboard/maintenance/table-html', [DashboardController::class, 'maintenanceTableHtml']);
+    Route::get('/dashboard/damage/table-html', [DashboardController::class, 'damageTableHtml']);
+
+    // =========================
+    // ISSUED / FORMS
+    // =========================
     Route::get('/issued/search-students', [IssuedLogController::class, 'searchStudents']);
     Route::get('/issued/available-serials', [IssuedLogController::class, 'availableSerials']);
     Route::get('/issued/check-ref/{reference}', [IssuedLogController::class, 'checkReference']);
     Route::post('/issued/store', [IssuedLogController::class, 'store'])->name('issued.store');
+
     Route::patch('/forms/{id}/update-status', [DashboardController::class, 'updateStatus'])->name('forms.updateStatus');
+
     Route::post('/issued/return/{id}', [IssuedReturnController::class, 'returnItem'])->name('issued.return');
+    Route::post('/issued/unserviceable/{id}', [IssuedUnserviceableController::class, 'markUnserviceable'])->name('issued.unserviceable');
+
+    // =========================
+    // CHATBOT
+    // =========================
     Route::post('/chatbot/message', [ChatbotController::class, 'chat'])->name('chatbot.message');
+
+    // =========================
+    // DAMAGE / MAINTENANCE TICKETS FROM DAMAGE
+    // =========================
+    Route::post('/damage/move/{damage_id}', [DashboardController::class, 'moveDamageToMaintenance'])->name('damage.move');
+
+    Route::post('/damage-reports/{damageId}/ticket', [MaintenanceController::class, 'createTicketFromDamage'])
+        ->name('damage.ticket');
 
     Route::post('/damage-reports/store', [IssuedDamageController::class, 'store']);
 
-    Route::get('/damage-reports/table', [IssuedDamageController::class, 'table']);
+    // JSON endpoint (OK to keep) — just don't use it for table reload
     Route::get('/damage-reports/{serialNo}', [IssuedDamageController::class, 'showBySerial']);
 
+    // =========================
+    // SCANNER
+    // =========================
     Route::post('/items/scan/validate', [InventoryController::class, 'validateScan']);
     Route::post('/items/receive-batch', [InventoryController::class, 'receiveBatch']);
-
     Route::get('/items/scan', [FormRecordsItemScanController::class, 'scan'])->name('items.scan');
-    
+
+    // =========================
+    // NOTIFICATIONS
+    // =========================
     Route::post('/notifications/{id}/read', [NotificationController::class, 'MarkAsRead'])->name('notifications.read');
 
+    // =========================
+    // ITEM APPROVAL
+    // =========================
     Route::post('/item-approval/request', [ItemApprovalRequestController::class, 'store'])->name('item-approval.request');
-
     Route::post('/item-approval/{request_id}/approve', [InventorySettingsController::class, 'approveItem'])->name('item.approve');
     Route::post('/item-approval/{request_id}/reject', [InventorySettingsController::class, 'rejectItem'])->name('item.reject');
 
+    // ==========================================================
+    // ✅ MAINTENANCE ROUTES FOR ADMIN + PROPERTY CUSTODIAN
+    // (Moved out of Admin-only so Property Custodian won't get 404)
+    // ==========================================================
+    Route::middleware(['role:Admin,Property Custodian'])->group(function () {
+
+        Route::post('/maintenance/store', [DashboardController::class, 'storeMaintenance'])->name('maintenance.store');
+
+        Route::get('/maintenance/latest-damage/{serialNo}', [DashboardController::class, 'getLatestDamageReport'])
+            ->name('maintenance.latestDamage');
+
+        Route::get('/maintenance/{id}', [DashboardController::class, 'showMaintenance'])->name('maintenance.show');
+
+        Route::put('/maintenance/{id}/update', [DashboardController::class, 'updateMaintenance'])
+            ->name('maintenance.update');
+
+        Route::delete('/maintenance/{id}/delete', [DashboardController::class, 'destroyMaintenance'])
+            ->name('maintenance.delete');
+
+        Route::get('/maintenance/records', [DashboardController::class, 'getMaintenanceRecords'])
+            ->name('maintenance.records');
+
+        Route::post('/maintenance/report/{serial_no}', [DashboardController::class, 'report']);
+        Route::post('/maintenance/make-available/{serial}', [DashboardController::class, 'makeAvailable']);
+        Route::get('/maintenance/history/{serial}', [DashboardController::class, 'getMaintenanceHistory']);
+
+        // Optional admin-only analytics in its own group below
+    });
+
+    // =========================
+    // ADMIN ONLY
+    // =========================
     Route::middleware(['role:Admin'])->group(function () {
 
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-        
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
         Route::get('/dashboard/summary/{type}', [DashboardController::class, 'getDashboardSummary']);
         Route::get('/dashboard/inventory', [DashboardController::class, 'inventory'])->name('dashboard.inventory');
@@ -99,24 +163,13 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('/inventory/get-tool/{tool_name}', [InventoryController::class, 'getTool']);
         Route::get('/check-property-no/{property_no}', [InventoryController::class, 'checkPropertyNo']);
+
         Route::get('/check-serial-no/{serial_no}', function ($serial_no) {
             $exists = DB::table('tools')->where('serial_no', $serial_no)->exists();
             return response()->json(['exists' => $exists]);
         });
 
         Route::get('/damage-reports', [DashboardController::class, 'getDamageReports'])->name('damage.index');
-    //  Route::post('/damage-reports/store', [DashboardController::class, 'storeDamageReport'])->name('damage.store');
-        Route::post('/damage/move/{id}', [DashboardController::class, 'moveDamageToMaintenance']);
-
-        Route::post('/maintenance/store', [DashboardController::class, 'storeMaintenance'])->name('maintenance.store');
-        Route::get('/maintenance/latest-damage/{serialNo}', [DashboardController::class, 'getLatestDamageReport'])->name('maintenance.latestDamage');
-        Route::get('/maintenance/{id}', [DashboardController::class, 'showMaintenance'])->name('maintenance.show');
-        Route::put('/maintenance/{id}/update', [DashboardController::class, 'updateMaintenance'])->name('maintenance.update');
-        Route::delete('/maintenance/{id}/delete', [DashboardController::class, 'destroyMaintenance'])->name('maintenance.delete');
-        Route::get('/maintenance/records', [DashboardController::class, 'getMaintenanceRecords'])->name('maintenance.records');
-        Route::post('/maintenance/report/{serial_no}', [DashboardController::class, 'report']);
-        Route::post('/maintenance/make-available/{serial}', [DashboardController::class, 'makeAvailable']);
-        Route::get('/maintenance/history/{serial}', [DashboardController::class, 'getMaintenanceHistory']);
 
         Route::get('/analytics/generate', [PredictiveAnalyticsController::class, 'generate'])->name('analytics.generate');
 
@@ -124,6 +177,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/chatbot/execute/{id}', [ChatbotController::class, 'execute']);
     });
 
+    // =========================
+    // PROPERTY CUSTODIAN + USER + REGULAR EMPLOYEE
+    // =========================
     Route::middleware(['role:Property Custodian,User,Regular Employee'])->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/dashboard/forms', [IssuedLogController::class, 'indexForms'])->name('dashboard.forms');
@@ -131,21 +187,23 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/issued/view/{reference_no}', [IssuedLogController::class, 'view']);
     });
 
+    // =========================
+    // DASHBOARD AJAX JSON (existing)
+    // =========================
     Route::get('/dashboard/issued/items-table', [DashboardController::class, 'getIssuedItemsTable'])->name('dashboard.issued.table');
     Route::get('/dashboard/inventory/table', [DashboardController::class, 'getInventoryTable'])->name('dashboard.inventory.table');
     Route::get('/dashboard/form/table', [DashboardController::class, 'getFormTable'])->name('dashboard.form.table');
+
     Route::get('/dashboard/get-total-items-and-equipment', [DashboardController::class, 'getListOfAllItemsTable']);
     Route::get('/dashboard/get-available-items', [DashboardController::class, 'getListofAllAvailableItemsTable']);
     Route::get('/dashboard/get-issued-items', [DashboardController::class, 'getListofIssuedItemsTable']);
+
+    // ⚠️ This returns array, not HTML. Keep if used, but don't inject directly into table.
     Route::get('/dashboard/get-under-maintenance', [DashboardController::class, 'getMaintenanceRecords']);
+
     Route::get('/dashboard/get-low-stock-items', [DashboardController::class, 'getLowStockItems']);
     Route::get('/dashboard/get-missing-items', [DashboardController::class, 'getMissingItems']);
     Route::get('/dashboard/items', [DashboardController::class, 'items']);
-
-    Route::post('/issued/unserviceable/{id}', [IssuedUnserviceableController::class, 'markUnserviceable'])->name('issued.unserviceable');
-
-    Route::post('/user/approve/{id}', [InventorySettingsController::class, 'approve'])->name('user.approve');
-    Route::post('/user/reject/{id}', [InventorySettingsController::class, 'reject'])->name('user.reject');
 });
 
 Route::get('/debug-role', function () {

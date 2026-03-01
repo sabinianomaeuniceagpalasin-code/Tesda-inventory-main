@@ -7,21 +7,24 @@ use Illuminate\Database\Eloquent\Model;
 class DamageReport extends Model
 {
     protected $table = 'damagereports';
-    protected $primaryKey = 'damage_id'; // ✅ because your PK is damage_id
-    public $incrementing = true;
+    protected $primaryKey = 'damage_id';   // IMPORTANT: your PK is damage_id
+    public $timestamps = true;
 
     protected $fillable = [
         'serial_no',
-        'reported_at',
+        'observation',
         'borrower_name',
-        'observation', // ✅ we will add this column
-        'reported_by', // ✅ optional: who reported it
+        'reported_by',
+        'reported_at',
     ];
-
-    public $timestamps = true;
 
     public function item()
     {
-        return $this->belongsTo(Item::class, 'serial_no', 'serial_no');
+        return $this->hasOne(Item::class, 'serial_no', 'serial_no');
+    }
+
+    public function reporter()
+    {
+        return $this->belongsTo(User::class, 'reported_by', 'user_id');
     }
 }

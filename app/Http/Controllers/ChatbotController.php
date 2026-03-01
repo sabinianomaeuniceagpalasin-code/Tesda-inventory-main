@@ -18,71 +18,68 @@ class ChatbotController extends Controller
         $message = strtolower(trim($request->message));
 
         /* =========================
-        | 1️⃣ INTENT DETECTION (ORDER MATTERS)
-        ========================= */
-
+         | 1) INTENT DETECTION (ORDER MATTERS)
+         ========================= */
         $intent = null;
 
-        /**
-         * MOST SPECIFIC FIRST
-         */
-
-        // 1️⃣ Damaged items WITH borrowers (plural)
+        // 1) Damaged items WITH borrowers
         if (preg_match('/(who|list|show).*(borrower|borrowed).*(damaged)|damaged.*(borrower|borrowed|who)/i', $message)) {
             $intent = 'DAMAGED_WITH_BORROWER';
         }
-
-        // 2️⃣ List damaged items only
+        // 2) List damaged items only
         elseif (preg_match('/list\s+.*damaged|damaged\s+items/i', $message)) {
             $intent = 'LIST_DAMAGED';
         }
-
-        // 3️⃣ Who borrowed a SPECIFIC item (requires SN)
-        elseif (preg_match('/who\s+(borrowed|issued|is\s+using|last).*sn\d+/i', $message)) {
+        // 3) Who borrowed a SPECIFIC item (requires SN)
+        elseif (preg_match('/who\s+(borrowed|issued|is\s+using|last).*sn[\-\s]?\d+/i', $message)) {
             $intent = 'WHO_BORROWED';
         }
-
-        // 4️⃣ When issued (SN based)
-        elseif (preg_match('/when.*issued.*sn\d+/i', $message)) {
+        // 4) When issued (SN based)
+        elseif (preg_match('/when.*(sn[\-\s]?\d+).*issued|when.*issued.*(sn[\-\s]?\d+)/i', $message)) {
             $intent = 'WHEN_ISSUED';
         }
 
-        // 5️⃣ Item status (SN only)
-        elseif (preg_match('/sn\d+/i', $message)) {
+        elseif (preg_match('/who\s+(damaged|reported\s+damage).*sn[\-\s]?\d+/i', $message)) {
+            $intent = 'WHO_DAMAGED';
+        }
+        // 5) Item status (SN only)
+        elseif (preg_match('/sn[\-\s]?\d+/i', $message)) {
             $intent = 'ITEM_STATUS';
         }
-
-        // 6️⃣ Low stock
+        // 6) Low stock
         elseif (preg_match('/low\s+stock|low\s+inventory|nearly\s+out|out\s+of\s+stock/i', $message)) {
             $intent = 'LOW_STOCK';
         }
-
-        // 7️⃣ List available
+        // 7) List available
         elseif (preg_match('/list\s+.*available/i', $message)) {
             $intent = 'LIST_AVAILABLE';
         }
-
-        // 8️⃣ List all
+        // 8) List all
         elseif (preg_match('/list\s+.*all\s+items|show\s+.*all\s+items/i', $message)) {
             $intent = 'LIST_ALL';
         }
-
-        // 9️⃣ Total items
+        // 9) Total items
         elseif (preg_match('/how\s+many\s+items/i', $message)) {
             $intent = 'TOTAL_ITEMS';
         }
-
-        // 🔟 Item count (how many printers)
+        // 10) Item count (how many printers)
         elseif (preg_match('/how\s+many\s+[a-z\s]+/i', $message)) {
             $intent = 'ITEM_COUNT';
         }
 
+        // ✅ Unserviceable items WITH last borrower
+        elseif (preg_match('/(who|last).*(borrower|borrowed).*(unserviceable)|unserviceable.*(who|last).*(borrower|borrowed)/i', $message)) {
+            $intent = 'UNSERVICEABLE_WITH_BORROWER';
+        }
+        // ✅ List unserviceable items
+        elseif (preg_match('/list\s+.*unserviceable|show\s+.*unserviceable|unserviceable\s+items/i', $message)) {
+            $intent = 'LIST_UNSERVICEABLE';
+        }
 
         /* =========================
-         | 2️⃣ ROUTER
+         | 2) ROUTER
          ========================= */
         switch ($intent) {
-
             case 'WHO_BORROWED':
                 return $this->whoBorrowed($message);
 
@@ -104,6 +101,9 @@ class ChatbotController extends Controller
             case 'WHEN_ISSUED':
                 return $this->whenIssued($message);
 
+            case 'WHO_DAMAGED':
+                return $this->whoDamaged($message);
+
             case 'ITEM_STATUS':
                 return $this->itemStatus($message);
 
@@ -113,9 +113,40 @@ class ChatbotController extends Controller
             case 'LIST_DAMAGED':
                 return $this->listDamaged();
 
+            case 'UNSERVICEABLE_WITH_BORROWER':
+                return $this->unserviceableWithBorrower();
+
+            case 'LIST_UNSERVICEABLE':
+                return $this->listUnserviceable();
+
             default:
                 return $this->fallbackAI($request);
         }
+    }
+
+    /* =========================
+     | HELPERS
+     ========================= */
+
+    private function extractSerial($message): ?string
+{
+    // supports SN0006, SN-0006, sn 0006
+    if (!preg_match('/\b(sn)[\-\s]?(\d+)\b/i', $message, $m)) return null;
+
+    $num = str_pad($m[2], 4, '0', STR_PAD_LEFT); // SN6 -> SN0006
+    return 'SN' . $num;
+}
+
+    private function issuedByName($issuedBy): string
+    {
+        // If issued_by is numeric => join users
+        if (is_numeric($issuedBy)) {
+            $u = DB::table('users')->where('user_id', $issuedBy)->first();
+            if ($u) return trim(($u->first_name ?? '') . ' ' . ($u->last_name ?? ''));
+        }
+
+        // else it's already a name string
+        return (string) $issuedBy;
     }
 
     /* =========================
@@ -153,13 +184,10 @@ class ChatbotController extends Controller
             ->get();
 
         if ($items->isEmpty()) {
-            return response()->json([
-                'reply' => 'There are no available items in the inventory.'
-            ]);
+            return response()->json(['reply' => 'There are no available items in the inventory.']);
         }
 
         $reply = "<strong>Available Items:</strong><br><br>";
-
         $currentItem = null;
 
         foreach ($items as $item) {
@@ -173,6 +201,75 @@ class ChatbotController extends Controller
         return response()->json(['reply' => $reply]);
     }
 
+    private function listUnserviceable()
+{
+    $items = DB::table('items')
+        ->where('status', 'Unserviceable')
+        ->select('item_name', 'serial_no')
+        ->orderBy('item_name')
+        ->orderBy('serial_no')
+        ->get();
+
+    if ($items->isEmpty()) {
+        return response()->json([
+            'reply' => 'There are currently no unserviceable items.'
+        ]);
+    }
+
+    $reply = "<strong>Unserviceable Items:</strong><br><br>";
+
+    $currentItem = null;
+
+    foreach ($items as $item) {
+        if ($currentItem !== $item->item_name) {
+            $currentItem = $item->item_name;
+            $reply .= "<br><strong>{$currentItem}</strong><br>";
+        }
+        $reply .= "• {$item->serial_no}<br>";
+    }
+
+    return response()->json(['reply' => $reply]);
+}
+
+private function unserviceableWithBorrower()
+{
+    $items = DB::table('items')
+        ->where('status', 'Unserviceable')
+        ->select('item_name', 'serial_no')
+        ->orderBy('item_name')
+        ->orderBy('serial_no')
+        ->get();
+
+    if ($items->isEmpty()) {
+        return response()->json(['reply' => 'There are currently no unserviceable items.']);
+    }
+
+    $reply = "<strong>Unserviceable Items and Last Borrower:</strong><br><br>";
+
+    foreach ($items as $it) {
+        // latest issued log for this serial
+        $issued = DB::table('issuedlog')
+            ->where('serial_no', $it->serial_no)
+            ->orderByDesc('issue_id')
+            ->first();
+
+        if ($issued) {
+            $borrower = $issued->borrower_name ?: 'N/A';
+            $issuedByName = $this->issuedByName($issued->issued_by);
+            $issuedDate = $issued->issued_date ? date('F d, Y', strtotime($issued->issued_date)) : 'N/A';
+
+            $reply .= "<strong>{$it->item_name}</strong> ({$it->serial_no})<br>"
+                . "Last Borrower: <strong>{$borrower}</strong><br>"
+                . "Issued By: {$issuedByName}<br>"
+                . "Date Issued: {$issuedDate}<br><br>";
+        } else {
+            $reply .= "<strong>{$it->item_name}</strong> ({$it->serial_no})<br>"
+                . "No issuance record found.<br><br>";
+        }
+    }
+
+    return response()->json(['reply' => $reply]);
+}
 
     private function listDamaged()
     {
@@ -184,13 +281,10 @@ class ChatbotController extends Controller
             ->get();
 
         if ($items->isEmpty()) {
-            return response()->json([
-                'reply' => 'There are currently no damaged items.'
-            ]);
+            return response()->json(['reply' => 'There are currently no damaged items.']);
         }
 
         $reply = "<strong>Damaged Items:</strong><br><br>";
-
         $currentItem = null;
 
         foreach ($items as $item) {
@@ -204,6 +298,51 @@ class ChatbotController extends Controller
         return response()->json(['reply' => $reply]);
     }
 
+    private function whoDamaged($message)
+{
+    $serial = $this->extractSerial($message);
+
+    if (!$serial) {
+        return response()->json(['reply' => 'Please provide a serial number like SN0006.']);
+    }
+
+    // Get latest damage report for this serial + who reported it
+    $damage = DB::table('damagereports as d')
+        ->leftJoin('users as u', 'd.reported_by', '=', 'u.user_id')
+        ->where('d.serial_no', $serial)
+        ->orderByDesc('d.reported_at')
+        ->select(
+            'd.serial_no',
+            'd.observation',
+            'd.reported_at',
+            'd.borrower_name',
+            'u.first_name',
+            'u.last_name'
+        )
+        ->first();
+
+    if (!$damage) {
+        return response()->json([
+            'reply' => "No damage report found for {$serial}."
+        ]);
+    }
+
+    $reportedBy = trim(($damage->first_name ?? '') . ' ' . ($damage->last_name ?? ''));
+    if ($reportedBy === '') $reportedBy = 'Unknown user';
+
+    $date = $damage->reported_at ? date('F d, Y', strtotime($damage->reported_at)) : 'Unknown date';
+    $borrower = $damage->borrower_name ?: 'N/A';
+
+    return response()->json([
+        'reply' =>
+            "<strong>{$serial}</strong><br>" .
+            "Damaged reported by: <strong>{$reportedBy}</strong><br>" .
+            "Borrower at time: <strong>{$borrower}</strong><br>" .
+            "Date reported: {$date}<br>" .
+            "Observation: {$damage->observation}"
+    ]);
+}
+
     private function damagedWithBorrower()
     {
         $damagedItems = DB::table('items')
@@ -213,42 +352,42 @@ class ChatbotController extends Controller
             ->get();
 
         if ($damagedItems->isEmpty()) {
-            return response()->json([
-                'reply' => 'There are currently no damaged items.'
-            ]);
+            return response()->json(['reply' => 'There are currently no damaged items.']);
         }
 
-        $reply = "<strong>Damaged Items and Borrowers:</strong><br><br>";
+        $reply = "<strong>Damaged Items and Last Issuance:</strong><br><br>";
 
-        foreach ($damagedItems as $item) {
-
+        foreach ($damagedItems as $it) {
+            // latest issued log for this serial
             $issued = DB::table('issuedlog')
-                ->join('student', 'issuedlog.student_id', '=', 'student.student_id')
-                ->where('issuedlog.serial_no', $item->serial_no)
-                ->orderByDesc('issuedlog.issued_date')
-                ->select('student.student_name', 'issuedlog.issued_date')
+                ->where('serial_no', $it->serial_no)
+                ->orderByDesc('issue_id')
                 ->first();
 
             if ($issued) {
-                $reply .= "<strong>{$item->item_name}</strong> ({$item->serial_no})<br>
-                       Last Borrowed By: {$issued->student_name}<br>
-                       Date Issued: " . date('F d, Y', strtotime($issued->issued_date)) . "<br><br>";
+                $issuedByName = $this->issuedByName($issued->issued_by);
+                $borrower = $issued->borrower_name ?? 'N/A';
+                $issuedDate = $issued->issued_date ? date('F d, Y', strtotime($issued->issued_date)) : 'N/A';
+
+                $reply .= "<strong>{$it->item_name}</strong> ({$it->serial_no})<br>"
+                    . "Borrower: {$borrower}<br>"
+                    . "Issued By: {$issuedByName}<br>"
+                    . "Date Issued: {$issuedDate}<br><br>";
             } else {
-                $reply .= "<strong>{$item->item_name}</strong> ({$item->serial_no})<br>
-                       No borrowing record found.<br><br>";
+                $reply .= "<strong>{$it->item_name}</strong> ({$it->serial_no})<br>"
+                    . "No issued record found.<br><br>";
             }
         }
 
         return response()->json(['reply' => $reply]);
     }
 
-
-
     private function listAll()
     {
         $items = DB::table('propertyinventory')
             ->select('item_name', DB::raw('SUM(quantity) as total'))
             ->groupBy('item_name')
+            ->orderBy('item_name')
             ->get();
 
         if ($items->isEmpty()) {
@@ -277,8 +416,11 @@ class ChatbotController extends Controller
     private function itemCount($message)
     {
         preg_match('/(how\s+many|number\s+of|stock\s+of|quantity\s+of)\s+([a-z\s]+)/i', $message, $match);
+        $itemName = trim(rtrim($match[2] ?? '', 's'));
 
-        $itemName = trim(rtrim($match[2], 's'));
+        if (!$itemName) {
+            return response()->json(['reply' => "Please specify the item name (example: 'How many printers?')."]);
+        }
 
         $item = DB::table('propertyinventory')
             ->select(DB::raw('SUM(quantity) as total'))
@@ -296,27 +438,29 @@ class ChatbotController extends Controller
 
     private function whenIssued($message)
     {
-        preg_match('/(sn\d+)/i', $message, $sn);
-        $serial = strtoupper($sn[1]);
+        $serial = $this->extractSerial($message);
+        if (!$serial) return response()->json(['reply' => "Please include a serial like SN100001."]);
 
         $issued = DB::table('issuedlog')
             ->where('serial_no', $serial)
-            ->orderByDesc('issued_date')
+            ->orderByDesc('issue_id')
             ->first();
 
         if (!$issued) {
-            return response()->json(['reply' => 'This item has never been issued.']);
+            return response()->json(['reply' => "This item ({$serial}) has never been issued."]);
         }
 
+        $date = $issued->issued_date ? date('F d, Y', strtotime($issued->issued_date)) : 'N/A';
+
         return response()->json([
-            'reply' => "Last issued on " . date('F d, Y', strtotime($issued->issued_date))
+            'reply' => "Last issued on {$date}."
         ]);
     }
 
     private function itemStatus($message)
     {
-        preg_match('/(sn\d+)/i', $message, $sn);
-        $serial = strtoupper($sn[1]);
+        $serial = $this->extractSerial($message);
+        if (!$serial) return response()->json(['reply' => "Please include a serial like SN100001."]);
 
         $item = DB::table('items')->where('serial_no', $serial)->first();
 
@@ -333,32 +477,51 @@ class ChatbotController extends Controller
 
     private function whoBorrowed($message)
     {
-        preg_match('/(sn\d+)/i', $message, $sn);
-        $serial = strtoupper($sn[1]);
+        $serial = $this->extractSerial($message);
+        if (!$serial) return response()->json(['reply' => "Please include a serial like SN100001."]);
 
         $item = DB::table('items')->where('serial_no', $serial)->first();
         if (!$item) {
-            return response()->json(['reply' => 'Item not found.']);
+            return response()->json(['reply' => "Item not found for serial {$serial}."]);
         }
 
+        // Get latest issuance record for this serial
         $issued = DB::table('issuedlog')
-            ->join('student', 'issuedlog.student_id', '=', 'student.student_id')
-            ->where('issuedlog.serial_no', $serial)
-            ->orderByDesc('issuedlog.issued_date')
-            ->select('student.student_name', 'issuedlog.issued_date')
+            ->where('serial_no', $serial)
+            ->orderByDesc('issue_id')
             ->first();
 
-        $borrower = $issued
-            ? "Last Borrowed By: {$issued->student_name}<br>Date Issued: " . date('F d, Y', strtotime($issued->issued_date))
-            : "No borrowing record found.";
+        if (!$issued) {
+            return response()->json([
+                'reply' => "<strong>{$item->item_name}</strong><br>
+                            Serial No: {$serial}<br>
+                            Status: {$item->status}<br><br>
+                            No borrowing/issuance record found."
+            ]);
+        }
+
+        $borrower = $issued->borrower_name ?? 'N/A';
+        $issuedByName = $this->issuedByName($issued->issued_by);
+        $issuedDate = $issued->issued_date ? date('F d, Y', strtotime($issued->issued_date)) : 'N/A';
+        $returnDate = $issued->return_date ? date('F d, Y', strtotime($issued->return_date)) : 'N/A';
+        $actualReturn = $issued->actual_return_date ? date('F d, Y', strtotime($issued->actual_return_date)) : null;
+
+        $returnLine = $actualReturn
+            ? "Returned: {$actualReturn}"
+            : "Expected Return: {$returnDate}";
 
         return response()->json([
             'reply' => "<strong>{$item->item_name}</strong><br>
                         Serial No: {$serial}<br>
                         Status: {$item->status}<br><br>
-                        {$borrower}"
+                        Borrower: {$borrower}<br>
+                        Issued By: {$issuedByName}<br>
+                        Date Issued: {$issuedDate}<br>
+                        {$returnLine}"
         ]);
     }
+
+    
 
     private function fallbackAI(Request $request)
     {
@@ -367,13 +530,13 @@ class ChatbotController extends Controller
                 'Authorization' => 'Bearer ' . config('services.openrouter.key'),
                 'Content-Type' => 'application/json',
             ])->post('https://openrouter.ai/api/v1/chat/completions', [
-                        'model' => 'gpt-4o-mini',
-                        'messages' => [
-                            ['role' => 'system', 'content' => 'You are a TESDA inventory chatbot. if the question is not answerable say contact the tesda admin'],
-                            ['role' => 'user', 'content' => $request->message]
-                        ],
-                        'max_tokens' => 150
-                    ]);
+                'model' => 'gpt-4o-mini',
+                'messages' => [
+                    ['role' => 'system', 'content' => 'You are a TESDA inventory chatbot. If the question is not answerable, say: "Please contact the TESDA admin."'],
+                    ['role' => 'user', 'content' => $request->message]
+                ],
+                'max_tokens' => 150
+            ]);
 
             return response()->json([
                 'reply' => $response->json()['choices'][0]['message']['content'] ?? 'No response.'

@@ -1,77 +1,166 @@
-// damage.js (FULL REPLACEMENT)
+// public/js/damage.js  (FULL REPLACEMENT)
+//
+// Features:
+// 1) Report Damage from Issued table (.damaged-btn-issued) -> POST /damage-reports/store
+// 2) Create Maintenance Ticket from Damage table (.maintenance-btn-issued) -> POST /damage/move/{damage_id}
+// 3) Reload Damage + Maintenance tables using safe HTML endpoints
+//    - Prevents injecting Laravel 404/403 pages into <tbody>
 
-const DamageHandler = (() => {
-  async function reportDamage(serialNo, observation) {
+(() => {
+  const csrf = () =>
+    document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+
+  // ✅ Safe loader: will NOT inject 404/403 HTML into table
+  async function safeLoadTable(tbodySelector, url) {
+    const tbody = document.querySelector(tbodySelector);
+    if (!tbody) return;
+
+    // Optional loading row (keeps UI responsive)
+    tbody.innerHTML = `<tr><td colspan="99" style="text-align:center; padding:16px;">Loading...</td></tr>`;
+
     try {
-      const res = await fetch("/damage-reports/store", {
-        method: "POST",
-        headers: {
-          "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        body: JSON.stringify({
-          serial_no: serialNo,
-          observation: observation
-        })
+      const res = await fetch(url, {
+        headers: { Accept: "text/html" },
+        credentials: "same-origin",
       });
 
-      if (res.status === 401 || res.status === 403) {
-        Swal.fire("Unauthorized", "You are not allowed to do this action.", "error");
+      const html = await res.text();
+
+      // ✅ Do NOT inject error pages
+      if (!res.ok) {
+        console.error("Table reload failed:", url, res.status, html);
+
+        tbody.innerHTML = `<tr><td colspan="99" style="text-align:center; padding:16px;">
+          Failed to reload table (${res.status})
+        </td></tr>`;
+
+        // Optional: show Swal only when it’s clearly a problem
+        Swal.fire("Error", `Failed to reload table (${res.status}).`, "error");
         return;
       }
 
-      const data = await res.json().catch(() => ({}));
-
-      if (data.success) {
-        Swal.fire("Success", data.message, "success");
-
-        // Reload tables (issued + damage)
-        if (typeof window.reloadIssuedTable === "function") {
-          window.reloadIssuedTable();
-        }
-        reloadDamageTable();
-
-      } else {
-        Swal.fire("Error", data.message || "Failed to report damage.", "error");
+      // Extra guard: if server accidentally returns a full HTML page
+      // (Laravel error/404 page often contains <html> or <body>)
+      if (/<html|<body/i.test(html)) {
+        console.error("Blocked full HTML document injection for:", url, html);
+        tbody.innerHTML = `<tr><td colspan="99" style="text-align:center; padding:16px;">
+          Unexpected response returned. Check route/controller.
+        </td></tr>`;
+        Swal.fire("Error", "Unexpected response while reloading table.", "error");
+        return;
       }
+
+      tbody.innerHTML = html;
     } catch (err) {
       console.error(err);
-      Swal.fire("Error", "Something went wrong.", "error");
+      tbody.innerHTML = `<tr><td colspan="99" style="text-align:center; padding:16px;">
+        Network error while reloading table.
+      </td></tr>`;
+      Swal.fire("Error", "Network error while reloading table.", "error");
     }
   }
 
-  function reloadDamageTable() {
-    fetch("/damage-reports/table", { headers: { "Accept": "text/html" } })
-      .then(res => res.text())
-      .then(html => {
-        const tbody = document.querySelector("#damageTable tbody");
-        if (tbody) tbody.innerHTML = html;
-      })
-      .catch(err => console.error("Damage table reload error:", err));
+  // ✅ Expose reloaders globally so other scripts can call them too
+  window.reloadDamageTable = () =>
+    safeLoadTable("#damageTable tbody", "/dashboard/damage/table-html");
+
+  window.reloadMaintenanceTable = () =>
+    safeLoadTable("#maintenanceTable tbody", "/dashboard/maintenance/table-html");
+
+  // ---------------------------
+  // 1) Report Damage
+  // ---------------------------
+  async function reportDamage(serialNo, observation) {
+    const res = await fetch("/damage-reports/store", {
+      method: "POST",
+      headers: {
+        "X-CSRF-TOKEN": csrf(),
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "same-origin",
+      body: JSON.stringify({ serial_no: serialNo, observation }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (res.status === 401 || res.status === 403) {
+      Swal.fire("Unauthorized", "You are not allowed to do this action.", "error");
+      return;
+    }
+
+    if (!res.ok || !data.success) {
+      Swal.fire("Error", data.message || "Failed to report damage.", "error");
+      return;
+    }
+
+    Swal.fire("Success", data.message || "Damage reported.", "success");
+
+    // If you have an issued table reloader, refresh it
+    if (typeof window.reloadIssuedTable === "function") {
+      try { await window.reloadIssuedTable(); } catch (e) { console.warn(e); }
+    }
+
+    // Refresh damage table
+    await window.reloadDamageTable();
   }
 
-  // ✅ Always get serial safely (works after reload)
-  function getSerialFromButton(btn) {
-    // 1) preferred: data-id on button
-    let serial = btn.dataset.id;
+  // ---------------------------
+  // 2) Create Maintenance Ticket
+  // ---------------------------
+  async function createTicketFromDamage(damageId) {
+    const res = await fetch(`/damage/move/${encodeURIComponent(damageId)}`, {
+      method: "POST",
+      headers: {
+        "X-CSRF-TOKEN": csrf(),
+        Accept: "application/json",
+      },
+      credentials: "same-origin",
+    });
 
-    // 2) fallback: read first td (Serial # column)
+    const data = await res.json().catch(() => ({}));
+
+    if (res.status === 409) {
+      Swal.fire("Already Ticketed", data.message || "Ticket already exists.", "info");
+      return;
+    }
+
+    if (res.status === 401 || res.status === 403) {
+      Swal.fire("Unauthorized", data.message || "You are not allowed.", "error");
+      return;
+    }
+
+    if (!res.ok || !data.success) {
+      Swal.fire("Error", data.message || "Failed to create maintenance ticket.", "error");
+      return;
+    }
+
+    Swal.fire("Ticket Created", data.message || "Maintenance ticket created.", "success");
+
+    // ✅ Reload both tables safely
+    await window.reloadDamageTable();
+    await window.reloadMaintenanceTable();
+  }
+
+  function getSerialFromIssuedButton(btn) {
+    // issued table uses data-id="{{ $item->serial_no }}"
+    let serial = btn.dataset.id;
     if (!serial) {
       const row = btn.closest("tr");
       serial = row?.querySelector("td")?.textContent?.trim();
     }
-
     return serial || null;
   }
 
-  function bindDamageButtons() {
-    // ✅ Event delegation (works even after AJAX table replacement)
-    document.addEventListener("click", async (e) => {
-      const btn = e.target.closest(".damaged-btn-issued");
-      if (!btn) return;
+  // ---------------------------
+  // Event Binding
+  // ---------------------------
+  document.addEventListener("click", async (e) => {
+    // A) REPORT DAMAGE from issued table
+    const damageBtn = e.target.closest(".damaged-btn-issued");
+    if (damageBtn) {
+      const serialNo = getSerialFromIssuedButton(damageBtn);
 
-      const serialNo = getSerialFromButton(btn);
       if (!serialNo) {
         Swal.fire("Error", "Serial number missing!", "error");
         return;
@@ -89,28 +178,57 @@ const DamageHandler = (() => {
         confirmButtonText: "Submit",
         cancelButtonText: "Cancel",
         preConfirm: () => {
-          const obs = document.getElementById("damageObservation").value.trim();
+          const obs = document.getElementById("damageObservation")?.value?.trim();
           if (!obs) {
             Swal.showValidationMessage("Observation is required.");
             return false;
           }
           return obs;
-        }
+        },
       });
 
       if (result.isConfirmed) {
-        reportDamage(serialNo, result.value);
+        await reportDamage(serialNo, result.value);
       }
-    });
-  }
+      return;
+    }
 
-  function init() {
-    bindDamageButtons();
-  }
+    // B) CREATE MAINTENANCE TICKET from damage report table
+    const ticketBtn = e.target.closest(".maintenance-btn-issued");
+    if (ticketBtn) {
+      const damageId = ticketBtn.dataset.damageId;
 
-  return { init };
+      if (!damageId) {
+        Swal.fire("Error", "Damage report ID missing!", "error");
+        return;
+      }
+
+      const confirm = await Swal.fire({
+        title: "Create Maintenance Ticket?",
+        text: "This will create a maintenance record from this damage report.",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: "Create Ticket",
+        cancelButtonText: "Cancel",
+      });
+
+      if (!confirm.isConfirmed) return;
+
+      // prevent double click
+      ticketBtn.disabled = true;
+
+      try {
+        await createTicketFromDamage(damageId);
+      } finally {
+        ticketBtn.disabled = false;
+      }
+    }
+  });
+
+  // Optional: reload tables when page loads (only if you want)
+  document.addEventListener("DOMContentLoaded", () => {
+    // You can uncomment if you want auto-refresh on load:
+    // window.reloadDamageTable();
+    // window.reloadMaintenanceTable();
+  });
 })();
-
-document.addEventListener("DOMContentLoaded", () => {
-  DamageHandler.init();
-});

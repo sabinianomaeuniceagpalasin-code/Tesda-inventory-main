@@ -486,7 +486,7 @@
                 <div class="table-header">
                   <h4>Issued item list</h4>
                 </div>
-                <table class="issued-table">
+                <table class="issued-table" id="issuedTable">
                   <thead>
                     <tr>
                       <th>Serial #</th>
@@ -604,7 +604,7 @@
           <!-- Maintenance Records Table -->
           <div class="form-table-container mt-4">
             <h3>Maintenance Records</h3>
-            <table class="form-table">
+            <table class="form-table" id="maintenanceTable">
               <thead>
                 <tr>
                   <th>Serial #</th>
@@ -712,13 +712,15 @@
                     @forelse($damageReports as $report)
                       <tr>
                         <td>{{ $report->serial_no }}</td>
-                        <td>{{ $report->item->item_name ?? '-' }}</td>
+                        <td>{{ $report->item_name ?? '-' }}</td>
                         <td>{{ $report->observation ?? '-' }}</td>
                         <td>{{ \Carbon\Carbon::parse($report->reported_at)->format('F d, Y') }}</td>
                         <td>
                           <div class="button-container">
-                            <button class="action-btn-issued maintenance-btn-issued" data-id="{{ $report->id }}"
-                              data-serial="{{ $report->serial_no }}" title="Maintenance">
+                            <button class="action-btn-issued maintenance-btn-issued"
+                              data-damage-id="{{ $report->damage_id }}"
+                              data-serial="{{ $report->serial_no }}"
+                              title="Maintenance">
                               <i class="fas fa-exclamation-triangle"></i>
                             </button>
 
@@ -1235,7 +1237,6 @@
   <script src="{{ asset('js/dashboard-inv-search.js') }}"></script>
   <script src="{{ asset('js/dashboard-form-search.js') }}"></script>
   <script src="{{ asset('js/dashboard-configs.js') }}"></script>
-  <!-- <script src="{{ asset('js/dashboard-modal.js') }}"></script> -->
   <script src="{{ asset('js/dashboard-forms.js') }}"></script>
   <script src="{{ asset('js/dashboard.js') }}"></script>
   <script src="{{ asset('js/dashboard-modals.js') }}"></script>
@@ -1254,8 +1255,7 @@
   <script src="{{ asset('js/profile.js') }}"></script>
   <script src="{{ asset('js/return-item.js') }}"></script>
   <script src="{{ asset('js/issued-unserviceable.js') }}"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <script src="{{ asset('js/dashboard.js') }}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>  
   <script src="{{ asset('js/damage.js') }}"></script>
   <script src="{{ asset('js/maintenance.js') }}"></script>
   <script src="{{ asset('js/maintenance-report.js') }}"></script>
@@ -1269,6 +1269,9 @@
   <script src="{{ asset('js/scanner.js') }}"></script>
   <script src="{{ asset('js/issued-borrower-search.js') }}"></script>
   <script src="{{ asset('js/dashboard-inventory-filter.js') }}"></script>
+  <script src="{{ asset('js/maintenance-ticket.js') }}"></script>
+
+
 
 
 
