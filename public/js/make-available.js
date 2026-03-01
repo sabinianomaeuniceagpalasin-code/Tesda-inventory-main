@@ -59,10 +59,15 @@ function bindMakeAvailableButtons() {
 }
 
 function reloadMaintenanceTable() {
-    fetch("/dashboard/maintenance/table")
-        .then((res) => res.text())
-        .then((html) => {
-            document.querySelector(".form-table tbody").innerHTML = html;
-            bindMakeAvailableButtons(); 
-        });
+    fetch("/dashboard/maintenance/table", {
+        headers: { Accept: "application/json" },
+    })
+        .then((res) => res.json())
+        .then((data) => {
+            const tbody = document.querySelector("table.form-table tbody");
+            if (!tbody) return;
+
+            tbody.innerHTML = data.html; // ✅ ONLY html
+        })
+        .catch((err) => console.error(err));
 }

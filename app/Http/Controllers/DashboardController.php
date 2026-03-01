@@ -525,6 +525,8 @@ class DashboardController extends Controller
         }
     }
 
+
+
     public function showMaintenance($id)
     {
         $record = DB::table('maintenance')
@@ -718,7 +720,7 @@ class DashboardController extends Controller
 
     public function moveDamageToMaintenance($id)
     {
-        $damage = DB::table('damagereports')->where('id', $id)->first();
+        $damage = DB::table('damagereports')->where('damage_id', $id)->first();
 
         if (!$damage) {
             return response()->json(['error' => 'Damage report not found']);
@@ -731,13 +733,94 @@ class DashboardController extends Controller
             'repair_cost' => 0,
             'expected_completion' => now()->addDays(3),
             'remarks' => 'Auto-transferred from damage report',
-            'created_at' => now(),
-            'updated_at' => now(),
+            // 'created_at' => now(),
+            // 'updated_at' => now(),
         ]);
 
-        DB::table('damagereports')->where('id', $id)->delete();
+        DB::table('damagereports')->where('damage_id', $id)->delete();
 
         return response()->json(['message' => 'Damage moved to maintenance successfully!']);
+    }
+
+    public function getMaintenanceTable()
+    {
+        $records = DB::table('maintenance')
+            ->leftJoin('items', 'maintenance.serial_no', '=', 'items.serial_no')
+            ->select(
+                'maintenance.maintenance_id',
+                'maintenance.serial_no',
+                'items.item_name',
+                'maintenance.issue_type',
+                'maintenance.date_reported',
+                'maintenance.repair_cost',
+                'maintenance.expected_completion',
+                'maintenance.remarks'
+            )
+            ->orderBy('maintenance.date_reported', 'desc')
+            ->get();
+
+        $html = '';
+
+        foreach ($records as $record) {
+
+            $dateReported = \Carbon\Carbon::parse($record->date_reported)->format('F d, Y');
+
+            $expectedCompletion = $record->expected_completion
+                ? \Carbon\Carbon::parse($record->expected_completion)->format('F d, Y')
+                : '-';
+
+            $repairCost = number_format($record->repair_cost, 2);
+
+            $html .= "
+            <tr>
+            <td class='serial-cell' data-serial='{$record->serial_no}'>
+                {$record->serial_no}
+            </td>
+
+            <td>" . ($record->item_name ?? '-') . "</td>
+
+            <td>" . ($record->issue_type ?? '-') . "</td>
+
+            <td>{$dateReported}</td>
+
+            <td>" . ($record->repair_cost ? '₱' . $repairCost : '-') . "</td>
+
+            <td>{$expectedCompletion}</td>
+
+            <td>" . ($record->remarks ?? '-') . "</td>
+
+            <td>
+                <div class='btn-with-icon'>
+                <button class='edit-btn'
+                    data-id='{$record->maintenance_id}'
+                    data-serial='{$record->serial_no}'>
+                    <svg class='edit-icon' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'
+                    fill='rgba(100,205,138,1)'>
+                    <path d='M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z'/>
+                    </svg>
+                    Edit
+                </button>
+                </div>
+
+                <div class='right-side'>
+                <div class='btn-with-icon'>
+                    <button class='make-available-btn'
+                    data-serial='{$record->serial_no}'
+                    title='Make Available'>
+                    <svg class='available-icon' xmlns='http://www.w3.org/2000/svg'
+                        viewBox='0 0 24 24' fill='rgba(100,205,138,1)'>
+                        <path d='M9 16.2l-3.5-3.5 1.41-1.42L9 13.38l7.09-7.09L17.5 7.8z'/>
+                    </svg>
+                    Make Available
+                    </button>
+                </div>
+                </div>
+            </td>
+            </tr>
+            ";
+        }
+
+        return response()->json(['html' => $html]);
     }
 
     public function makeAvailable($serial)
@@ -756,7 +839,7 @@ class DashboardController extends Controller
 
             DB::table('maintenance')->where('serial_no', $serial)->update([
                 'remarks' => 'Item is now available',
-                'updated_at' => now(),
+                // 'updated_at' => now(),
             ]);
 
             return response()->json(['message' => 'Item status updated to Available successfully!']);

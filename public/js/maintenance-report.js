@@ -3,7 +3,7 @@ function bindMaintenanceButtons() {
         btn.addEventListener("click", function () {
             const id = this.getAttribute("data-id");
             const row = this.closest("tr");
-
+            
             Swal.fire({
                 title: "Move to Maintenance?",
                 text: "This damage report will be transferred into maintenance records.",
@@ -23,6 +23,7 @@ function bindMaintenanceButtons() {
                     })
                         .then((res) => res.json())
                         .then((data) => {
+                            console.log("ID:", id);
                             if (data.error) {
                                 Swal.fire("Error", data.error, "error");
                                 return;

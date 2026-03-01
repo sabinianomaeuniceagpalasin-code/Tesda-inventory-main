@@ -117,6 +117,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/maintenance/report/{serial_no}', [DashboardController::class, 'report']);
         Route::post('/maintenance/make-available/{serial}', [DashboardController::class, 'makeAvailable']);
         Route::get('/maintenance/history/{serial}', [DashboardController::class, 'getMaintenanceHistory']);
+        Route::get('/dashboard/maintenance/table', [DashboardController::class, 'getMaintenanceTable'])->name('maintenancetable.records');
 
         Route::get('/analytics/generate', [PredictiveAnalyticsController::class, 'generate'])->name('analytics.generate');
 
@@ -137,10 +138,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/get-total-items-and-equipment', [DashboardController::class, 'getListOfAllItemsTable']);
     Route::get('/dashboard/get-available-items', [DashboardController::class, 'getListofAllAvailableItemsTable']);
     Route::get('/dashboard/get-issued-items', [DashboardController::class, 'getListofIssuedItemsTable']);
-    Route::get('/dashboard/get-under-maintenance', [DashboardController::class, 'getMaintenanceRecords']);
+    Route::get('/dashboard/get-under-maintenance', [DashboardController::class, 'getUnderMaintenanceListTable']);
     Route::get('/dashboard/get-low-stock-items', [DashboardController::class, 'getLowStockItems']);
     Route::get('/dashboard/get-missing-items', [DashboardController::class, 'getMissingItems']);
     Route::get('/dashboard/items', [DashboardController::class, 'items']);
+
 
     Route::post('/issued/unserviceable/{id}', [IssuedUnserviceableController::class, 'markUnserviceable'])->name('issued.unserviceable');
 

@@ -9,7 +9,7 @@
 <body>
   <div class="container">
     <div class="left">
-      <img src="{{ asset('images/Lingap.png') }}" alt="TESDA Logo">
+      <img src="{{ asset('images/imahengnakaraan.png') }}" alt="TESDA Logo">
     </div>
     <div class="right">
       <h2>Log in</h2>

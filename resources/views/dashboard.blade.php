@@ -717,7 +717,7 @@
                         <td>{{ \Carbon\Carbon::parse($report->reported_at)->format('F d, Y') }}</td>
                         <td>
                           <div class="button-container">
-                            <button class="action-btn-issued maintenance-btn-issued" data-id="{{ $report->id }}"
+                            <button class="action-btn-issued maintenance-btn-issued" data-id="{{ $report->damage_id }}"
                               data-serial="{{ $report->serial_no }}" title="Maintenance">
                               <i class="fas fa-exclamation-triangle"></i>
                             </button>

@@ -166,4 +166,18 @@ document.addEventListener("DOMContentLoaded", () => {
     window.addEventListener("click", (e) => {
         if (e.target === modal) closeModal();
     });
+
+    function reloadMaintenanceTable() {
+        fetch("/dashboard/maintenance/table", {
+            headers: { Accept: "application/json" },
+        })
+            .then((res) => res.json())
+            .then((data) => {
+                const tbody = document.querySelector("#reports table.form-table tbody");
+                if (!tbody) return;
+
+                tbody.innerHTML = data.html; // ✅ IMPORTANT (not data)
+            })
+            .catch((err) => console.error("reloadMaintenanceTable error:", err));
+    }
 });
