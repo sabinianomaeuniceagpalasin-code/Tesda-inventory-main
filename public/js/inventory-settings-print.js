@@ -1,142 +1,185 @@
+// public/js/inventory-settings-print.js
+
 document.addEventListener("DOMContentLoaded", function () {
+  const modalEl = document.getElementById("printPreviewModal");
+  if (!modalEl) return;
 
-    const modal = new bootstrap.Modal(document.getElementById('printPreviewModal'));
+  const modal = new bootstrap.Modal(modalEl);
 
-    document.querySelectorAll('.openPrintModal').forEach(button => {
-        button.addEventListener('click', function () {
+  document.querySelectorAll(".openPrintModal").forEach((button) => {
+    button.addEventListener("click", function () {
+      const itemName = (this.dataset.item || "").trim();
+      const serialString = (this.dataset.serials || "").trim();
+      const type = (this.dataset.type || "qr").trim().toLowerCase(); // "qr" | "barcode"
 
-            let itemName = this.dataset.item;
-            let serialString = this.dataset.serials;
-            let type = this.dataset.type; // qr or barcode
+      const serials = serialString
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
 
-            let serials = serialString.split(',').map(s => s.trim());
+      const container = document.getElementById("qrContainer");
+      if (!container) return;
 
-            let container = document.getElementById('qrContainer');
-            container.innerHTML = '';
+      container.innerHTML = "";
+      container.setAttribute("data-type", type);
 
-            // 🔥 store type so printPreview() can detect it
-            container.setAttribute("data-type", type);
+      serials.forEach((serial) => {
+        const box = document.createElement("div");
+        box.className = "qr-box";
 
-            serials.forEach(serial => {
+        const codeDiv = document.createElement("div");
+        box.appendChild(codeDiv);
 
-                let box = document.createElement('div');
-                box.className = 'qr-box';
+        if (type === "qr") {
+          // QR image only
+          new QRCode(codeDiv, {
+            text: serial,
+            width: 70,
+            height: 70,
+          });
+        } else {
+          // BARCODE image only (NO text), then we print our own label below
+          const wrap = document.createElement("div");
+          wrap.className = "barcode-wrap";
 
-                let codeDiv = document.createElement('div');
-                box.appendChild(codeDiv);
+          const img = document.createElement("img");
+          img.alt = `Barcode ${serial}`;
+          img.src = `https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(
+            serial
+          )}&code=Code128&translate-esc=false&multiplebarcodes=false&quiet=0&showtext=0`;
 
-                if (type === 'qr') {
+          // Make the image slightly taller, wrap will crop any extra bottom text/space
+          img.style.width = "120px";
+          img.style.height = "55px";
 
-                    new QRCode(codeDiv, {
-                        text: serial,
-                        width: 70,
-                        height: 70
-                    });
+          wrap.appendChild(img);
+          codeDiv.appendChild(wrap);
+        }
 
-                } else if (type === 'barcode') {
+        // Label layout for BOTH:
+        // item name
+        // serial number
+        const label = document.createElement("div");
+        label.className = "qr-title";
+        label.innerHTML = `
+          <div><strong>${escapeHtml(itemName)}</strong></div>
+          <div class="qr-serial">${escapeHtml(serial)}</div>
+        `;
 
-                    let img = document.createElement('img');
+        box.appendChild(label);
+        container.appendChild(box);
+      });
 
-                    // remove quiet zone
-                    img.src = `https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(serial)}&code=Code128&quiet=0`;
-
-                    img.style.width = "120px";
-                    img.style.height = "40px";
-
-                    codeDiv.appendChild(img);
-                }
-
-                let label = document.createElement('div');
-                label.className = 'qr-title';
-                label.innerHTML = "<strong>" + itemName + "</strong><br>" + serial;
-
-                box.appendChild(label);
-                container.appendChild(box);
-            });
-
-            modal.show();
-        });
+      modal.show();
     });
-
+  });
 });
 
 function printPreview() {
+  const container = document.getElementById("qrContainer");
+  if (!container) return;
 
-    let container = document.getElementById("qrContainer");
-    let type = container.getAttribute("data-type");
-    let printContents = container.innerHTML;
+  const type = (container.getAttribute("data-type") || "qr").toLowerCase();
+  const printContents = container.innerHTML;
 
-    let printWindow = window.open('', '', 'width=900,height=1200');
+  const printWindow = window.open("", "", "width=900,height=1200");
+  if (!printWindow) return;
 
-    // 🔥 Dynamic grid layout
-    let gridColumns;
-    let boxWidth;
+  // Grid layout
+  let gridColumns;
+  let boxWidth;
 
-    if (type === 'barcode') {
-        gridColumns = "repeat(5, 130px)";  // 5 per row
-        boxWidth = "130px";
-    } else {
-        gridColumns = "repeat(7, 90px)";   // 7 per row
-        boxWidth = "90px";
-    }
+  if (type === "barcode") {
+    gridColumns = "repeat(5, 130px)"; // 5 per row
+    boxWidth = "130px";
+  } else {
+    gridColumns = "repeat(7, 90px)"; // 7 per row
+    boxWidth = "90px";
+  }
 
-    printWindow.document.write(`
-        <html>
-        <head>
-            <title>Print Codes</title>
-            <style>
-                body {
-                    margin: 0;
-                    padding: 20px;
-                    font-family: Arial, sans-serif;
-                }
+  printWindow.document.write(`
+    <html>
+    <head>
+      <title>Print Codes</title>
+      <style>
+        @media print {
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
 
-                .qr-container {
-                    display: grid;
-                    grid-template-columns: ${gridColumns};
-                    justify-content: center;
-                    gap: 8px;
-                }
+        body {
+          margin: 0;
+          padding: 20px;
+          font-family: Arial, sans-serif;
+        }
 
-                .qr-box {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    text-align: center;
-                    width: ${boxWidth};
-                }
+        .qr-container {
+          display: grid;
+          grid-template-columns: ${gridColumns};
+          justify-content: center;
+          gap: 8px;
+        }
 
-                .qr-box canvas {
-                    width: 70px !important;
-                    height: 70px !important;
-                }
+        .qr-box {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          width: ${boxWidth};
+        }
 
-                .qr-box img {
-                    display: block;
-                    margin: 0 auto;
-                }
+        /* QR canvases */
+        .qr-box canvas {
+          width: 70px !important;
+          height: 70px !important;
+        }
 
-                .qr-title {
-                    font-size: 9px;
-                    margin-top: 4px;
-                    line-height: 1.2;
-                    text-align: center;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="qr-container">
-                ${printContents}
-            </div>
-        </body>
-        </html>
-    `);
+        /* Barcode crop wrapper: guarantees NO serial printed inside the image area */
+        .barcode-wrap {
+          width: 120px;
+          height: 40px;
+          overflow: hidden;
+        }
 
-    printWindow.document.close();
-    printWindow.focus();
+        .qr-box img {
+          display: block;
+          margin: 0 auto;
+        }
 
-    setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
-    }, 500);
+        .qr-title {
+          font-size: 9px;
+          margin-top: 4px;
+          line-height: 1.2;
+          text-align: center;
+        }
+
+        .qr-serial {
+          font-size: 9px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="qr-container">
+        ${printContents}
+      </div>
+    </body>
+    </html>
+  `);
+
+  printWindow.document.close();
+  printWindow.focus();
+
+  setTimeout(() => {
+    printWindow.print();
+    printWindow.close();
+  }, 500);
+}
+
+/** Prevent breaking HTML if itemName/serial contains special chars */
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }

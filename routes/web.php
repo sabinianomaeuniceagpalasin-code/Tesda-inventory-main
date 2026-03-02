@@ -59,6 +59,15 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/login-history', [ProfileController::class, 'loginHistory'])->name('login-history');
 
     // =========================
+    // USER APPROVAL
+    // =========================
+        Route::post('/users/{user_id}/approve', [InventorySettingsController::class, 'approve'])
+            ->name('user.approve');
+
+        Route::post('/users/{user_id}/reject', [InventorySettingsController::class, 'reject'])
+            ->name('user.reject');
+            
+    // =========================
     // HTML TABLE RELOAD ROUTES (AJAX)
     // =========================
     Route::get('/dashboard/issued/table-html', [DashboardController::class, 'issuedTableHtml']);

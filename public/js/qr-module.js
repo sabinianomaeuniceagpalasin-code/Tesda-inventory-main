@@ -122,7 +122,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     format: "CODE128",
                     width: 2,
                     height: 80,
-                    displayValue: true
+                    displayValue: false
                 });
 
                 box.append(label, svg);

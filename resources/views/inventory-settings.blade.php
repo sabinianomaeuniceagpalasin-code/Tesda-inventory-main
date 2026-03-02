@@ -274,7 +274,8 @@
                             <table class="table table-hover align-middle text-center">
                                 <thead class="table-light">
                                     <tr>
-                                        <th>Name</th>
+                                        <th>First Name</th>
+                                        <th>Last Name</th>
                                         <th>Role Requested</th>
                                         <th>Email Address</th>
                                         <th>Date Registered</th>
@@ -285,7 +286,8 @@
                                     @foreach($users as $user)
                                         @if($user->is_verified == 1 && $user->is_approved == 0)
                                         <tr>
-                                            <td>{{ $user->full_name }}</td>
+                                            <td>{{ $user->first_name }}</td>
+                                            <td>{{ $user->last_name }}</td>
                                             <td>{{ $user->role }}</td>
                                             <td>{{ $user->email }}</td>
                                             <td>{{ $user->created_at->format('F d, Y') }}</td>
@@ -502,11 +504,19 @@
                                         </button>
                                         <form method="POST" action="{{ route('item.approve', $request->request_id) }}">
                                             @csrf
-                                            <button class="btn btn-success btn-sm">Approve</button>
+                                            <button type="button"
+                                                    class="btn btn-success btn-sm approve-item"
+                                                    data-id="{{ $request->request_id }}">
+                                                Approve
+                                            </button>
                                         </form>
                                         <form method="POST" action="{{ route('item.reject', $request->request_id) }}">
                                             @csrf
-                                            <button class="btn btn-danger btn-sm">Decline</button>
+                                            <button type="button"
+                                                    class="btn btn-danger btn-sm reject-item"
+                                                    data-id="{{ $request->request_id }}">
+                                            Decline
+                                            </button>
                                         </form>
                                     </div>
                                 </div>

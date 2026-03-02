@@ -108,31 +108,38 @@ document.getElementById("password").addEventListener("input", function () {
 form.addEventListener("submit", function (e) {
     let isValid = true;
 
-    const fullName = form.querySelector("[name='full_name']");
-    const contact = form.querySelector("[name='contact_no']");
-    const email = form.querySelector("[name='email']");
-    const password = form.querySelector("[name='password']");
+    const firstName = form.querySelector("[name='first_name']");
+    const lastName  = form.querySelector("[name='last_name']");
+    const contact   = form.querySelector("[name='contact_no']");
+    const email     = form.querySelector("[name='email']");
+    const password  = form.querySelector("[name='password']");
     const confirmPassword = form.querySelector("[name='password_confirmation']");
     const role = form.querySelector('input[name="role"]:checked');
 
     document.querySelectorAll("small.error").forEach(el => el.textContent = "");
 
-    if (fullName.value.trim() === "") {
-        setError(fullName, "Full name is required");
+    if (!firstName || firstName.value.trim() === "") {
+        setError(firstName, "First name is required");
         isValid = false;
     }
 
-    if (contact.value.trim() === "" || !/^[0-9]{10,}$/.test(contact.value)) {
+    if (!lastName || lastName.value.trim() === "") {
+        setError(lastName, "Last name is required");
+        isValid = false;
+    }
+
+    if (!contact || contact.value.trim() === "" || !/^[0-9]{10,}$/.test(contact.value)) {
         setError(contact, "Enter a valid contact number (at least 10 digits)");
         isValid = false;
     }
 
     if (!role) {
-        document.querySelector(".role small.error").textContent = "Please select a role";
+        const roleErr = document.querySelector(".role small.error");
+        if (roleErr) roleErr.textContent = "Please select a role";
         isValid = false;
     }
 
-    if (email.value.trim() === "") {
+    if (!email || email.value.trim() === "") {
         setError(email, "Enter a valid email");
         isValid = false;
     }
@@ -143,7 +150,7 @@ form.addEventListener("submit", function (e) {
     }
 
     // Password rules
-    const pwd = password.value;
+    const pwd = password ? password.value : "";
     const passwordRules =
         pwd.length >= 8 &&
         /[A-Z]/.test(pwd) &&
@@ -155,7 +162,7 @@ form.addEventListener("submit", function (e) {
         isValid = false;
     }
 
-    if (confirmPassword.value !== password.value) {
+    if (!confirmPassword || confirmPassword.value !== pwd) {
         setError(confirmPassword, "Passwords do not match");
         isValid = false;
     }
