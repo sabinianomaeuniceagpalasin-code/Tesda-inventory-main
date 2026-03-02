@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let qrQueue = [];
 
     const nameInput = document.getElementById("item-name");
+    const deptInput = document.getElementById("item-department"); // ✅ added
     const qtyInput = document.getElementById("item-quantity");
     const typeInput = document.getElementById("item-type");
     const addBtn = document.getElementById("add-to-queue-btn");
@@ -13,11 +14,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     addBtn.addEventListener("click", async () => {
         const name = nameInput.value.trim();
+        const department = deptInput ? deptInput.value : ""; // ✅ added
         const qty = parseInt(qtyInput.value);
         const type = typeInput.value;
 
         if (!name || isNaN(qty) || qty <= 0) {
             alert("Please enter valid item name and quantity.");
+            return;
+        }
+
+        if (!department) { // ✅ added
+            alert("Please select a department.");
             return;
         }
 
@@ -33,7 +40,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await res.json();
 
             data.serials.forEach(serial => {
-                qrQueue.push({ name, type, serial });
+                // ✅ store department per item
+                qrQueue.push({ name, type, serial, department });
             });
 
         } catch (err) {
@@ -49,6 +57,7 @@ document.addEventListener("DOMContentLoaded", () => {
         nameInput.value = "";
         qtyInput.value = "";
         typeInput.value = "qr";
+        // keep department selected (recommended)
         nameInput.focus();
     });
 
@@ -57,25 +66,35 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const grouped = {};
         qrQueue.forEach(item => {
-            const key = `${item.name}|${item.type}`;
+            // ✅ group also by department (so it doesn’t mix)
+            const key = `${item.name}|${item.type}|${item.department}`;
             if (!grouped[key]) grouped[key] = [];
             grouped[key].push(item.serial);
         });
 
         Object.keys(grouped).forEach(key => {
-            const [name, type] = key.split("|");
+            const [name, type, department] = key.split("|");
             const serials = grouped[key];
 
             const row = tbody.insertRow();
             row.insertCell(0).textContent = name;
-            row.insertCell(1).textContent = serials.length;
-            row.insertCell(2).textContent = type;
+            row.insertCell(1).textContent = department;
+            row.insertCell(2).textContent = serials.length;
+            row.insertCell(3).textContent = type;
 
-            const actionCell = row.insertCell(3);
+            // If you also want to SHOW department in table,
+            // add a new <th>Department</th and then:
+            // row.insertCell(3).textContent = department;
+
+            const actionCell = row.insertCell(4);
             const btn = document.createElement("button");
             btn.textContent = "Remove";
             btn.onclick = () => {
-                qrQueue = qrQueue.filter(item => !(item.name === name && item.type === type));
+                qrQueue = qrQueue.filter(item => !(
+                    item.name === name &&
+                    item.type === type &&
+                    item.department === department
+                ));
                 renderQueue();
                 renderCodes();
                 updateSendButton();
@@ -136,56 +155,67 @@ document.addEventListener("DOMContentLoaded", () => {
         sendBtn.disabled = qrQueue.length === 0;
     }
 
+    // ✅ THIS is the exact place the department must be included
     sendBtn.addEventListener("click", async () => {
-    if (qrQueue.length === 0) return;
+        if (qrQueue.length === 0) return;
 
-    try {
-        const res = await fetch("/item-approval/request", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
-            },
-            body: JSON.stringify({ items: qrQueue })
-        });
-
-        const text = await res.text();
-        let data;
-        try { data = JSON.parse(text); } catch { data = null; }
-
-        if (!res.ok) {
+        // optional: validate again before sending
+        const missingDept = qrQueue.some(x => !x.department);
+        if (missingDept) {
             Swal.fire({
-                icon: 'error',
-                title: 'Failed to Send Request',
-                text: data?.message || 'Something went wrong!',
+                icon: "warning",
+                title: "Missing Department",
+                text: "Please select a department before sending."
             });
             return;
         }
 
-        // Success
-        Swal.fire({
-            icon: 'success',
-            title: 'Request Sent',
-            text: data?.message || 'Items sent for approval successfully!',
-            timer: 2000,
-            showConfirmButton: false
-        });
+        try {
+            const res = await fetch("/item-approval/request", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
+                },
+                // ✅ department included because it is inside qrQueue items now
+                body: JSON.stringify({ items: qrQueue })
+            });
 
-        // Clear queue
-        qrQueue = [];
-        renderQueue();
-        renderCodes();
-        updateSendButton();
+            const text = await res.text();
+            let data;
+            try { data = JSON.parse(text); } catch { data = null; }
 
-    } catch (err) {
-        console.error("Send Request Error:", err);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: err.message || 'Failed to send request',
-        });
-    }
-});
+            if (!res.ok) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Failed to Send Request',
+                    text: data?.message || 'Something went wrong!',
+                });
+                return;
+            }
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Request Sent',
+                text: data?.message || 'Items sent for approval successfully!',
+                timer: 2000,
+                showConfirmButton: false
+            });
+
+            qrQueue = [];
+            renderQueue();
+            renderCodes();
+            updateSendButton();
+
+        } catch (err) {
+            console.error("Send Request Error:", err);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: err.message || 'Failed to send request',
+            });
+        }
+    });
 
     updateSendButton();
 });

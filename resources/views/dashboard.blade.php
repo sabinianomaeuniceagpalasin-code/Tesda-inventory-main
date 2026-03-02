@@ -911,6 +911,13 @@
               <label>Item Name</label>
               <input type="text" id="item-name" placeholder="Enter item name">
 
+              <label>Department</label>
+              <select id="item-department">
+                <option value="" selected disabled>Select department</option>
+                <option value="ICS">ICS</option>
+                <option value="ENGINEERING">ENGINEERING</option>
+              </select>
+
               <label>Type</label>
               <select id="item-type">
                 <option value="qr" selected>QR Code</option>
@@ -939,6 +946,7 @@
                   <thead>
                     <tr>
                       <th>Item</th>
+                      <th>Department</th>
                       <th>Qty</th>
                       <th>Type</th>
                       <th>Action</th>

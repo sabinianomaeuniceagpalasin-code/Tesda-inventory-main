@@ -124,6 +124,12 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/item-approval/{request_id}/approve', [InventorySettingsController::class, 'approveItem'])->name('item.approve');
     Route::post('/item-approval/{request_id}/reject', [InventorySettingsController::class, 'rejectItem'])->name('item.reject');
 
+    Route::post('/item-approval/batch/{batch_id}/approve', [InventorySettingsController::class, 'approveBatch'])
+    ->name('item.batch.approve');
+
+    Route::post('/item-approval/batch/{batch_id}/reject', [InventorySettingsController::class, 'rejectBatch'])
+        ->name('item.batch.reject');
+
     // ==========================================================
     // ✅ MAINTENANCE ROUTES FOR ADMIN + PROPERTY CUSTODIAN
     // (Moved out of Admin-only so Property Custodian won't get 404)
