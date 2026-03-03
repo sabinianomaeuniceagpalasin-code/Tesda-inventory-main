@@ -26,7 +26,6 @@ class InventorySettingsController extends Controller
         $itemRequests = DB::table('item_approval_requests')
             ->select(
                 'item_name',
-                'description',
                 'serial_number',
                 DB::raw('SUM(quantity) as quantity'),
                 DB::raw('MIN(request_id) as request_id'), // pick one representative id
@@ -35,7 +34,7 @@ class InventorySettingsController extends Controller
                 'created_at'
             )
             ->where('status', 'pending')
-            ->groupBy('item_name', 'description','serial_number', 'request_type', 'created_at', 'requested_at')
+            ->groupBy('item_name', 'serial_number', 'request_type', 'created_at', 'requested_at')
             ->orderBy('requested_at', 'desc')
             ->get();
 
@@ -45,7 +44,6 @@ class InventorySettingsController extends Controller
             $archiveRequests = DB::table('item_approval_requests')
                 ->select(
                     'item_name',
-                    'description',
                     'serial_number',
                     DB::raw('SUM(quantity) as quantity'),
                     DB::raw('MIN(request_id) as request_id'),
@@ -54,7 +52,7 @@ class InventorySettingsController extends Controller
                     'status'
                 )
                 ->whereIn('status', ['approved', 'rejected', 'pending'])
-                ->groupBy('item_name', 'description','serial_number', 'request_type', 'requested_at', 'status')
+                ->groupBy('item_name', 'serial_number', 'request_type', 'requested_at', 'status')
                 ->orderBy('requested_at', 'desc')
                 ->get();
 
