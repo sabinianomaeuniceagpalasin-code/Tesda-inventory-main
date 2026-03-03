@@ -918,6 +918,9 @@
                 <option value="ENGINEERING">ENGINEERING</option>
               </select>
 
+              <label>Description / Model</label>
+              <input type="text" id="item-description" placeholder="Enter model (e.g. HP LaserJet 107w)">
+
               <label>Type</label>
               <select id="item-type">
                 <option value="qr" selected>QR Code</option>
@@ -947,6 +950,7 @@
                     <tr>
                       <th>Item</th>
                       <th>Department</th>
+                      <th>Description</th>
                       <th>Qty</th>
                       <th>Type</th>
                       <th>Action</th>

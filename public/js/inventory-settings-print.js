@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", function () {
   document.querySelectorAll(".openPrintModal").forEach((button) => {
     button.addEventListener("click", function () {
       const itemName = (this.dataset.item || "").trim();
+      const description = (this.dataset.description || "").trim();
       const serialString = (this.dataset.serials || "").trim();
       const type = (this.dataset.type || "qr").trim().toLowerCase(); // "qr" | "barcode"
 
@@ -63,6 +64,7 @@ document.addEventListener("DOMContentLoaded", function () {
         label.className = "qr-title";
         label.innerHTML = `
           <div><strong>${escapeHtml(itemName)}</strong></div>
+          <div class="qr-desc">${escapeHtml(description)}</div>
           <div class="qr-serial">${escapeHtml(serial)}</div>
         `;
 
@@ -110,6 +112,12 @@ function printPreview() {
           margin: 0;
           padding: 20px;
           font-family: Arial, sans-serif;
+        }
+
+        .qr-desc {
+          font-size: 8px;
+          margin-top: 1px;
+          line-height: 1.1;
         }
 
         .qr-container {

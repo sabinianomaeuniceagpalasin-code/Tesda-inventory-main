@@ -613,6 +613,7 @@
                                                 <button 
                                                     class="btn btn-sm btn-primary openPrintModal"
                                                     data-item="{{ $request->item_name }}"
+                                                    data-description="{{ $request->description }}"
                                                     data-serials="{{ $request->serial_number }}"
                                                     data-type="{{ $request->request_type }}"
                                                 >
