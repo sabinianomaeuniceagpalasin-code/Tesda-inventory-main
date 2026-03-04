@@ -5,23 +5,45 @@ document.addEventListener("DOMContentLoaded", function () {
   if (!modalEl) return;
 
   const modal = new bootstrap.Modal(modalEl);
+  const container = document.getElementById("qrContainer");
 
-  document.querySelectorAll(".openPrintModal").forEach((button) => {
-    button.addEventListener("click", function () {
-      const itemName = (this.dataset.item || "").trim();
-      const serialString = (this.dataset.serials || "").trim();
-      const type = (this.dataset.type || "qr").trim().toLowerCase(); // "qr" | "barcode"
+  if (!container) return;
 
-      const serials = serialString
+  // ===============================
+  // OPEN BATCH PRINT PREVIEW
+  // ===============================
+  document.addEventListener("click", function (e) {
+    const btn = e.target.closest(".openBatchPrintModal");
+    if (!btn) return;
+
+    const batchId = btn.dataset.batch;
+    const scriptTag = document.getElementById(`batch-data-${batchId}`);
+
+    if (!scriptTag) {
+      console.error("Batch data not found");
+      return;
+    }
+
+    let rows;
+
+    try {
+      rows = JSON.parse(scriptTag.textContent);
+    } catch (err) {
+      console.error("Invalid batch JSON");
+      return;
+    }
+
+    container.innerHTML = "";
+
+    rows.forEach((row) => {
+      const itemName = (row.item_name || "").trim();
+      const description = (row.description || "").trim();
+      const type = (row.request_type || "qr").trim().toLowerCase();
+
+      const serials = String(row.serial_number || "")
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean);
-
-      const container = document.getElementById("qrContainer");
-      if (!container) return;
-
-      container.innerHTML = "";
-      container.setAttribute("data-type", type);
 
       serials.forEach((serial) => {
         const box = document.createElement("div");
@@ -30,15 +52,21 @@ document.addEventListener("DOMContentLoaded", function () {
         const codeDiv = document.createElement("div");
         box.appendChild(codeDiv);
 
+        // ===============================
+        // QR CODE
+        // ===============================
         if (type === "qr") {
-          // QR image only
           new QRCode(codeDiv, {
             text: serial,
             width: 70,
             height: 70,
           });
-        } else {
-          // BARCODE image only (NO text), then we print our own label below
+        }
+
+        // ===============================
+        // BARCODE
+        // ===============================
+        else {
           const wrap = document.createElement("div");
           wrap.className = "barcode-wrap";
 
@@ -48,7 +76,6 @@ document.addEventListener("DOMContentLoaded", function () {
             serial
           )}&code=Code128&translate-esc=false&multiplebarcodes=false&quiet=0&showtext=0`;
 
-          // Make the image slightly taller, wrap will crop any extra bottom text/space
           img.style.width = "120px";
           img.style.height = "55px";
 
@@ -56,52 +83,46 @@ document.addEventListener("DOMContentLoaded", function () {
           codeDiv.appendChild(wrap);
         }
 
-        // Label layout for BOTH:
-        // item name
-        // serial number
+        // ===============================
+        // LABEL
+        // ===============================
         const label = document.createElement("div");
         label.className = "qr-title";
+
         label.innerHTML = `
           <div><strong>${escapeHtml(itemName)}</strong></div>
+          <div class="qr-desc">${escapeHtml(description)}</div>
           <div class="qr-serial">${escapeHtml(serial)}</div>
         `;
 
         box.appendChild(label);
         container.appendChild(box);
       });
-
-      modal.show();
     });
+
+    modal.show();
   });
 });
 
+
+// ===============================
+// PRINT FUNCTION
+// ===============================
 function printPreview() {
   const container = document.getElementById("qrContainer");
   if (!container) return;
 
-  const type = (container.getAttribute("data-type") || "qr").toLowerCase();
   const printContents = container.innerHTML;
 
   const printWindow = window.open("", "", "width=900,height=1200");
   if (!printWindow) return;
-
-  // Grid layout
-  let gridColumns;
-  let boxWidth;
-
-  if (type === "barcode") {
-    gridColumns = "repeat(5, 130px)"; // 5 per row
-    boxWidth = "130px";
-  } else {
-    gridColumns = "repeat(7, 90px)"; // 7 per row
-    boxWidth = "90px";
-  }
 
   printWindow.document.write(`
     <html>
     <head>
       <title>Print Codes</title>
       <style>
+
         @media print {
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
@@ -114,9 +135,9 @@ function printPreview() {
 
         .qr-container {
           display: grid;
-          grid-template-columns: ${gridColumns};
+          grid-template-columns: repeat(6, 120px);
           justify-content: center;
-          gap: 8px;
+          gap: 15px;
         }
 
         .qr-box {
@@ -124,16 +145,14 @@ function printPreview() {
           flex-direction: column;
           align-items: center;
           text-align: center;
-          width: ${boxWidth};
+          width: 120px;
         }
 
-        /* QR canvases */
         .qr-box canvas {
           width: 70px !important;
           height: 70px !important;
         }
 
-        /* Barcode crop wrapper: guarantees NO serial printed inside the image area */
         .barcode-wrap {
           width: 120px;
           height: 40px;
@@ -146,21 +165,27 @@ function printPreview() {
         }
 
         .qr-title {
-          font-size: 9px;
-          margin-top: 4px;
-          line-height: 1.2;
-          text-align: center;
-        }
+        font-size: 9px;
+        margin-top: 4px;
+        line-height: 1.2;
+      }
+
+      .qr-desc {
+        font-size: 8px;
+      }
 
         .qr-serial {
           font-size: 9px;
         }
+
       </style>
     </head>
     <body>
+
       <div class="qr-container">
         ${printContents}
       </div>
+
     </body>
     </html>
   `);
@@ -174,7 +199,10 @@ function printPreview() {
   }, 500);
 }
 
-/** Prevent breaking HTML if itemName/serial contains special chars */
+
+// ===============================
+// ESCAPE HTML
+// ===============================
 function escapeHtml(str) {
   return String(str)
     .replace(/&/g, "&amp;")

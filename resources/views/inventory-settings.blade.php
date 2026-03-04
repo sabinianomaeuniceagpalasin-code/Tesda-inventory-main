@@ -327,313 +327,334 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div>  
 
-    <!-- ITEM APPROVAL MODAL -->
+            <!-- ITEM APPROVAL MODAL -->
 <div class="modal fade" id="itemApprovalModal" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
 
             <!-- Modal Header -->
             <div class="modal-header">
-                <h5 class="modal-title fw-bold">Generation Requests Pending Approval</h5>
+                <h5 class="modal-title fw-bold">Generation Requests</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
+
+            @php
+                // ✅ Group pending rows by batch_id
+                $pendingBatches = $itemRequests->groupBy('batch_id');
+
+                // ✅ Group archive rows by batch_id (each batch should have same status)
+                $archiveBatches = $archiveRequests->groupBy('batch_id');
+            @endphp
 
             <!-- Tabs -->
             <ul class="nav nav-tabs" id="approvalTabs" role="tablist">
                 <li class="nav-item">
-                    <button class="nav-link active" id="qr-tab" data-bs-toggle="tab" data-bs-target="#qrRequests" type="button">
-                        QR Code Requests
+                    <button class="nav-link active"
+                            id="pending-tab"
+                            data-bs-toggle="tab"
+                            data-bs-target="#pendingBatchesTab"
+                            type="button">
+                        Item Requests
                     </button>
                 </li>
                 <li class="nav-item">
-                    <button class="nav-link" id="barcode-tab" data-bs-toggle="tab" data-bs-target="#barcodeRequests" type="button">
-                        Bar Code Requests
-                    </button>
-                </li>
-                <li class="nav-item">
-                    <button class="nav-link" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archiveRequests" type="button">
-                        Item Approval Archive
+                    <button class="nav-link"
+                            id="archive-tab"
+                            data-bs-toggle="tab"
+                            data-bs-target="#archiveBatchesTab"
+                            type="button">
+                        Archive
                     </button>
                 </li>
             </ul>
 
-            <!-- Modal Body / Tab Content -->
+            <!-- Modal Body -->
             <div class="modal-body px-4">
                 <div class="tab-content mt-3">
 
-                    <!-- QR Code Requests Tab -->
-                    <div class="tab-pane fade show active" id="qrRequests" role="tabpanel">
+                    <!-- =========================
+                         ITEM REQUESTS (PENDING)
+                    ========================== -->
+                    <div class="tab-pane fade show active" id="pendingBatchesTab" role="tabpanel">
+
                         <div class="alert alert-warning small mb-3">
-                            {{ $itemRequests->where('request_type', 'qr')->count() }} new QR request(s) pending approval
+                            {{ $pendingBatches->count() }} batch(es) pending approval
                         </div>
 
-                        <!-- QR FILTERS -->
-                            <div class="row g-3 mb-3 align-items-end">
+                        @if($pendingBatches->count() === 0)
+                            <div class="text-center text-muted py-4">No pending batches.</div>
+                        @else
+                            @foreach($pendingBatches as $batchId => $rows)
+                                @php
+                                    $first = $rows->first();
+                                    $totalQty = $rows->sum('quantity');
+                                    $types = $rows->pluck('request_type')->unique()->map(fn($t) => strtoupper($t))->implode(', ');
+                                    $dateValue = \Carbon\Carbon::parse($first->requested_at)->format('Y-m-d');
+                                @endphp
 
-                                <div class="col-md-3">
-                                    <label class="form-label small fw-semibold">From</label>
-                                    <input type="date" class="form-control form-control-sm" id="qrFromDate">
-                                </div>
-
-                                <div class="col-md-3">
-                                    <label class="form-label small fw-semibold">To</label>
-                                    <input type="date" class="form-control form-control-sm" id="qrToDate">
-                                </div>
-
-                                <div class="col-md-2">
-                                    <button class="btn btn-outline-secondary btn-sm w-100" id="qrResetBtn">
-                                      <i class="bi bi-arrow-counterclockwise"></i>Reset
-                                    </button>
-                                </div>
-
-                            </div>
-
-
-                        @foreach ($itemRequests->where('request_type', 'qr') as $request)
-                            @php
-                                $dateValue = \Carbon\Carbon::parse($request->requested_at)->format('Y-m-d');
-                            @endphp
-
-                            <div class="approval-card mb-3 qr-card" data-date="{{ $dateValue }}">
-                                <div class="row align-items-center">
-                                    <div class="col-md-6">
-                                        <div class="fw-semibold">Item: {{ $request->item_name }}</div>
-                                        @php
-                                            $serials = array_map('trim', explode(',', $request->serial_number));
-                                            $firstSerial = $serials[0] ?? '';
-                                            $lastSerial  = end($serials);
-                                        @endphp
-                                        <div class="text-muted small">
-                                            SN: {{ count($serials) > 1 ? "$firstSerial - $lastSerial" : $firstSerial }}
+                                <div class="approval-card mb-3" data-date="{{ $dateValue }}">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-6">
+                                            <div class="fw-semibold">Batch #: {{ $batchId }}</div>
+                                            <div class="text-muted small">
+                                                Types: {{ $types }} • Lines: {{ $rows->count() }}
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="col-md-3 text-center">
-                                        <div class="fw-semibold">Qty: {{ $request->quantity }}</div>
-                                        <div class="text-muted small">
-                                            {{ \Carbon\Carbon::parse($request->requested_at)->format('d M Y') }}
+
+                                        <div class="col-md-3 text-center">
+                                            <div class="fw-semibold">Total Qty: {{ $totalQty }}</div>
+                                            <div class="text-muted small">
+                                                {{ \Carbon\Carbon::parse($first->requested_at)->format('d M Y') }}
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="col-md-3 text-center d-flex justify-content-center gap-2 flex-wrap">
-                                        <!-- View Button -->
-                                        <button type="button"
-                                                class="btn btn-outline-primary btn-sm"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#qrModal-{{ $request->request_id }}">
-                                            View QR
-                                        </button>
 
-                                        <!-- Approve Button -->
-                                        <button type="button"
-                                                class="btn btn-success btn-sm approve-item"
-                                                data-id="{{ $request->request_id }}">
-                                            Approve
-                                        </button>
-
-                                        <!-- Reject Button -->
-                                        <button type="button"
-                                                class="btn btn-danger btn-sm reject-item"
-                                                data-id="{{ $request->request_id }}">
-                                            Decline
-                                        </button>
-
-                                    </div>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-
-                    <!-- Barcode Requests Tab -->
-                    <div class="tab-pane fade" id="barcodeRequests" role="tabpanel">
-                        <div class="alert alert-warning small mb-3">
-                            {{ $itemRequests->where('request_type', 'barcode')->count() }} new Barcode request(s) pending approval
-                        </div>
-
-                        <!-- BARCODE FILTERS -->
-                    <div class="row g-3 mb-3 align-items-end">
-
-                        <div class="col-md-3">
-                            <label class="form-label small fw-semibold">From</label>
-                            <input type="date" class="form-control form-control-sm" id="barcodeFromDate">
-                        </div>
-
-                        <div class="col-md-3">
-                            <label class="form-label small fw-semibold">To</label>
-                            <input type="date" class="form-control form-control-sm" id="barcodeToDate">
-                        </div>
-
-                        <div class="col-md-2">
-                            <button class="btn btn-outline-secondary btn-sm w-100" id="barcodeResetBtn">
-                                <i class="bi bi-arrow-counterclockwise"></i> Reset
-                            </button>
-                        </div>
-
-                    </div>
-
-
-                        @foreach ($itemRequests->where('request_type', 'barcode') as $request)
-                            @php
-                                $dateValue = \Carbon\Carbon::parse($request->requested_at)->format('Y-m-d');
-                            @endphp
-
-                            <div class="approval-card mb-3 qr-card" data-date="{{ $dateValue }}">
-                                <div class="row align-items-center">
-                                    <div class="col-md-6">
-                                        <div class="fw-semibold">Item: {{ $request->item_name }}</div>
-                                        @php
-                                            $serials = array_map('trim', explode(',', $request->serial_number));
-                                            $firstSerial = $serials[0] ?? '';
-                                            $lastSerial  = end($serials);
-                                        @endphp
-                                        <div class="text-muted small">
-                                            SN: {{ count($serials) > 1 ? "$firstSerial - $lastSerial" : $firstSerial }}
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3 text-center">
-                                        <div class="fw-semibold">Qty: {{ $request->quantity }}</div>
-                                        <div class="text-muted small">
-                                            {{ \Carbon\Carbon::parse($request->requested_at)->format('d M Y') }}
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3 text-center d-flex justify-content-center gap-2 flex-wrap">
-                                        <button type="button" class="btn btn-outline-primary btn-sm"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#barcodeModal-{{ $request->request_id }}">
-                                            View Barcode
-                                        </button>
-                                        <form method="POST" action="{{ route('item.approve', $request->request_id) }}">
-                                            @csrf
+                                        <div class="col-md-3 text-center d-flex justify-content-center gap-2 flex-wrap">
+                                            <!-- View Batch -->
                                             <button type="button"
-                                                    class="btn btn-success btn-sm approve-item"
-                                                    data-id="{{ $request->request_id }}">
+                                                    class="btn btn-outline-primary btn-sm"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#batchModal-{{ $batchId }}">
+                                                View
+                                            </button>
+
+                                            <!-- Approve Batch -->
+                                            <button type="button"
+                                                    class="btn btn-success btn-sm approve-batch"
+                                                    data-batch="{{ $batchId }}">
                                                 Approve
                                             </button>
-                                        </form>
-                                        <form method="POST" action="{{ route('item.reject', $request->request_id) }}">
-                                            @csrf
+
+                                            <!-- Reject Batch -->
                                             <button type="button"
-                                                    class="btn btn-danger btn-sm reject-item"
-                                                    data-id="{{ $request->request_id }}">
-                                            Decline
+                                                    class="btn btn-danger btn-sm reject-batch"
+                                                    data-batch="{{ $batchId }}">
+                                                Decline
                                             </button>
-                                        </form>
+                                        </div>
                                     </div>
                                 </div>
+
+                                <!-- =========================
+                                     BATCH DETAILS MODAL
+                                ========================== -->
+                                <div class="modal fade" id="batchModal-{{ $batchId }}" tabindex="-1">
+                                    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                                        <div class="modal-content">
+
+                                            <div class="modal-header">
+                                                <h5 class="modal-title fw-bold">Batch #{{ $batchId }} — Details</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+
+                                            <div class="modal-body">
+                                                <div class="table-responsive">
+                                                    <table class="table table-bordered align-middle text-center">
+                                                        <thead class="table-light">
+                                                            <tr>
+                                                                <th>Item Name</th>
+                                                                <th>Serial Range</th>
+                                                                <th>Qty</th>
+                                                                <th>Type</th>
+                                                                <th>Requested</th>
+                                                                <th>Preview</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach($rows as $r)
+                                                                @php
+                                                                    $serials = array_map('trim', explode(',', $r->serial_number));
+                                                                    $firstSerial = $serials[0] ?? '';
+                                                                    $lastSerial  = end($serials);
+                                                                    $serialDisplay = count($serials) > 1 ? "$firstSerial - $lastSerial" : $firstSerial;
+                                                                    $collapseId = "codes-{$batchId}-{$r->request_id}";
+                                                                @endphp
+                                                                <tr>
+                                                                    <td class="text-start">{{ $r->item_name }}</td>
+                                                                    <td class="text-start">{{ $serialDisplay }}</td>
+                                                                    <td>{{ $r->quantity }}</td>
+                                                                    <td>{{ strtoupper($r->request_type) }}</td>
+                                                                    <td>{{ \Carbon\Carbon::parse($r->requested_at)->format('d M Y') }}</td>
+                                                                    <td>
+                                                                        <button class="btn btn-outline-secondary btn-sm"
+                                                                                type="button"
+                                                                                data-bs-toggle="collapse"
+                                                                                data-bs-target="#{{ $collapseId }}">
+                                                                            View Codes
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+
+                                                                <tr class="collapse" id="{{ $collapseId }}">
+                                                                    <td colspan="6">
+                                                                        <div class="d-flex flex-wrap gap-3 justify-content-start">
+                                                                            @foreach($serials as $serial)
+                                                                                <div class="text-center border rounded p-2" style="width:130px">
+                                                                                    @if($r->request_type === 'qr')
+                                                                                        <img
+                                                                                            src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data={{ urlencode($serial) }}"
+                                                                                            alt="QR {{ $serial }}">
+                                                                                    @else
+                                                                                        <img
+                                                                                            src="https://barcode.tec-it.com/barcode.ashx?data={{ urlencode($serial) }}&code=Code128&multiplebarcodes=false&translate-esc=false"
+                                                                                            alt="Barcode {{ $serial }}"
+                                                                                            style="max-width:100%; height:auto;">
+                                                                                    @endif
+                                                                                    <div class="small mt-1">{{ $serial }}</div>
+                                                                                </div>
+                                                                            @endforeach
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            @endforeach
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                </div>
+
+                            @endforeach
+                        @endif
+                    </div>
+
+
+                    <!-- =========================
+                         ARCHIVE (APPROVED/REJECTED/PENDING)
+                    ========================== -->
+                    <div class="tab-pane fade" id="archiveBatchesTab" role="tabpanel">
+
+                        <!-- FILTER SECTION (kept from your archive) -->
+                        <div class="row g-3 mb-3 mt-2 align-items-end">
+
+                            <div class="col-md-3" style="margin-top: -50px;">
+                                <label class="form-label fw-semibold small">Filter by Status</label>
+                                <select class="form-select form-select-sm" id="archiveStatusFilter">
+                                    <option value="all">Show All</option>
+                                    <option value="approved">Approved</option>
+                                    <option value="rejected">Rejected</option>
+                                    <option value="pending">Pending</option>
+                                </select>
                             </div>
-                        @endforeach
-                    </div>
 
-                    <!-- Archive Tab -->
-                <div class="tab-pane fade" id="archiveRequests" role="tabpanel">
+                            <div class="col-md-2">
+                                <label class="form-label fw-semibold small">Specific Date</label>
+                                <input type="date" class="form-control form-control-sm" id="archiveSpecificDate">
+                            </div>
 
-                    <!-- FILTER SECTION -->
-                <div class="row g-3 mb-3 mt-2 align-items-end">
+                            <div class="col-md-2">
+                                <label class="form-label fw-semibold small">From</label>
+                                <input type="date" class="form-control form-control-sm" id="archiveFromDate">
+                            </div>
 
-                    <!-- Status Dropdown -->
-                    <div class="col-md-3" style="margin-top: -50px;">
-                        <label class="form-label fw-semibold small">Filter by Status</label>
-                        <select class="form-select form-select-sm" id="archiveStatusFilter">
-                            <option value="all">Show All</option>
-                            <option value="approved">Approved</option>
-                            <option value="rejected">Rejected</option>
-                            <option value="pending">Pending</option>
-                        </select>
-                    </div>
+                            <div class="col-md-2">
+                                <label class="form-label fw-semibold small">To</label>
+                                <input type="date" class="form-control form-control-sm" id="archiveToDate">
+                            </div>
 
-                    <!-- Specific Date -->
-                    <div class="col-md-2">
-                        <label class="form-label fw-semibold small">Specific Date</label>
-                        <input type="date" class="form-control form-control-sm" id="archiveSpecificDate">
-                    </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-outline-secondary btn-sm w-100" id="archiveResetBtn">
+                                    <i class="bi bi-arrow-counterclockwise"></i> Reset Filters
+                                </button>
+                            </div>
+                        </div>
 
-                    <!-- From Date -->
-                    <div class="col-md-2">
-                        <label class="form-label fw-semibold small">From</label>
-                        <input type="date" class="form-control form-control-sm" id="archiveFromDate">
-                    </div>
-
-                    <!-- To Date -->
-                    <div class="col-md-2">
-                        <label class="form-label fw-semibold small">To</label>
-                        <input type="date" class="form-control form-control-sm" id="archiveToDate">
-                    </div>
-
-                    <!-- Reset Button -->
-                    <div class="col-md-2">
-                        <button class="btn btn-outline-secondary btn-sm w-100" id="archiveResetBtn">
-                            <i class="bi bi-arrow-counterclockwise"></i> Reset Filters
-                        </button>
-                    </div>
-
-                </div>
-
-                    @if($archiveRequests->count() > 0)
-                        <table class="table table-bordered table-striped mt-2" id="archiveTable">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Item Name</th>
-                                    <th>Serial Number</th>
-                                    <th>Quantity</th>
-                                    <th>Request Type</th>
-                                    <th>Requested Date</th>
-                                    <th>Status</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($archiveRequests as $request)
-                                    @php
-                                        $serials = array_map('trim', explode(',', $request->serial_number));
-                                        $first = $serials[0] ?? '';
-                                        $last = end($serials);
-                                        $serialDisplay = count($serials) > 1 ? "$first - $last" : $first;
-                                        $dateValue = \Carbon\Carbon::parse($request->requested_at)->format('Y-m-d');
-                                    @endphp
-                                    <tr 
-                                        data-status="{{ $request->status }}"
-                                        data-date="{{ $dateValue }}"
-                                    >
-                                        <td>{{ $request->item_name }}</td>
-                                        <td>{{ $serialDisplay }}</td>
-                                        <td>{{ $request->quantity }}</td>
-                                        <td>{{ ucfirst($request->request_type) }}</td>
-                                        <td>{{ \Carbon\Carbon::parse($request->requested_at)->format('d M Y') }}</td>
-                                        <td>
-                                            @if($request->status == 'approved')
-                                                <span class="badge bg-success">Approved</span>
-                                            @elseif($request->status == 'rejected')
-                                                <span class="badge bg-danger">Rejected</span>
-                                            @else
-                                                <span class="badge bg-secondary">Pending</span>
-                                            @endif
-                                        </td>
-                                        <td>
-                                            @if($request->status == 'approved')
-                                                <button 
-                                                    class="btn btn-sm btn-primary openPrintModal"
-                                                    data-item="{{ $request->item_name }}"
-                                                    data-serials="{{ $request->serial_number }}"
-                                                    data-type="{{ $request->request_type }}"
-                                                >
-                                                    <i class="bi bi-printer"></i> Print
-                                                </button>
-                                            @else
-                                                <span class="text-muted">—</span>
-                                            @endif
-                                        </td>
+                        @if($archiveBatches->count() > 0)
+                            <table class="table table-bordered table-striped mt-2" id="archiveTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Batch #</th>
+                                        <th>Item Names</th>
+                                        <th>Types</th>
+                                        <th>Total Qty</th>
+                                        <th>Requested Date</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
                                     </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    @else
-                        <div class="text-center text-muted mt-3">No requests in archive.</div>
-                    @endif
+                                    </thead>
+                                <tbody>
+                                    @foreach($archiveBatches as $batchId => $rows)
+                                        @php
+                                            $first = $rows->first();
+
+                                            // ✅ combine item names inside the same batch
+                                            $itemNames = $rows->pluck('item_name')->unique()->implode(', ');
+
+                                            $totalQty = $rows->sum('quantity');
+
+                                            $types = $rows->pluck('request_type')
+                                                        ->unique()
+                                                        ->map(fn($t) => strtoupper($t))
+                                                        ->implode(', ');
+
+                                            $status = $first->status;
+
+                                            $dateValue = \Carbon\Carbon::parse($first->requested_at)->format('Y-m-d');
+                                        @endphp
+
+                                        <tr data-status="{{ $status }}" data-date="{{ $dateValue }}">
+                                            <td>{{ $batchId }}</td>
+
+                                            <td class="text-start">
+                                                {{ $itemNames }}
+                                            </td>
+
+                                            <td>{{ $types }}</td>
+
+                                            <td>{{ $totalQty }}</td>
+
+                                            <td>{{ \Carbon\Carbon::parse($first->requested_at)->format('d M Y') }}</td>
+
+                                            <td>
+                                                @if($status == 'approved')
+                                                    <span class="badge bg-success">Approved</span>
+                                                @elseif($status == 'rejected')
+                                                    <span class="badge bg-danger">Rejected</span>
+                                                @else
+                                                    <span class="badge bg-secondary">Pending</span>
+                                                @endif
+                                            </td>
+
+                                            <td>
+                                                @if($status == 'approved')
+                                                    <button
+                                                        class="btn btn-sm btn-primary openBatchPrintModal"
+                                                        data-batch="{{ $batchId }}"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#printPreviewModal"
+                                                    >
+                                                        <i class="bi bi-printer"></i> Print
+                                                    </button>
+                                                @else
+                                                    <span class="text-muted">—</span>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                        <script type="application/json" id="batch-data-{{ $batchId }}">
+                                            {!! json_encode($rows->values(), JSON_UNESCAPED_UNICODE) !!}
+                                            </script>
+
+                                                    
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        @else
+                            <div class="text-center text-muted mt-3">No requests in archive.</div>
+                        @endif
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+
                 </div>
-
-
-                </div> <!-- tab-content -->
-            </div> <!-- modal-body -->
+            </div>
         </div>
     </div>
 </div>

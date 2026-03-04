@@ -23,19 +23,23 @@ class InventorySettingsController extends Controller
             ->get();
 
         // Pending item approval requests, batched
+        // Pending item approval requests (FULL ROWS)
         $itemRequests = DB::table('item_approval_requests')
             ->select(
+                'request_id',
+                'batch_id',
                 'item_name',
+                'department',
+                'description',
                 'serial_number',
-                DB::raw('SUM(quantity) as quantity'),
-                DB::raw('MIN(request_id) as request_id'), // pick one representative id
+                'quantity',
                 'request_type',
                 'requested_at',
-                'created_at'
+                'status'
             )
             ->where('status', 'pending')
-            ->groupBy('item_name', 'serial_number', 'request_type', 'created_at', 'requested_at')
-            ->orderBy('requested_at', 'desc')
+            ->whereNotNull('batch_id')
+            ->orderByDesc('requested_at')
             ->get();
 
             // ===============================
@@ -43,17 +47,20 @@ class InventorySettingsController extends Controller
             // ===============================
             $archiveRequests = DB::table('item_approval_requests')
                 ->select(
+                    'request_id',
+                    'batch_id',
                     'item_name',
+                    'department',
+                    'description',
                     'serial_number',
-                    DB::raw('SUM(quantity) as quantity'),
-                    DB::raw('MIN(request_id) as request_id'),
+                    'quantity',
                     'request_type',
                     'requested_at',
                     'status'
                 )
                 ->whereIn('status', ['approved', 'rejected', 'pending'])
-                ->groupBy('item_name', 'serial_number', 'request_type', 'requested_at', 'status')
-                ->orderBy('requested_at', 'desc')
+                ->whereNotNull('batch_id')
+                ->orderByDesc('requested_at')
                 ->get();
 
 
@@ -121,4 +128,38 @@ class InventorySettingsController extends Controller
             'message' => 'Item request rejected.'
         ]);
     }
+
+    public function approveBatch($batchId)
+        {
+            DB::table('item_approval_requests')
+                ->where('batch_id', $batchId)
+                ->where('status', 'pending')
+                ->update([
+                    'status'      => 'approved',
+                    'approved_at' => now(),
+                    'updated_at'  => now(),
+                ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Batch approved.',
+            ]);
+        }
+
+        public function rejectBatch($batchId)
+        {
+            DB::table('item_approval_requests')
+                ->where('batch_id', $batchId)
+                ->where('status', 'pending')
+                ->update([
+                    'status'      => 'rejected',
+                    'rejected_at' => now(),
+                    'updated_at'  => now(),
+                ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Batch rejected.',
+            ]);
+        }
 }
