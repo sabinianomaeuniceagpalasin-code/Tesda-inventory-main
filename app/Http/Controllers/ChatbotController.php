@@ -32,6 +32,17 @@ class ChatbotController extends Controller
 
         // 3) Route intent
         switch ($intent) {
+            case 'GREET':
+                return $this->greet();
+
+            case 'INTRO':
+                return $this->intro();
+
+            case 'HELP':
+                return $this->help();
+
+            case 'OUT_OF_SCOPE':
+                return $this->outOfScope();
             case 'FAQ_SERIAL_TRACKING_IMPORTANCE':
                 return $this->faqSerialTrackingImportance();
 
@@ -99,6 +110,24 @@ class ChatbotController extends Controller
      ========================= */
     private function detectIntent(string $msg): string
     {
+
+    // GREET / INTRO / HELP
+        if (preg_match('/\b(hi|hello|hey|good\s*(morning|afternoon|evening))\b/i', $msg)) {
+            return 'GREET';
+        }
+
+        if (preg_match('/\b(who\s+are\s+you|what\s+are\s+you|introduce\s+yourself)\b/i', $msg)) {
+            return 'INTRO';
+        }
+
+        if (preg_match('/\b(what\s+can\s+you\s+do|help|commands|what\s+can\s+i\s+ask|how\s+to\s+use)\b/i', $msg)) {
+            return 'HELP';
+        }
+
+        // OUT-OF-SCOPE (not related to inventory)
+        if ($this->isOutOfScope($msg)) {
+            return 'OUT_OF_SCOPE';
+        }
         // FAQ
         if (preg_match('/(why|what\s+is).*(serial|serial\s+number).*tracking.*(important|purpose)|importance.*serial/i', $msg)) {
             return 'FAQ_SERIAL_TRACKING_IMPORTANCE';
@@ -322,13 +351,23 @@ class ChatbotController extends Controller
         $reply = "<strong>Unserviceable Items and Last Borrower:</strong><br><br>";
 
         foreach ($items as $it) {
-            $issued = DB::table('issuedlog')
-                ->where('serial_no', $it->serial_no)
-                ->orderByDesc('issue_id')
+
+            $issued = DB::table('issuedlog as i')
+                ->leftJoin('formrecords as f', 'i.reference_no', '=', 'f.reference_no')
+                ->where('i.serial_no', $it->serial_no)
+                ->orderByDesc('i.issue_id')
+                ->select(
+                    'i.issue_id',
+                    'i.issued_by',
+                    'i.issued_date',
+                    DB::raw("COALESCE(NULLIF(i.borrower_name,''), NULLIF(f.borrower_name,'')) as borrower_name")
+                )
                 ->first();
 
             if ($issued) {
-                $borrower = $issued->borrower_name ?: 'N/A';
+                $borrower = $issued->borrower_name ?? 'N/A';
+                if (trim((string)$borrower) === '') $borrower = 'N/A';
+
                 $issuedByName = $this->issuedByName($issued->issued_by);
                 $issuedDate = $issued->issued_date ? date('F d, Y', strtotime($issued->issued_date)) : 'N/A';
 
@@ -442,27 +481,44 @@ class ChatbotController extends Controller
     }
 
     private function itemCount(string $msg)
-    {
-        preg_match('/(how\s+many|number\s+of|stock\s+of|quantity\s+of)\s+([a-z\s]+)/i', $msg, $match);
-        $itemName = trim(rtrim($match[2] ?? '', 's'));
-
-        if (!$itemName) {
+{
+    // Capture item name but stop before common trailing phrases
+    if (!preg_match('/\bhow\s+many\s+(.+?)(?:\s+are\s+there|\s+do\s+we\s+have|\s+in\s+the\s+inventory|\?|$)/i', $msg, $m)) {
+        if (!preg_match('/\b(number\s+of|stock\s+of|quantity\s+of)\s+(.+?)(?:\s+are\s+there|\s+do\s+we\s+have|\s+in\s+the\s+inventory|\?|$)/i', $msg, $m2)) {
             return response()->json(['reply' => "Please specify the item name (example: 'How many printers?')."]);
         }
-
-        $item = DB::table('propertyinventory')
-            ->select(DB::raw('SUM(quantity) as total'))
-            ->whereRaw('LOWER(item_name) LIKE ?', ['%' . strtolower($itemName) . '%'])
-            ->first();
-
-        if (!$item || !$item->total) {
-            return response()->json(['reply' => "I couldn’t find any {$itemName} in the inventory."]);
-        }
-
-        return response()->json([
-            'reply' => "There are {$item->total} {$itemName}(s) in stock."
-        ]);
+        $rawItem = $m2[2] ?? '';
+    } else {
+        $rawItem = $m[1] ?? '';
     }
+
+    $itemName = strtolower(trim($rawItem));
+    $itemName = preg_replace('/\s+/', ' ', $itemName);
+
+    // Basic singular handling (printers -> printer, laptops -> laptop)
+    if (strlen($itemName) > 3 && str_ends_with($itemName, 's')) {
+        $itemName = rtrim($itemName, 's');
+    }
+
+    if ($itemName === '') {
+        return response()->json(['reply' => "Please specify the item name (example: 'How many printers?')."]);
+    }
+
+    $row = DB::table('propertyinventory')
+        ->select(DB::raw('SUM(quantity) as total'))
+        ->whereRaw('LOWER(item_name) LIKE ?', ['%' . $itemName . '%'])
+        ->first();
+
+    $total = (int) ($row->total ?? 0);
+
+    if ($total <= 0) {
+        return response()->json(['reply' => "I couldn’t find any {$itemName} in the inventory."]);
+    }
+
+    return response()->json([
+        'reply' => "There are {$total} {$itemName}(s) in stock."
+    ]);
+}
 
     private function itemStatus(Request $request, string $rawMessage)
     {
@@ -683,10 +739,10 @@ class ChatbotController extends Controller
             "List all items",
             "How many items are in inventory?",
             "Low stock items",
-            "Who borrowed SN0001?",
-            "When was SN0001 issued?",
-            "What is the status of SN0001?",
-            "Who reported damage of SN0001?",
+            "Who borrowed SN?",
+            "When was SN issued?",
+            "What is the status of SN?",
+            "Who reported damage of SN?",
             "Show damaged items with borrower",
             "Show unserviceable items with borrower",
         ];
@@ -721,6 +777,87 @@ class ChatbotController extends Controller
 
         return response()->json(['suggestions' => $all]);
     }
+
+    private function greet()
+{
+    return response()->json([
+        'reply' => "Hello! I’m the TESDA Inventory Chatbot. Type <strong>Help</strong> to see what I can do."
+    ]);
+}
+
+private function intro()
+{
+    return response()->json([
+        'reply' =>
+            "I’m the <strong>TESDA Inventory Chatbot</strong>. " .
+            "I can help you check item availability, stock counts, item status by serial number (SN), and item issuance history."
+    ]);
+}
+
+private function help()
+{
+    $reply =
+        "<strong>Here’s what I can help you with:</strong><br><br>" .
+        "✅ <strong>Inventory Lists</strong><br>" .
+        "• List available items<br>" .
+        "• List damaged items<br>" .
+        "• List unserviceable items<br>" .
+        "• Show damaged items with borrower<br>" .
+        "• Show unserviceable items with borrower<br><br>" .
+        "✅ <strong>Counts</strong><br>" .
+        "• How many items are in inventory?<br>" .
+        "• How many laptops?<br>" .
+        "• Low stock items<br><br>" .
+        "✅ <strong>Serial Number Queries</strong><br>" .
+        "• What is the status of SN0001?<br>" .
+        "• Who borrowed SN0001?<br>" .
+        "• When was SN0001 issued?<br>" .
+        "• Who reported damage of SN0001?<br>";
+
+    return response()->json(['reply' => $reply]);
+}
+
+private function outOfScope()
+{
+    return response()->json([
+        'reply' =>
+            "I can only assist with the <strong>TESDA Inventory System</strong> (items, serial numbers, issuance, stock, and reports).<br><br>" .
+            "Try asking:<br>" .
+            "• List available items<br>" .
+            "• What is the status of SN0001?<br>" .
+            "• How many laptops?"
+    ]);
+}
+
+private function isOutOfScope(string $msg): bool
+{
+    // If message contains inventory keywords, it's NOT out of scope
+    $inventoryKeywords = [
+        'inventory', 'item', 'items', 'stock', 'available', 'issued', 'borrowed',
+        'borrower', 'serial', 'sn', 'barcode', 'qr', 'maintenance', 'repair',
+        'damaged', 'unserviceable', 'approval', 'request', 'property', 'ics', 'par'
+    ];
+
+    foreach ($inventoryKeywords as $kw) {
+        if (str_contains($msg, $kw)) return false;
+    }
+
+    // If message looks like a general chit-chat / random topic → out of scope
+    $outOfScopeHints = [
+        'weather', 'joke', 'love', 'crush', 'girlfriend', 'boyfriend',
+        'song', 'lyrics', 'movie', 'anime', 'game', 'facebook', 'tiktok',
+        'math', 'history', 'politics', 'president', 'travel', 'recipe', 'food'
+    ];
+
+    foreach ($outOfScopeHints as $kw) {
+        if (str_contains($msg, $kw)) return true;
+    }
+
+    // If it has no inventory keywords AND it's not a very short message,
+    // treat it as out of scope.
+    // (Short messages like "help", "hi" are handled earlier.)
+    return strlen(trim($msg)) >= 8;
+}
 
     /* =========================
      | FALLBACK AI (same logic)

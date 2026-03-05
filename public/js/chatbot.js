@@ -11,6 +11,20 @@
 
   if (!toggle || !popup || !closeBtn || !input || !sendBtn || !messagesDiv) return;
 
+  function hideAllSuggestions() {
+    hideSuggestions();
+  }
+
+    function getCategory(text) {
+    const t = String(text).toLowerCase();
+    if (t.includes("sn")) return "SERIAL";
+    if (t.includes("list") || t.includes("show") || t.includes("stock") || t.includes("how many")) return "INVENTORY";
+    if (t.includes("qr") || t.includes("barcode")) return "CODES";
+    if (t.includes("approval")) return "APPROVAL";
+    if (t.includes("why") || t.includes("how")) return "FAQ";
+    return "HELP";
+  }
+
   /* =========================
      SETTINGS
   ========================= */
@@ -75,6 +89,13 @@
   });
 
   popup.addEventListener("click", (e) => e.stopPropagation());
+
+  popup.addEventListener("click", (e) => {
+  if (!e.target.closest("#chat-input")) {
+    hideSuggestions();
+  }
+});
+
   input.addEventListener("click", (e) => e.stopPropagation());
 
   document.addEventListener("click", (e) => {
@@ -189,7 +210,9 @@
     return t;
   }
 
-  function showSuggestions(list) {
+    let activeSuggestionIndex = -1;
+
+  function showSuggestions(list, headerText = "Suggestions") {
     if (!suggestionsBox) return;
 
     if (!list || !list.length) {
@@ -197,19 +220,29 @@
       return;
     }
 
-    // Render as: polished label + smaller hint underneath (optional)
-    suggestionsBox.innerHTML = list
+    activeSuggestionIndex = -1;
+
+    const itemsHtml = list
       .slice(0, SUGGEST_UI.maxItems)
-      .map((text) => {
+      .map((text, idx) => {
         const label = toProfessionalLabel(text);
+        const cat = getCategory(text);
         return `
-          <div class="chat-suggestion-item" data-text="${escapeHtmlAttr(text)}">
-            <div class="chat-suggestion-title">${escapeHtml(label)}</div>
-            <div class="chat-suggestion-sub">${escapeHtml(text)}</div>
+          <div class="chat-suggestion-item" data-index="${idx}" data-text="${escapeHtmlAttr(text)}">
+            <div class="chat-suggestion-meta">
+              <div class="chat-suggestion-title">${escapeHtml(label)}</div>
+              <div class="chat-suggestion-sub">${escapeHtml(text)}</div>
+            </div>
+            <div class="chat-suggestion-badge">${escapeHtml(cat)}</div>
           </div>
         `;
       })
       .join("");
+
+    suggestionsBox.innerHTML = `
+      <div class="suggestions-header">${escapeHtml(headerText)}</div>
+      <div class="suggestions-list">${itemsHtml}</div>
+    `;
 
     suggestionsBox.style.display = "block";
   }
@@ -230,37 +263,71 @@
       .catch(() => hideSuggestions());
   }
 
-  input.addEventListener("input", () => {
-    const q = input.value.trim();
+   input.addEventListener("input", () => {
+      const q = input.value.trim();
 
-    clearTimeout(suggestTimer);
-    suggestTimer = setTimeout(() => {
-      // If empty, hide (or you can show curated)
-      if (!q) {
-        if (SUGGEST_UI.showOnFocusWhenEmpty) fetchSuggestions("");
-        else hideSuggestions();
-        return;
-      }
-      fetchSuggestions(q);
-    }, SUGGEST_UI.debounceMs);
-  });
+      clearTimeout(suggestTimer);
+      suggestTimer = setTimeout(() => {
+        fetchSuggestions(q); // ✅ show suggestions even if empty
+      }, SUGGEST_UI.debounceMs);
+    });
 
   input.addEventListener("focus", () => {
-    const q = input.value.trim();
-    if (!q && !SUGGEST_UI.showOnFocusWhenEmpty) return;
-    fetchSuggestions(q);
-  });
-
-  suggestionsBox?.addEventListener("click", (e) => {
-    e.preventDefault();
     e.stopPropagation();
+  fetchSuggestions(input.value.trim()); // ✅ show on focus
+});
 
-    const item = e.target.closest(".chat-suggestion-item");
-    if (!item) return;
+  // Click suggestion => store in textbox only
+suggestionsBox?.addEventListener("click", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
 
-    input.value = item.dataset.text;
-    hideSuggestions();
-    input.focus();
+  const item = e.target.closest(".chat-suggestion-item");
+  if (!item) return;
+
+  input.value = item.dataset.text;
+  hideAllSuggestions();
+  input.focus(); // ✅ keep focus so user can edit before sending
+});
+
+    input.addEventListener("keydown", (e) => {
+    const isDropdownOpen = suggestionsBox && suggestionsBox.style.display === "block";
+    if (!isDropdownOpen) {
+      if (e.key === "Escape") hideAllSuggestions();
+      return;
+    }
+
+    const items = Array.from(suggestionsBox.querySelectorAll(".chat-suggestion-item"));
+    if (!items.length) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      activeSuggestionIndex = (activeSuggestionIndex + 1) % items.length;
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      activeSuggestionIndex = (activeSuggestionIndex - 1 + items.length) % items.length;
+    } else if (e.key === "Enter") {
+      if (activeSuggestionIndex >= 0) {
+        e.preventDefault();
+        const picked = items[activeSuggestionIndex];
+        input.value = picked.dataset.text;
+        hideAllSuggestions();
+        input.focus(); // ✅ user can edit, then press Enter again to send
+      }
+      return;
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      hideAllSuggestions();
+      return;
+    } else {
+      return;
+    }
+
+    // Apply active style
+    items.forEach((el, idx) => el.classList.toggle("active", idx === activeSuggestionIndex));
+
+    // Keep active item visible
+    items[activeSuggestionIndex]?.scrollIntoView({ block: "nearest" });
   });
 
   /* =========================
@@ -403,4 +470,12 @@
     const indicator = document.getElementById("typing-indicator");
     if (indicator) indicator.remove();
   }
+
+  /* =========================
+   HIDE SUGGESTIONS WHEN SCROLLING
+    ========================= */
+    messagesDiv.addEventListener("scroll", () => {
+      hideAllSuggestions();
+    });
+
 })();

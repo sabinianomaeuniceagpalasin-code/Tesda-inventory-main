@@ -1663,35 +1663,126 @@ td {
     align-items: center;
 }
 
-.chat-suggestions{
+/* Suggestions dropdown (typing mode) */
+.chat-suggestions {
   position: absolute;
-  bottom: 60px; /* adjust depending on your layout */
-  left: 10px;
-  right: 10px;
+  left: 12px;
+  right: 12px;
+  bottom: 64px;               /* just above input bar */
   background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 10px;
+  border: 1px solid #e6e6e6;
+  border-radius: 14px;
+  box-shadow: 0 14px 28px rgba(0,0,0,0.14);
   overflow: hidden;
   z-index: 9999;
+  display: none;
+  max-height: 220px;          /* important: prevents taking the whole chat */
 }
-.chat-suggestion-item{
+
+.chat-suggestions .suggestions-header {
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #fafafa;
+  border-bottom: 1px solid #eee;
+}
+
+.chat-suggestions .suggestions-list {
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.chat-suggestion-item {
+  display: flex;
+  gap: 10px;
   padding: 10px 12px;
   cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
 }
-.chat-suggestion-item:hover{
-  background: #f2f2f2;
+
+.chat-suggestion-item:last-child { border-bottom: 0; }
+
+.chat-suggestion-item:hover,
+.chat-suggestion-item.active {
+  background: #f4f7ff;
+}
+
+.chat-suggestion-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .chat-suggestion-title {
   font-weight: 600;
   font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .chat-suggestion-sub {
   font-size: 11px;
-  opacity: 0.75;
-  margin-top: 2px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+
+.chat-suggestion-badge {
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid #e6e6e6;
+  color: #444;
+  background: #fff;
+  height: fit-content;
+  margin-left: auto;
+}
+
+/* Quick actions chips (empty-input mode) */
+.chat-quick-actions {
+  display: none;
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 64px;
+  background: #fff;
+  border: 1px solid #e6e6e6;
+  border-radius: 14px;
+  box-shadow: 0 14px 28px rgba(0,0,0,0.14);
+  padding: 10px;
+  z-index: 9999;
+}
+
+.chat-quick-actions .quick-title {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.chat-quick-actions .chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.chat-quick-actions .chip {
+  border: 1px solid #d7e3ff;
+  background: #f4f7ff;
+  color: #004aad;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.chat-quick-actions .chip:hover {
+  background: #eaf0ff;
+}
+
 
 .dot {
     width: 6px;
@@ -1766,6 +1857,7 @@ td {
     height: 100%;
     padding: 12px;
     gap: 10px;
+    position: relative;
 }
 
 .chat-messages {
