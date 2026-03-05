@@ -1663,6 +1663,36 @@ td {
     align-items: center;
 }
 
+.chat-suggestions{
+  position: absolute;
+  bottom: 60px; /* adjust depending on your layout */
+  left: 10px;
+  right: 10px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  overflow: hidden;
+  z-index: 9999;
+}
+.chat-suggestion-item{
+  padding: 10px 12px;
+  cursor: pointer;
+}
+.chat-suggestion-item:hover{
+  background: #f2f2f2;
+}
+
+.chat-suggestion-title {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.chat-suggestion-sub {
+  font-size: 11px;
+  opacity: 0.75;
+  margin-top: 2px;
+}
+
 .dot {
     width: 6px;
     height: 6px;

@@ -91,6 +91,7 @@ Route::middleware(['auth'])->group(function () {
     // CHATBOT
     // =========================
     Route::post('/chatbot/message', [ChatbotController::class, 'chat'])->name('chatbot.message');
+    Route::get('/chatbot/suggestions', [ChatbotController::class, 'suggestions']);
 
     // =========================
     // DAMAGE / MAINTENANCE TICKETS FROM DAMAGE

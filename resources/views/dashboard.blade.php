@@ -1104,6 +1104,7 @@
 
       <!-- MESSAGES -->
       <div id="chat-messages" class="chat-messages"></div>
+      <div id="chat-suggestions" class="chat-suggestions" style="display:none;"></div>
 
       <!-- INPUT -->
       <div class="chat-input-bar">
