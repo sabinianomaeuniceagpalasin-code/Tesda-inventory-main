@@ -13,11 +13,16 @@ window.showItemDetails = function (item) {
     if (elFund) elFund.innerText = item.source_of_fund || "---";
 
     if (statusEl) {
-        statusEl.innerText = item.status;
+        statusEl.innerText = item.status || "---";
         statusEl.className = "detail-value fw-bold";
-        if (item.status === "Available") statusEl.classList.add("text-success");
-        else if (item.status === "For Repair") statusEl.classList.add("text-warning");
-        else statusEl.classList.add("text-danger");
+
+        if (item.status === "Available") {
+            statusEl.classList.add("text-success");
+        } else if (item.status === "For Repair") {
+            statusEl.classList.add("text-warning");
+        } else {
+            statusEl.classList.add("text-danger");
+        }
     }
 
     if (dateEl && item.date_acquired) {
@@ -30,16 +35,115 @@ window.showItemDetails = function (item) {
     }
 
     if (qrImg) {
-        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${item.serial_no}`;
+        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(item.serial_no || "")}`;
     }
 
     const modalEl = document.getElementById("inventoryModal");
     if (modalEl && typeof bootstrap !== "undefined") {
         const myModal = new bootstrap.Modal(modalEl);
         myModal.show();
-    } else {
+    } else if (modalEl) {
         modalEl.style.display = "flex";
     }
+};
+
+// ===============================
+// OPEN INVENTORY EDIT MODAL
+// ===============================
+window.openInventoryEditModal = function (button) {
+    console.log("button clicked!");
+
+    const modal = document.getElementById("inventoryEditModal");
+    if (!modal) return;
+
+    modal.classList.add("active");
+
+    const row = button.closest("tr");
+    if (!row) return;
+
+    const raw = row.dataset.item;
+    if (!raw) return;
+
+    let item;
+    try {
+        item = JSON.parse(raw);
+    } catch (err) {
+        console.error("Failed to parse row data-item:", err);
+        return;
+    }
+
+    const serialInput = document.getElementById("edit_serial_no");
+    const itemNameInput = document.getElementById("edit_item_name");
+    const fundInput = document.getElementById("edit_source_of_fund");
+    const classInput = document.getElementById("edit_classification");
+    const dateInput = document.getElementById("edit_date_acquired");
+    const statusInput = document.getElementById("edit_status");
+
+    if (serialInput) serialInput.value = item.serial_no || "";
+    if (itemNameInput) itemNameInput.value = item.item_name || "";
+    if (fundInput) fundInput.value = item.source_of_fund || "";
+    if (classInput) classInput.value = item.classification || "";
+    if (dateInput) dateInput.value = item.date_acquired || "";
+    if (statusInput) statusInput.value = item.status || "";
+
+    const form = document.getElementById("inventoryEditForm");
+    if (form) {
+        form.action = "/inventory/update/" + encodeURIComponent(item.serial_no || "");
+    }
+};
+
+// ===============================
+// CLOSE INVENTORY EDIT MODAL
+// ===============================
+window.closeInventoryEditModal = function () {
+    const modal = document.getElementById("inventoryEditModal");
+    if (modal) {
+        modal.classList.remove("active");
+    }
+};
+
+// ===============================
+// CLOSE MODAL WHEN CLICKING OUTSIDE
+// ===============================
+window.onclick = function (event) {
+    const modal = document.getElementById("inventoryEditModal");
+    if (modal && event.target === modal) {
+        modal.classList.remove("active");
+    }
+};
+
+// ===============================
+// DELETE ITEM
+// ===============================
+window.deleteItem = function (serial_no) {
+    if (!confirm("Are you sure you want to delete this item?")) return;
+
+    fetch(`/inventory/${encodeURIComponent(serial_no)}`, {
+        method: "DELETE",
+        headers: {
+            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+        }
+    })
+        .then((res) => {
+            if (!res.ok) {
+                throw new Error("Failed to delete item.");
+            }
+            return res.json();
+        })
+        .then((data) => {
+            if (data.success) {
+                alert("Item deleted successfully!");
+                location.reload();
+            } else {
+                alert(data.message || "Failed to delete item.");
+            }
+        })
+        .catch((err) => {
+            console.error(err);
+            alert("Error deleting item.");
+        });
 };
 
 document.addEventListener("click", function (e) {
@@ -52,30 +156,30 @@ document.addEventListener("click", function (e) {
 
 // ✅ Works even after table is replaced by AJAX
 document.addEventListener("click", function (e) {
-  const row = e.target.closest("#inventoryTable tbody tr.inventory-row");
-  if (!row) return;
+    const row = e.target.closest("#inventoryTable tbody tr.inventory-row");
+    if (!row) return;
 
-  // Prevent opening modal when clicking buttons
-  if (e.target.closest("button")) return;
+    // Prevent opening modal when clicking buttons
+    if (e.target.closest("button")) return;
 
-  const raw = row.getAttribute("data-item");
-  if (!raw) return;
+    const raw = row.getAttribute("data-item");
+    if (!raw) return;
 
-  try {
-    const item = JSON.parse(raw);
-    window.showItemDetails(item);
-  } catch (err) {
-    console.error("Failed to parse data-item:", raw, err);
-  }
+    try {
+        const item = JSON.parse(raw);
+        window.showItemDetails(item);
+    } catch (err) {
+        console.error("Failed to parse data-item:", raw, err);
+    }
 });
 
 window.showUsageHistory = function () {
     const historyModal = document.getElementById("usageHistoryModal");
 
-    // Kinukuha ang details mula sa modal ng inventory para ilagay sa history modal
     const itemName = document.getElementById("modal-item")
         ? document.getElementById("modal-item").innerText
         : "---";
+
     const serialNo = document.getElementById("modal-serial")
         ? document.getElementById("modal-serial").innerText
         : "---";
@@ -83,6 +187,7 @@ window.showUsageHistory = function () {
     if (document.getElementById("history-item-name")) {
         document.getElementById("history-item-name").innerText = itemName;
     }
+
     if (document.getElementById("history-property-no")) {
         document.getElementById("history-property-no").innerText = serialNo;
     }
@@ -94,4 +199,4 @@ window.showUsageHistory = function () {
             loadHistoryData();
         }
     }
-}
+};

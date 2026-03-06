@@ -140,6 +140,10 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/item-approval/batch/{batch_id}/reject', [InventorySettingsController::class, 'rejectBatch'])
         ->name('item.batch.reject');
 
+        Route::put('/inventory/update/{serial_no}', [InventoryController::class, 'update'])->name('inventory.update');
+        Route::delete('/inventory/{serial_no}', [InventoryController::class, 'destroy'])->name('inventory.destroy');
+
+
     // ==========================================================
     // ✅ MAINTENANCE ROUTES FOR ADMIN + PROPERTY CUSTODIAN
     // (Moved out of Admin-only so Property Custodian won't get 404)

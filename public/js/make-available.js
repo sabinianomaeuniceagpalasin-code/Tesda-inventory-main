@@ -1,68 +1,58 @@
-document.addEventListener("DOMContentLoaded", function () {
-    bindMakeAvailableButtons();
-});
+// public/js/make-available.js
 
-function bindMakeAvailableButtons() {
-    document.querySelectorAll(".make-available-btn").forEach((btn) => {
-        btn.addEventListener("click", function () {
-            let serial = this.getAttribute("data-serial");
+document.addEventListener("click", async function (e) {
+    const btn = e.target.closest(".make-available-btn");
+    if (!btn) return;
 
-            Swal.fire({
-                title: "Mark item as available?",
-                text: "This will update the inventory status to 'Available'.",
-                icon: "question",
-                showCancelButton: true,
-                confirmButtonColor: "#3085d6",
-                cancelButtonColor: "#d33",
-                confirmButtonText: "Yes, make available",
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    fetch(`/maintenance/make-available/${serial}`, {
-                        method: "POST",
-                        headers: {
-                            "X-CSRF-TOKEN": document.querySelector(
-                                'meta[name="csrf-token"]'
-                            ).content,
-                            Accept: "application/json",
-                        },
-                    })
-                        .then((res) => res.json())
-                        .then((data) => {
-                            if (data.error) {
-                                Swal.fire("Error", data.error, "error");
-                                return;
-                            }
+    const serial = btn.dataset.serial;
+    if (!serial) {
+        Swal.fire("Error", "Serial number not found.", "error");
+        return;
+    }
 
-                            Swal.fire({
-                                title: "Success!",
-                                text: data.message,
-                                icon: "success",
-                                timer: 1500,
-                                showConfirmButton: false,
-                            });
-
-                            // Optional: reload Maintenance and Inventory tables
-                            reloadMaintenanceTable();
-                        })
-                        .catch((err) => {
-                            Swal.fire(
-                                "Error",
-                                "Something went wrong.",
-                                "error"
-                            );
-                            console.error(err);
-                        });
-                }
-            });
-        });
+    const result = await Swal.fire({
+        title: "Make item available?",
+        text: `This will set item ${serial} back to Available.`,
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: "Yes",
+        cancelButtonText: "Cancel",
     });
-}
 
-function reloadMaintenanceTable() {
-    fetch("/dashboard/maintenance/table")
-        .then((res) => res.text())
-        .then((html) => {
-            document.querySelector(".form-table tbody").innerHTML = html;
-            bindMakeAvailableButtons(); 
+    if (!result.isConfirmed) return;
+
+    btn.disabled = true;
+
+    try {
+        const res = await fetch(`/maintenance/make-available/${encodeURIComponent(serial)}`, {
+            method: "POST",
+            headers: {
+                "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+                "Accept": "application/json",
+            },
         });
-}
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data.error || data.message || "Failed to update item.");
+        }
+
+        await Swal.fire({
+            title: "Success",
+            text: data.message || "Item is now available.",
+            icon: "success",
+            timer: 1200,
+            showConfirmButton: false,
+        });
+
+        // ✅ after reload, open Maintenance section again
+        localStorage.setItem("activeSection", "reports");
+        window.location.reload();
+
+    } catch (err) {
+        console.error(err);
+        Swal.fire("Error", err.message || "Failed to update item.", "error");
+        btn.disabled = false;
+    }
+});

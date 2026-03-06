@@ -196,49 +196,50 @@
         </div>
 
         <!-- ======================
-            INVENTORY SECTION
-        ======================= -->
-        <div id="inventory" class="content-section">
-          <div class="inventory-summary">
-            <div class="summary-box">
-              <p>Total Items & Equipment</p>
-              <h2>{{ $totalItems }}</h2>
-            </div>
-            <div class="summary-box">
-              <p>Available Items</p>
-              <h2>{{ $availableItems }}</h2>
-            </div>
-            <div class="summary-box">
-              <p>Issued Items</p>
-              <h2>{{ $issuedItems }}</h2>
-            </div>
-            <div class="summary-box">
-              <p>Unserviceable/For Repair</p>
-              <h2>{{ $forRepair }}</h2>
-            </div>
-          </div>
+     INVENTORY SECTION
+======================= -->
+<div id="inventory" class="content-section">
+    <div class="inventory-summary">
+        <div class="summary-box">
+            <p>Total Items & Equipment</p>
+            <h2>{{ $totalItems }}</h2>
+        </div>
+        <div class="summary-box">
+            <p>Available Items</p>
+            <h2>{{ $availableItems }}</h2>
+        </div>
+        <div class="summary-box">
+            <p>Issued Items</p>
+            <h2>{{ $issuedItems }}</h2>
+        </div>
+        <div class="summary-box">
+            <p>Unserviceable/For Repair</p>
+            <h2>{{ $forRepair }}</h2>
+        </div>
+    </div>
 
-          <div class="inventory-controls">
-            <div class="left-buttons">
-              <select id="inventoryStatusFilter" class="filter-select">
+    <div class="inventory-controls">
+        <div class="left-buttons">
+            <select id="inventoryStatusFilter" class="filter-select">
                 <option value="All">All</option>
                 <option value="Available">Available</option>
                 <option value="Damaged">Damaged</option>
                 <option value="Unserviceable">Unserviceable</option>
                 <option value="Missing">Missing</option>
-              </select>
-              <button>+ Export</button>
-              <button type="button" id="clearInventoryFiltersBtn">Clear filters</button>
-            </div>
-            <div class="right-buttons">
-              <input type="text" id="inventorySearchInput" placeholder="Search Item Name...">
-              <button id="addItemBtn">+ Add new item</button>
-            </div>
-          </div>
+            </select>
+            <button>+ Export</button>
+            <button type="button" id="clearInventoryFiltersBtn">Clear filters</button>
+        </div>
 
-          <table id="inventoryTable">
-            <thead>
-              <tr>
+        <div class="right-buttons">
+            <input type="text" id="inventorySearchInput" placeholder="Search Item Name...">
+            <button id="addItemBtn">+ Add new item</button>
+        </div>
+    </div>
+
+    <table id="inventoryTable">
+        <thead>
+            <tr>
                 <th>Serial #</th>
                 <th>Item</th>
                 <th>Sources of Fund</th>
@@ -246,172 +247,249 @@
                 <th>Date Acquired</th>
                 <th>Status</th>
                 <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              @foreach ($inventory as $item)
-                <tr data-item='@json($item)' style="cursor: pointer;">
-                  <td>{{ $item->serial_no }}</td>
-                  <td>{{ $item->item_name }}</td>
-                  <td>{{ $item->source_of_fund }}</td>
-                  <td>{{ $item->classification }}</td>
-                  <td>{{ \Carbon\Carbon::parse($item->date_acquired)->format('F d, Y') }}</td>
-                  <td>
-                    <span
-                      class="
-                                                                                                                                    @if($item->status === 'Available') text-green
-                                                                                                                                    @elseif($item->status === 'For Repair') text-brown
-                                                                                                                                    @elseif($item->status === 'Issued') text-blue
-                                                                                                                                    @elseif($item->status === 'Unserviceable' || $item->status === 'Damaged' || $item->status === 'Lost') text-red
-                                                                                                                                    @endif">
-                      {{ $item->status }}
-                    </span>
-                  </td>
-                  <td class="action-buttons">
-                    <button class="edit-btn" onclick="event.stopPropagation();">✏️</button>
-                    <button class="delete-btn" onclick="event.stopPropagation();">🗑️</button>
-                  </td>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach ($inventory as $item)
+                <tr class="inventory-row" data-item='@json($item)' style="cursor:pointer;">
+                    <td>{{ $item->serial_no }}</td>
+                    <td>{{ $item->item_name }}</td>
+                    <td>{{ $item->source_of_fund }}</td>
+                    <td>{{ $item->classification }}</td>
+                    <td>{{ \Carbon\Carbon::parse($item->date_acquired)->format('F d, Y') }}</td>
+                    <td>
+                        <span
+                            class="
+                                @if($item->status === 'Available') text-green
+                                @elseif($item->status === 'For Repair') text-brown
+                                @elseif($item->status === 'Issued') text-blue
+                                @elseif($item->status === 'Unserviceable' || $item->status === 'Damaged' || $item->status === 'Lost' || $item->status === 'Missing') text-red
+                                @endif
+                            "
+                        >
+                            {{ $item->status }}
+                        </span>
+                    </td>
+                    <td class="action-buttons">
+                        <button
+                            type="button"
+                            class="inventory-edit-btn"
+                            onclick="event.stopPropagation(); openInventoryEditModal(this)"
+                        >
+                            ✏️
+                        </button>
+
+                        <button
+                            type="button"
+                            class="inventory-delete-btn"
+                            onclick="event.stopPropagation(); deleteItem('{{ $item->serial_no }}')"
+                        >
+                            🗑️
+                        </button>
+                    </td>
                 </tr>
-              @endforeach
-            </tbody>
-          </table>
+            @endforeach
+        </tbody>
+    </table>
 
-          <div style="margin-top: 20px;">
-            <button type="button" class="view-btn" onclick="showUsageHistory()">
-              View Usage History
-            </button>
-          </div>
+    <div style="margin-top: 20px;">
+        <button type="button" class="view-btn" onclick="showUsageHistory()">
+            View Usage History
+        </button>
+    </div>
 
-          <div class="modal fade" id="ik tabindex="-1">
-            <div class="modal-dialog modal-md modal-side-right">
-              <div class="modal-content item-detail-modal">
+    <!-- INVENTORY VIEW MODAL -->
+    <div class="modal fade" id="inventoryModal" tabindex="-1">
+        <div class="modal-dialog modal-md modal-side-right">
+            <div class="modal-content item-detail-modal">
                 <div class="modal-header-custom">
-                  <button type="button" class="btn-action" data-bs-dismiss="modal">
-                    <i class="bi bi-x-lg"></i>
-                  </button>
-                  <h5 class="modal-title-custom">Item detail</h5>
-                  <button type="button" class="btn-action" onclick="saveItemChanges()">
-                    <i class="bi bi-check-lg"></i>
-                  </button>
+                    <button type="button" class="btn-action" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+
+                    <h5 class="modal-title-custom">Item detail</h5>
+
+                    <button type="button" class="btn-action" onclick="saveItemChanges()">
+                        <i class="bi bi-check-lg"></i>
+                    </button>
                 </div>
 
                 <div class="modal-body p-0">
-                  <div class="detail-row">
-                    <div class="detail-info">
-                      <label>Item name</label>
-                      <div id="modal-item" class="detail-value"></div>
+                    <div class="detail-row">
+                        <div class="detail-info">
+                            <label>Item name</label>
+                            <div id="modal-item" class="detail-value"></div>
+                        </div>
+                        <a href="#" class="detail-action">Rename <i class="bi bi-pencil"></i></a>
                     </div>
-                    <a href="#" class="detail-action">Rename <i class="bi bi-pencil"></i></a>
-                  </div>
 
-                  <div class="detail-row">
-                    <div class="detail-info">
-                      <label>Property No.</label>
-                      <div id="modal-serial" class="detail-value"></div>
+                    <div class="detail-row">
+                        <div class="detail-info">
+                            <label>Property No.</label>
+                            <div id="modal-serial" class="detail-value"></div>
+                        </div>
+                        <a href="#" class="detail-action">Change</a>
                     </div>
-                    <a href="#" class="detail-action">Change</a>
-                  </div>
 
-                  <div class="detail-row">
-                    <div class="detail-info">
-                      <label>Condition</label>
-                      <div id="modal-status" class="detail-value"></div>
+                    <div class="detail-row">
+                        <div class="detail-info">
+                            <label>Condition</label>
+                            <div id="modal-status" class="detail-value"></div>
+                        </div>
+                        <a href="#" class="detail-action">Change</a>
                     </div>
-                    <a href="#" class="detail-action">Change</a>
-                  </div>
 
-                  <div class="detail-row">
-                    <div class="detail-info">
-                      <label>Date Acquired</label>
-                      <div id="modal-date" class="detail-value"></div>
+                    <div class="detail-row">
+                        <div class="detail-info">
+                            <label>Date Acquired</label>
+                            <div id="modal-date" class="detail-value"></div>
+                        </div>
+                        <a href="#" class="detail-action">Change</a>
                     </div>
-                    <a href="#" class="detail-action">Change</a>
-                  </div>
 
-                  <div class="detail-row empty">
-                    <label>Expected Lifespan</label>
-                    <div class="detail-value text-muted">Not set</div>
-                  </div>
-
-                  <div class="status-marking">
-                    <p class="section-title">Quick Status Update</p>
-                    <div class="marking-options">
-                      <span class="mark-label">Mark as:</span>
-                      <a href="javascript:void(0)" class="mark-link text-repair" onclick="updateStatus('For Repair')">[
-                        For repair ]</a>
-                      <a href="javascript:void(0)" class="mark-link text-unserviceable"
-                        onclick="updateStatus('Unserviceable')">[ Unserviceable ]</a>
-                      <a href="javascript:void(0)" class="mark-link text-missing" onclick="updateStatus('Missing')">[
-                        Missing ]</a>
-                      <a href="javascript:void(0)" class="mark-link text-maintenance"
-                        onclick="updateStatus('Maintenance')">[ Schedule maintenance ]</a>
+                    <div class="detail-row empty">
+                        <label>Expected Lifespan</label>
+                        <div class="detail-value text-muted">Not set</div>
                     </div>
-                  </div>
 
-                  <div class="footer-links">
-                    <a href="javascript:void(0)" class="usage-history" onclick="showUsageHistory()">View item usage
-                      history</a>
-                  </div>
-                  <div class="tesda-custom-footer-group">
-                    <button type="button" class="tesda-btn-off" data-bs-dismiss="modal">Cancel</button>
-                  </div>
+                    <div class="status-marking">
+                        <p class="section-title">Quick Status Update</p>
+                        <div class="marking-options">
+                            <span class="mark-label">Mark as:</span>
+
+                            <a href="javascript:void(0)" class="mark-link text-repair" onclick="updateStatus('For Repair')">
+                                [ For repair ]
+                            </a>
+
+                            <a href="javascript:void(0)" class="mark-link text-unserviceable" onclick="updateStatus('Unserviceable')">
+                                [ Unserviceable ]
+                            </a>
+
+                            <a href="javascript:void(0)" class="mark-link text-missing" onclick="updateStatus('Missing')">
+                                [ Missing ]
+                            </a>
+
+                            <a href="javascript:void(0)" class="mark-link text-maintenance" onclick="updateStatus('Maintenance')">
+                                [ Schedule maintenance ]
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="footer-links">
+                        <a href="javascript:void(0)" class="usage-history" onclick="showUsageHistory()">
+                            View item usage history
+                        </a>
+                    </div>
+
+                    <div class="tesda-custom-footer-group">
+                        <button type="button" class="tesda-btn-off" data-bs-dismiss="modal">
+                            Cancel
+                        </button>
+                    </div>
                 </div>
-              </div>
             </div>
-          </div>
+        </div>
+    </div>
 
-          <div id="usageHistoryModal" class="usage-modal-overlay" style="display: none;">
+    <!-- INVENTORY EDIT MODAL -->
+    <div id="inventoryEditModal" class="inventory-modal">
+        <div class="inventory-modal-content">
+            <span class="inventory-close-modal" onclick="closeInventoryEditModal()">
+                &times;
+            </span>
 
-            <div class="usage-history-content">
+            <h2>Edit Inventory Item</h2>
 
-              <div class="usage-header">
+            <form id="inventoryEditForm" method="POST">
+                @csrf
+                @method('PUT')
+
+                <input type="hidden" id="edit_inventory_id">
+
+                <label>Serial Number</label>
+                <input type="text" id="edit_serial_no" name="serial_no">
+
+                <label>Item Name</label>
+                <input type="text" id="edit_item_name" name="item_name">
+
+                <label>Source of Fund</label>
+                <input type="text" id="edit_source_of_fund" name="source_of_fund">
+
+                <label>Classification</label>
+                <input type="text" id="edit_classification" name="classification">
+
+                <label>Date Acquired</label>
+                <input type="date" id="edit_date_acquired" name="date_acquired">
+
+                <label>Status</label>
+                <select id="edit_status" name="status">
+                    <option value="Available">Available</option>
+                    <option value="Issued">Issued</option>
+                    <option value="For Repair">For Repair</option>
+                    <option value="Damaged">Damaged</option>
+                    <option value="Unserviceable">Unserviceable</option>
+                    <option value="Missing">Missing</option>
+                </select>
+
+                <button type="submit" class="inventory-save-btn">
+                    Save Changes
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- USAGE HISTORY MODAL -->
+    <div id="usageHistoryModal" class="usage-modal-overlay" style="display: none;">
+        <div class="usage-history-content">
+            <div class="usage-header">
                 <button type="button" class="back-btn" onclick="closeUsageHistory()">
-                  <i class="bi bi-arrow-left"></i> <span>&#8592;</span> </button>
+                    <i class="bi bi-arrow-left"></i> <span>&#8592;</span>
+                </button>
                 <h1 class="usage-title">Usage History</h1>
-                <h1 class="usage-title">Usage History</h1>
-              </div>
+            </div>
 
-              <div class="usage-item-info">
+            <div class="usage-item-info">
                 Item: <span id="history-item-name" style="font-weight:bold;">Printer</span><br>
                 Property No.: <span id="history-property-no" style="font-weight:bold;">00001</span>
-              </div>
+            </div>
 
-              <div class="usage-filters">
+            <div class="usage-filters">
                 <select class="filter-select">
-                  <option>All Statuses</option>
+                    <option>All Statuses</option>
                 </select>
-                <select class="filter-select">
-                  <option>Latest - Oldest</option>
-                </select>
-              </div>
 
-              <table class="usage-table">
+                <select class="filter-select">
+                    <option>Latest - Oldest</option>
+                </select>
+            </div>
+
+            <table class="usage-table">
                 <thead>
-                  <tr>
-                    <th>Issued Period</th>
-                    <th>Issued To</th>
-                    <th>Purpose</th>
-                    <th>Issued By</th>
-                    <th>Return Status</th>
-                    <th>Condition After Use</th>
-                    <th>Remarks</th>
-                  </tr>
+                    <tr>
+                        <th>Issued Period</th>
+                        <th>Issued To</th>
+                        <th>Purpose</th>
+                        <th>Issued By</th>
+                        <th>Return Status</th>
+                        <th>Condition After Use</th>
+                        <th>Remarks</th>
+                    </tr>
                 </thead>
                 <tbody id="usage-history-body">
                 </tbody>
-              </table>
+            </table>
 
-              <div class="usage-footer">
+            <div class="usage-footer">
                 <span class="entries-count">Showing 1-3 of 42 entries</span>
                 <div class="pagination-controls">
-                  <button class="pag-btn"><i class="bi bi-chevron-left"></i></button>
-                  <button class="pag-num active">1</button>
-                  <button class="pag-num">2</button>
-                  <button class="pag-btn"><i class="bi bi-chevron-right"></i></button>
+                    <button class="pag-btn"><i class="bi bi-chevron-left"></i></button>
+                    <button class="pag-num active">1</button>
+                    <button class="pag-num">2</button>
+                    <button class="pag-btn"><i class="bi bi-chevron-right"></i></button>
                 </div>
-              </div>
             </div>
-          </div>
+        </div>
+    </div>
 
           <!-- SCANNER MODAL -->
           <div id="scannerModal" class="scanner-modal hidden">
@@ -604,7 +682,7 @@
           <!-- Maintenance Records Table -->
           <div class="form-table-container mt-4">
             <h3>Maintenance Records</h3>
-            <table class="form-table" id="maintenanceTable">
+            <table class="form-table">
               <thead>
                 <tr>
                   <th>Serial #</th>
@@ -630,32 +708,16 @@
                     <td>
                       {{ $record->expected_completion ? \Carbon\Carbon::parse($record->expected_completion)->format('M d, Y') : '-' }}
                     </td>
-                    <td>{{ $record->remarks ?? '-' }}</td>
-                    <td>
-                      <div class="btn-with-icon">
+                    <td>{{ $record->remarks ?? '-' }}</td>                            
+                    <td class="action-buttons-issued">
                         <button class="edit-btn" data-id="{{ $record->maintenance_id }}"
                           data-serial="{{ $record->serial_no }}">
-                          <svg class="edit-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-                            fill="rgba(100,205,138,1)">
-                            <path
-                              d="M12.8995 6.85453L17.1421 11.0972L7.24264 20.9967H3V16.754L12.8995 6.85453ZM14.3137 5.44032L16.435 3.319C16.8256 2.92848 17.4587 2.92848 17.8492 3.319L20.6777 6.14743C21.0682 6.53795 21.0682 7.17112 20.6777 7.56164L18.5563 9.68296L14.3137 5.44032Z">
-                            </path>
-                          </svg>
-                          Edit
+                          <i class="fa fa-pen-to-square"></i>
                         </button>
-                      </div>
-                      <div class="right-side">
-                        <div class="btn-with-icon">
                           <button class="make-available-btn" data-serial="{{ $record->serial_no }}"
                             title="Make Available">
-                            <svg class="available-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-                              fill="rgba(100,205,138,1)">
-                              <path d="M9 16.2l-3.5-3.5 1.41-1.42L9 13.38l7.09-7.09L17.5 7.8z" />
-                            </svg>
-                            Make Available
+                            <i class="fa-solid fa-check"></i>
                           </button>
-                        </div>
-                      </div>
                     </td>
                   </tr>
                 @empty
@@ -1054,7 +1116,7 @@
 
         <div class="form-group">
           <label>Issue / Problem*</label>
-          <input type="text" id="m_issue" name="issue" required>
+         <input type="text" id="m_issue" name="issue_type" required>
         </div>
 
         <div class="form-group">

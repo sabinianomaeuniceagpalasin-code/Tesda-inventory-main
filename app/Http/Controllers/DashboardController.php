@@ -856,40 +856,65 @@ class DashboardController extends Controller
 public function maintenanceTableHtml()
 {
     $records = DB::table('maintenance')
-        ->join('items', 'maintenance.serial_no', '=', 'items.serial_no')
-        ->select('maintenance.*', 'items.item_name')
-        ->orderByDesc('maintenance.date_reported')
+        ->leftJoin('items', 'maintenance.serial_no', '=', 'items.serial_no')
+        ->select(
+            'maintenance.maintenance_id',
+            'maintenance.serial_no',
+            'items.item_name',
+            'maintenance.issue_type',
+            'maintenance.date_reported',
+            'maintenance.repair_cost',
+            'maintenance.expected_completion',
+            'maintenance.remarks'
+        )
+        ->orderBy('maintenance.date_reported', 'desc')
         ->get();
 
     $html = '';
-    foreach ($records as $r) {
-        $dateReported = $r->date_reported ? Carbon::parse($r->date_reported)->format('F d, Y') : '-';
-        $expected = $r->expected_completion ? Carbon::parse($r->expected_completion)->format('M d, Y') : '-';
-        $cost = $r->repair_cost !== null ? '₱' . number_format($r->repair_cost, 2) : '-';
-        $remarks = $r->remarks ?? '-';
-        $issue = $r->issue_type ?? '-';
-        $itemName = $r->item_name ?? '-';
+
+    foreach ($records as $record) {
+        $dateReported = $record->date_reported
+            ? \Carbon\Carbon::parse($record->date_reported)->format('F d, Y')
+            : '-';
+
+        $expectedCompletion = $record->expected_completion
+            ? \Carbon\Carbon::parse($record->expected_completion)->format('F d, Y')
+            : '-';
+
+        $repairCost = $record->repair_cost !== null
+            ? '₱' . number_format($record->repair_cost, 2)
+            : '-';
+
+        $itemName = $record->item_name ?? '-';
+        $issueType = $record->issue_type ?? '-';
+        $remarks = $record->remarks ?? '-';
 
         $html .= "
-          <tr>
-            <td class='serial-cell' data-serial='{$r->serial_no}'>{$r->serial_no}</td>
-            <td>{$itemName}</td>
-            <td>{$issue}</td>
-            <td>{$dateReported}</td>
-            <td>{$cost}</td>
-            <td>{$expected}</td>
-            <td>{$remarks}</td>
-            <td>
-              <div class='btn-with-icon'>
-                <button class='edit-btn' data-id='{$r->maintenance_id}' data-serial='{$r->serial_no}'>Edit</button>
-              </div>
-              <div class='right-side'>
-                <div class='btn-with-icon'>
-                  <button class='make-available-btn' data-serial='{$r->serial_no}' title='Make Available'>Make Available</button>
-                </div>
-              </div>
-            </td>
-          </tr>
+            <tr>
+                <td class='serial-cell' data-serial='{$record->serial_no}'>
+                    {$record->serial_no}
+                </td>
+                <td>{$itemName}</td>
+                <td>{$issueType}</td>
+                <td>{$dateReported}</td>
+                <td>{$repairCost}</td>
+                <td>{$expectedCompletion}</td>
+                <td>{$remarks}</td>
+                <td>
+                    <div class='btn-with-icon'>
+                        <button class='edit-btn' data-id='{$record->maintenance_id}' data-serial='{$record->serial_no}'>
+                            <i class='fa fa-pen-to-square'></i>
+                        </button>
+                    </div>
+                    <div class='right-side'>
+                        <div class='btn-with-icon'>
+                            <button class='make-available-btn' data-serial='{$record->serial_no}' title='Make Available'>
+                                <i class='fa-solid fa-check'></i>
+                            </button>
+                        </div>
+                    </div>
+                </td>
+            </tr>
         ";
     }
 
@@ -897,7 +922,7 @@ public function maintenanceTableHtml()
         $html = "<tr><td colspan='8' style='text-align:center;'>No maintenance records found.</td></tr>";
     }
 
-    return response($html, 200)->header('Content-Type', 'text/html');
+    return response()->json(['html' => $html]);
 }
 
 public function damageTableHtml()
