@@ -1117,6 +1117,20 @@
     </div>
   </div>
 
+  <div id="idleLockOverlay" style="display:none;">
+    <div class="idle-lock-box">
+        <h2>Session Locked</h2>
+        <p>Enter your password to continue</p>
+
+        <form id="unlockForm">
+            @csrf
+            <input type="password" id="unlockPassword" name="password" placeholder="Enter password" required>
+            <div id="unlockError" style="color:#ffb3b3; font-size:14px; margin-bottom:10px;"></div>
+            <button type="submit">Unlock</button>
+        </form>
+    </div>
+</div>
+
   <script>
   function escapeHtml(str) {
     return String(str || '')
@@ -1283,6 +1297,8 @@
   <script src="{{ asset('js/issued-borrower-search.js') }}"></script>
   <script src="{{ asset('js/dashboard-inventory-filter.js') }}"></script>
   <script src="{{ asset('js/maintenance-ticket.js') }}"></script>
+  <script src="{{ asset('js/lock.js') }}"></script>
+
 
 
 

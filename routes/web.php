@@ -20,6 +20,7 @@ use App\Http\Controllers\FormRecordsItemScanController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DamageReportController;
 use App\Http\Controllers\NotificationController; // ✅ added
+use App\Http\Controllers\LockController;
 
 Route::get('/', fn() => redirect()->route('login'));
 
@@ -57,6 +58,14 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/profile-settings', [ProfileController::class, 'edit'])->name('profile-settings');
     Route::post('/profile-settings', [ProfileController::class, 'update'])->name('profile.update');
     Route::get('/login-history', [ProfileController::class, 'loginHistory'])->name('login-history');
+
+    // IDLE LOCK 
+    Route::get('/lock', [LockController::class, 'show'])->name('lock.screen');
+    Route::post('/unlock', [LockController::class, 'unlock'])->name('unlock');
+
+    Route::post('/unlock-screen', [App\Http\Controllers\LockController::class, 'unlockScreen'])
+        ->name('unlock.screen');
+
 
     // =========================
     // USER APPROVAL
