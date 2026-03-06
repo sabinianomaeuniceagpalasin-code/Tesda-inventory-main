@@ -555,3 +555,87 @@ body {
 td .action-btn i {
     font-size: 14px;
 }
+
+.total-qty-col {
+    display: flex;
+    justify-content: center;  /* horizontal center */
+    align-items: center;      /* vertical center */
+    text-align: center;
+}
+
+.approval-row {
+    min-height: 90px;
+    align-items: center;
+}
+
+.total-qty-col {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.total-qty-box {
+    width: 100%;
+    text-align: center;
+}
+
+.action-col {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.info-col {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: left;
+}
+.lifespan-table th,
+.lifespan-table td {
+    vertical-align: middle;
+}
+
+.lifespan-table th {
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.lifespan-table td {
+    font-size: 0.85rem;
+}
+
+.lifespan-table td:nth-child(1),
+.lifespan-table td:nth-child(2) {
+    white-space: nowrap;
+}
+
+.lifespan-table td:nth-child(3) {
+    font-weight: 600;
+    color: #2c3e50;
+}
+.classification-table th,
+.classification-table td {
+    vertical-align: middle;
+}
+
+.classification-table th {
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.classification-table td {
+    font-size: 0.85rem;
+}
+
+.classification-table td:nth-child(1),
+.classification-table td:nth-child(2) {
+    white-space: nowrap;
+}
+
+.classification-table td:nth-child(3) {
+    font-weight: 600;
+    color: #2c3e50;
+}

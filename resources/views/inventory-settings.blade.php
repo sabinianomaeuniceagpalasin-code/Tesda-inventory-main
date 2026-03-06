@@ -48,113 +48,147 @@
                             </select>
                         </div>
 
-                        <!-- Enable Notifications -->
-                        <div class="d-flex justify-content-between align-items-center mb-4">
-                            <label class="form-label fw-semibold mb-0">Enable Notifications</label>
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="enableNotifications" checked>
-                            </div>
-                        </div>
-
                         <!-- Item Lifespan Limits -->
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <label class="form-label fw-semibold mb-0">Item Lifespan Limits</label>
-                                <a href="#" class="text-primary small">View all</a>
-                            </div>
-                            <table class="table table-sm">
-                                <tbody>
-                                    <tr>
-                                        <td>Laptop</td>
-                                        <td class="text-end">5</td>
-                                        <td class="text-end">
-                                            <button class="btn btn-sm btn-link p-0 me-2"><i
-                                                    class="bi bi-pencil text-primary"></i></button>
-                                            <button class="btn btn-sm btn-link p-0"><i
-                                                    class="bi bi-trash text-danger"></i></button>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>Printer</td>
-                                        <td class="text-end">8</td>
-                                        <td class="text-end">
-                                            <button class="btn btn-sm btn-link p-0 me-2"><i
-                                                    class="bi bi-pencil text-primary"></i></button>
-                                            <button class="btn btn-sm btn-link p-0"><i
-                                                    class="bi bi-trash text-danger"></i></button>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>Scanner</td>
-                                        <td class="text-end">7</td>
-                                        <td class="text-end">
-                                            <button class="btn btn-sm btn-link p-0 me-2"><i
-                                                    class="bi bi-pencil text-primary"></i></button>
-                                            <button class="btn btn-sm btn-link p-0"><i
-                                                    class="bi bi-trash text-danger"></i></button>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                            <button class="btn btn-sm btn-outline-primary w-100">
-                                <i class="bi bi-plus-circle me-1"></i> Add new item
+<div class="mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <label class="form-label fw-semibold mb-0">Item Lifespan Limits</label>
+        <a href="#" class="text-primary small" data-bs-toggle="modal" data-bs-target="#viewAllLifespanModal">
+            View all
+        </a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-sm align-middle lifespan-table">
+            <thead>
+                <tr>
+                    <th>Item Name</th>
+                    <th>Description</th>
+                    <th class="text-center">Lifespan</th>
+                    <th class="text-center">Edit</th>
+                    <th class="text-center">Delete</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($lifespanPreview as $item)
+                    <tr>
+                        <td>{{ $item->item_name }}</td>
+                        <td>{{ $item->description }}</td>
+                        <td class="text-center">{{ $item->expected_life_hours ?? 0 }}</td>
+                        <td class="text-center">
+                            <button
+                                type="button"
+                                class="btn btn-sm btn-link p-0 open-edit-lifespan"
+                                data-bs-toggle="modal"
+                                data-bs-target="#editLifespanModal"
+                                data-item-name="{{ $item->item_name }}"
+                                data-description="{{ $item->description }}"
+                                data-lifespan="{{ $item->expected_life_hours ?? 0 }}"
+                            >
+                                <i class="bi bi-pencil text-primary"></i>
                             </button>
-                        </div>
+                        </td>
+                        <td class="text-center">
+                            <form action="{{ route('inventory.settings.lifespan.delete') }}" method="POST" class="d-inline">
+                                @csrf
+                                <input type="hidden" name="item_id" value="{{ $item->item_id }}">
+                                <button
+                                    type="submit"
+                                    class="btn btn-sm btn-link p-0"
+                                    onclick="return confirm('Reset lifespan to 0 for this item?')"
+                                >
+                                    <i class="bi bi-trash text-danger"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">No items found.</td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+</div>
 
-                        <!-- Default Settings -->
-                        <h6 class="fw-bold mb-3 mt-4">Default Settings</h6>
+                        
 
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Date Format</label>
-                            <select class="form-select" name="date_format" id="dateFormat">
-                                <option value="MM/DD/YYYY" selected>MM/DD/YYYY</option>
-                                <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                                <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-                            </select>
-                        </div>
+                        
 
-                        <div class="d-flex justify-content-between align-items-center">
-                            <label class="form-label fw-semibold mb-0">Auto-Calculated Total Cost</label>
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="autoCalculate" checked>
-                            </div>
-                        </div>
+                        
                     </div>
                 </div>
 
                 <!-- Category & Classification Management Card -->
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title fw-bold mb-4">Category & Classification Management</h5>
+            <!-- Category & Classification Management Card -->
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title fw-bold mb-4">Category & Classification Management</h5>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Manage Item Classification</label>
-                            <div class="list-group mb-2">
-                                <div class="list-group-item d-flex justify-content-between align-items-center">
-                                    <span>Tools</span>
-                                    <div>
-                                        <button class="btn btn-sm btn-link p-0 me-2"><i
-                                                class="bi bi-pencil text-primary"></i></button>
-                                        <button class="btn btn-sm btn-link p-0"><i
-                                                class="bi bi-trash text-danger"></i></button>
-                                    </div>
-                                </div>
-                                <div class="list-group-item d-flex justify-content-between align-items-center">
-                                    <span>Equipment</span>
-                                    <div>
-                                        <button class="btn btn-sm btn-link p-0 me-2"><i
-                                                class="bi bi-pencil text-primary"></i></button>
-                                        <button class="btn btn-sm btn-link p-0"><i
-                                                class="bi bi-trash text-danger"></i></button>
-                                    </div>
-                                </div>
-                            </div>
-                            <button class="btn btn-sm btn-outline-primary w-100">
-                                <i class="bi bi-plus-circle me-1"></i> Add new classification
-                            </button>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label fw-semibold mb-0">Manage Item Classification</label>
+                            <a href="#" class="text-primary small" data-bs-toggle="modal" data-bs-target="#viewAllClassificationModal">
+                                View all
+                            </a>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle classification-table">
+                                <thead>
+                                    <tr>
+                                        <th>Item Name</th>
+                                        <th>Description</th>
+                                        <th class="text-center">Classification</th>
+                                        <th class="text-center">Edit</th>
+                                        <th class="text-center">Delete</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($classificationsPreview as $item)
+                                        <tr>
+                                            <td>{{ $item->item_name }}</td>
+                                            <td>{{ $item->description }}</td>
+                                            <td class="text-center">{{ $item->classification ?: 'Unclassified' }}</td>
+                                            <td class="text-center">
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-sm btn-link p-0 open-edit-classification"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#editClassificationModal"
+                                                    data-item-name="{{ $item->item_name }}"
+                                                    data-description="{{ $item->description }}"
+                                                    data-classification="{{ $item->classification ?: '' }}"
+                                                >
+                                                    <i class="bi bi-pencil text-primary"></i>
+                                                </button>
+                                            </td>
+                                            <td class="text-center">
+                                                <form action="{{ route('inventory.settings.classification.delete') }}" method="POST" class="d-inline">
+                                                    @csrf
+                                                    <input type="hidden" name="item_name" value="{{ $item->item_name }}">
+                                                    <input type="hidden" name="description" value="{{ $item->description }}">
+                                                    <button
+                                                        type="submit"
+                                                        class="btn btn-sm btn-link p-0"
+                                                        onclick="return confirm('Reset classification for this item group?')"
+                                                    >
+                                                        <i class="bi bi-trash text-danger"></i>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted">No items found.</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
                         </div>
                     </div>
-                </div>
+                </div>  
+            </div>
             </div>
 
             <!-- Right Column -->
@@ -395,38 +429,30 @@
                                 @endphp
 
                                 <div class="approval-card mb-3" data-date="{{ $dateValue }}">
-                                    <div class="row align-items-center">
-                                        <div class="col-md-6">
+                                    <div class="row approval-row">
+                                        <div class="col-md-4 info-col">
                                             <div class="fw-semibold">Batch #: {{ $batchId }}</div>
                                             <div class="text-muted small">
                                                 Types: {{ $types }} • Lines: {{ $rows->count() }}
                                             </div>
                                         </div>
 
-                                        <div class="col-md-3 text-center">
-                                            <div class="fw-semibold">Total Qty: {{ $totalQty }}</div>
-                                            <div class="text-muted small">
-                                                {{ \Carbon\Carbon::parse($first->requested_at)->format('d M Y') }}
+                                        <div class="col-md-4 total-qty-col">
+                                            <div class="total-qty-box">
+                                                <div class="fw-semibold">Total Qty: {{ $totalQty }}</div>
+                                                <div class="text-muted small">
+                                                    {{ \Carbon\Carbon::parse($first->requested_at)->format('d M Y') }}
+                                                </div>
                                             </div>
                                         </div>
 
-                                        <div class="col-md-3 text-center d-flex justify-content-center gap-2 flex-wrap">
-                                            <!-- View Batch -->
-                                            <button type="button"
-                                                    class="btn btn-outline-primary btn-sm"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#batchModal-{{ $batchId }}">
-                                                View
-                                            </button>
-
-                                            <!-- Approve Batch -->
+                                        <div class="col-md-4 action-col">
                                             <button type="button"
                                                     class="btn btn-success btn-sm approve-batch"
                                                     data-batch="{{ $batchId }}">
                                                 Approve
                                             </button>
 
-                                            <!-- Reject Batch -->
                                             <button type="button"
                                                     class="btn btn-danger btn-sm reject-batch"
                                                     data-batch="{{ $batchId }}">
@@ -767,6 +793,244 @@
     </div>
 </div>
 
+<!-- Edit Lifespan Modal -->
+<div class="modal fade" id="editLifespanModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form action="{{ route('inventory.settings.lifespan.update') }}" method="POST">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Edit Item Lifespan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                   <input type="hidden" name="item_name" id="edit_item_name_hidden">
+                    <input type="hidden" name="description" id="edit_description_hidden">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Item Name</label>
+                        <input type="text" id="edit_item_name" class="form-control" readonly>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Description</label>
+                        <input type="text" id="edit_description" class="form-control" readonly>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Expected Life Hours</label>
+                        <input
+                            type="number"
+                            name="expected_life_hours"
+                            id="edit_lifespan"
+                            class="form-control"
+                            min="0"
+                            required
+                        >
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- View All Lifespan Modal -->
+<div class="modal fade" id="viewAllLifespanModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">All Item Lifespan Limits</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Item Name</th>
+                                <th>Description</th>
+                                <th class="text-center">Lifespan</th>
+                                <th class="text-center">Edit</th>
+                                <th class="text-center">Delete</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($lifespanItems as $item)
+                                <tr>
+                                    <td>{{ $item->item_name }}</td>
+                                    <td>{{ $item->description }}</td>
+                                    <td class="text-center">{{ $item->expected_life_hours ?? 0 }}</td>
+                                    <td class="text-center">
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm btn-link p-0 open-edit-lifespan"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#editLifespanModal"
+                                            data-item-id="{{ $item->item_id }}"
+                                            data-item-name="{{ $item->item_name }}"
+                                            data-description="{{ $item->description }}"
+                                            data-lifespan="{{ $item->expected_life_hours ?? 0 }}"
+                                        >
+                                            <i class="bi bi-pencil text-primary"></i>
+                                        </button>
+                                    </td>
+                                    <td class="text-center">
+                                        <form action="{{ route('inventory.settings.lifespan.delete') }}" method="POST" class="d-inline">
+                                            @csrf
+                                            <input type="hidden" name="item_name" value="{{ $item->item_name }}">
+                                            <input type="hidden" name="description" value="{{ $item->description }}">
+                                            <button
+                                                type="submit"
+                                                class="btn btn-sm btn-link p-0"
+                                                onclick="return confirm('Reset lifespan to 0 for this item?')"
+                                            >
+                                                <i class="bi bi-trash text-danger"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">No items found.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Classification Modal -->
+<div class="modal fade" id="editClassificationModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form action="{{ route('inventory.settings.classification.update') }}" method="POST">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Edit Classification</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <input type="hidden" name="item_name" id="edit_class_item_name_hidden">
+                    <input type="hidden" name="description" id="edit_class_description_hidden">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Item Name</label>
+                        <input type="text" id="edit_class_item_name" class="form-control" readonly>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Description</label>
+                        <input type="text" id="edit_class_description" class="form-control" readonly>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Classification</label>
+                        <input
+                            type="text"
+                            name="classification"
+                            id="edit_classification"
+                            class="form-control"
+                            required
+                        >
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- View All Classification Modal -->
+<div class="modal fade" id="viewAllClassificationModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">All Item Classifications</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Item Name</th>
+                                <th>Description</th>
+                                <th class="text-center">Classification</th>
+                                <th class="text-center">Edit</th>
+                                <th class="text-center">Delete</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($classifications as $item)
+                                <tr>
+                                    <td>{{ $item->item_name }}</td>
+                                    <td>{{ $item->description }}</td>
+                                    <td class="text-center">{{ $item->classification ?: 'Unclassified' }}</td>
+                                    <td class="text-center">
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm btn-link p-0 open-edit-classification"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#editClassificationModal"
+                                            data-item-name="{{ $item->item_name }}"
+                                            data-description="{{ $item->description }}"
+                                            data-classification="{{ $item->classification ?: '' }}"
+                                        >
+                                            <i class="bi bi-pencil text-primary"></i>
+                                        </button>
+                                    </td>
+                                    <td class="text-center">
+                                        <form action="{{ route('inventory.settings.classification.delete') }}" method="POST" class="d-inline">
+                                            @csrf
+                                            <input type="hidden" name="item_name" value="{{ $item->item_name }}">
+                                            <input type="hidden" name="description" value="{{ $item->description }}">
+                                            <button
+                                                type="submit"
+                                                class="btn btn-sm btn-link p-0"
+                                                onclick="return confirm('Reset classification for this item group?')"
+                                            >
+                                                <i class="bi bi-trash text-danger"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">No items found.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
     <!-- SWEET ALERT -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
@@ -778,9 +1042,11 @@
     <script src="{{ asset('js/inventory-settings-user-approval.js') }}"></script>
     <script src="{{ asset('js/inventory-settings-item-approve-reject.js') }}"></script>
     <script src="{{ asset('js/archive-filters.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
     <script src="{{ asset('js/inventory-settings-print.js') }}"></script>
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="{{ asset('js/inventory-settings-lifespan.js') }}"></script>
+    
 
 
 

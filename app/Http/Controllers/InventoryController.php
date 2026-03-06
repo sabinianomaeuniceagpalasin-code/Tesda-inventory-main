@@ -49,6 +49,8 @@ class InventoryController extends Controller
         return response()->json(['exists' => false]);
     }
 
+    
+
     public function store(Request $request)
     {
         $validated = $request->validate([

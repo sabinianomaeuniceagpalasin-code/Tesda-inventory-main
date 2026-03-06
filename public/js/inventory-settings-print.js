@@ -1,5 +1,3 @@
-// public/js/inventory-settings-print.js
-
 document.addEventListener("DOMContentLoaded", function () {
   const modalEl = document.getElementById("printPreviewModal");
   if (!modalEl) return;
@@ -9,9 +7,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
   if (!container) return;
 
-  // ===============================
-  // OPEN BATCH PRINT PREVIEW
-  // ===============================
   document.addEventListener("click", function (e) {
     const btn = e.target.closest(".openBatchPrintModal");
     if (!btn) return;
@@ -50,11 +45,10 @@ document.addEventListener("DOMContentLoaded", function () {
         box.className = "qr-box";
 
         const codeDiv = document.createElement("div");
+        codeDiv.className = "code-holder";
         box.appendChild(codeDiv);
 
-        // ===============================
         // QR CODE
-        // ===============================
         if (type === "qr") {
           new QRCode(codeDiv, {
             text: serial,
@@ -63,32 +57,28 @@ document.addEventListener("DOMContentLoaded", function () {
           });
         }
 
-        // ===============================
         // BARCODE
-        // ===============================
         else {
           const wrap = document.createElement("div");
           wrap.className = "barcode-wrap";
 
-          const img = document.createElement("img");
-          img.alt = `Barcode ${serial}`;
-          img.src = `https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(
-            serial
-          )}&code=Code128&translate-esc=false&multiplebarcodes=false&quiet=0&showtext=0`;
+          const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+          svg.classList.add("barcode-svg");
+          wrap.appendChild(svg);
 
-          img.style.width = "120px";
-          img.style.height = "55px";
-
-          wrap.appendChild(img);
           codeDiv.appendChild(wrap);
+
+          JsBarcode(svg, serial, {
+            format: "CODE128",
+            width: 1.4,
+            height: 38,
+            displayValue: false, // ✅ removes duplicate serial text
+            margin: 0
+          });
         }
 
-        // ===============================
-        // LABEL
-        // ===============================
         const label = document.createElement("div");
         label.className = "qr-title";
-
         label.innerHTML = `
           <div><strong>${escapeHtml(itemName)}</strong></div>
           <div class="qr-desc">${escapeHtml(description)}</div>
@@ -104,10 +94,6 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 });
 
-
-// ===============================
-// PRINT FUNCTION
-// ===============================
 function printPreview() {
   const container = document.getElementById("qrContainer");
   if (!container) return;
@@ -122,70 +108,88 @@ function printPreview() {
     <head>
       <title>Print Codes</title>
       <style>
+        @page {
+          size: A4 portrait;
+          margin: 10mm;
+        }
 
         @media print {
-          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+        }
+
+        * {
+          box-sizing: border-box;
         }
 
         body {
           margin: 0;
-          padding: 20px;
+          padding: 10px;
           font-family: Arial, sans-serif;
         }
 
         .qr-container {
           display: grid;
-          grid-template-columns: repeat(6, 120px);
+          grid-template-columns: repeat(6, 105px);
+          gap: 10px;
           justify-content: center;
-          gap: 15px;
+          width: 100%;
         }
 
         .qr-box {
+          width: 105px;
           display: flex;
           flex-direction: column;
           align-items: center;
           text-align: center;
-          width: 120px;
+          page-break-inside: avoid;
+          break-inside: avoid;
         }
 
         .qr-box canvas {
-          width: 70px !important;
-          height: 70px !important;
+          width: 68px !important;
+          height: 68px !important;
         }
 
         .barcode-wrap {
-          width: 120px;
-          height: 40px;
+          width: 105px;
+          height: 42px;
+          display: flex;
+          justify-content: center;
+          align-items: center;
           overflow: hidden;
         }
 
-        .qr-box img {
+        .barcode-svg {
+          width: 105px;
+          height: 42px;
           display: block;
-          margin: 0 auto;
         }
 
         .qr-title {
-        font-size: 9px;
-        margin-top: 4px;
-        line-height: 1.2;
-      }
-
-      .qr-desc {
-        font-size: 8px;
-      }
-
-        .qr-serial {
-          font-size: 9px;
+          font-size: 8px;
+          margin-top: 4px;
+          line-height: 1.15;
+          width: 100%;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
         }
 
+        .qr-desc {
+          font-size: 7px;
+        }
+
+        .qr-serial {
+          font-size: 8px;
+        }
       </style>
     </head>
     <body>
-
       <div class="qr-container">
         ${printContents}
       </div>
-
     </body>
     </html>
   `);
@@ -199,10 +203,6 @@ function printPreview() {
   }, 500);
 }
 
-
-// ===============================
-// ESCAPE HTML
-// ===============================
 function escapeHtml(str) {
   return String(str)
     .replace(/&/g, "&amp;")

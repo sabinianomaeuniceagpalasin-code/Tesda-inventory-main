@@ -22,8 +22,7 @@ class InventorySettingsController extends Controller
             ->where('is_approved', 0)
             ->get();
 
-        // Pending item approval requests, batched
-        // Pending item approval requests (FULL ROWS)
+        // Pending item approval requests
         $itemRequests = DB::table('item_approval_requests')
             ->select(
                 'request_id',
@@ -42,29 +41,70 @@ class InventorySettingsController extends Controller
             ->orderByDesc('requested_at')
             ->get();
 
-            // ===============================
-            // ARCHIVE REQUESTS
-            // ===============================
-            $archiveRequests = DB::table('item_approval_requests')
-                ->select(
-                    'request_id',
-                    'batch_id',
-                    'item_name',
-                    'department',
-                    'description',
-                    'serial_number',
-                    'quantity',
-                    'request_type',
-                    'requested_at',
-                    'status'
-                )
-                ->whereIn('status', ['approved', 'rejected', 'pending'])
-                ->whereNotNull('batch_id')
-                ->orderByDesc('requested_at')
-                ->get();
+        // Archive requests
+        $archiveRequests = DB::table('item_approval_requests')
+            ->select(
+                'request_id',
+                'batch_id',
+                'item_name',
+                'department',
+                'description',
+                'serial_number',
+                'quantity',
+                'request_type',
+                'requested_at',
+                'status'
+            )
+            ->whereIn('status', ['approved', 'rejected', 'pending'])
+            ->whereNotNull('batch_id')
+            ->orderByDesc('requested_at')
+            ->get();
 
+        // ===============================
+        // ITEM LIFESPAN LIMITS
+        // grouped by item_name + description
+        // ===============================
+        $lifespanItems = DB::table('items')
+            ->select(
+                'item_name',
+                'description',
+                DB::raw('COALESCE(MAX(expected_life_hours), 0) as expected_life_hours'),
+                DB::raw('MIN(item_id) as item_id')
+            )
+            ->groupBy('item_name', 'description')
+            ->orderBy('item_name', 'asc')
+            ->orderBy('description', 'asc')
+            ->get();
 
-        return view('Inventory-settings', compact('users', 'itemRequests', 'archiveRequests'));
+        $lifespanPreview = $lifespanItems->take(5);
+
+        // ===============================
+        // CLASSIFICATION MANAGEMENT
+        // grouped by item_name + description
+        // ===============================
+        $classifications = DB::table('items')
+            ->select(
+                'item_name',
+                'description',
+                DB::raw('COALESCE(MAX(classification), "") as classification'),
+                DB::raw('MIN(item_id) as item_id')
+            )
+            ->groupBy('item_name', 'description')
+            ->orderBy('item_name', 'asc')
+            ->orderBy('description', 'asc')
+            ->get();
+
+        $classificationsPreview = $classifications->take(5);
+
+        return view('Inventory-settings', compact(
+            'users',
+            'itemRequests',
+            'archiveRequests',
+            'lifespanItems',
+            'lifespanPreview',
+            'classifications',
+            'classificationsPreview'
+        ));
     }
 
     /* ================================
@@ -94,9 +134,48 @@ class InventorySettingsController extends Controller
     }
 
     /* ================================
+       ITEM LIFESPAN LIMITS
+    ================================= */
+    public function updateLifespan(Request $request)
+    {
+        $request->validate([
+            'item_name' => 'required|string',
+            'description' => 'required|string',
+            'expected_life_hours' => 'required|integer|min:0',
+        ]);
+
+        DB::table('items')
+            ->where('item_name', $request->item_name)
+            ->where('description', $request->description)
+            ->update([
+                'expected_life_hours' => $request->expected_life_hours,
+                'updated_at' => now(),
+            ]);
+
+        return back()->with('success', 'Lifespan updated for all matching items.');
+    }
+
+    public function deleteLifespan(Request $request)
+    {
+        $request->validate([
+            'item_name' => 'required|string',
+            'description' => 'required|string',
+        ]);
+
+        DB::table('items')
+            ->where('item_name', $request->item_name)
+            ->where('description', $request->description)
+            ->update([
+                'expected_life_hours' => 0,
+                'updated_at' => now(),
+            ]);
+
+        return back()->with('success', 'Lifespan reset for all matching items.');
+    }
+
+    /* ================================
        ITEM APPROVAL
     ================================= */
-
     public function approveItem($id)
     {
         DB::table('item_approval_requests')
@@ -118,9 +197,9 @@ class InventorySettingsController extends Controller
         DB::table('item_approval_requests')
             ->where('request_id', $id)
             ->update([
-                'status'       => 'rejected',
-                'rejected_at'  => now(),
-                'updated_at'   => now(),
+                'status'      => 'rejected',
+                'rejected_at' => now(),
+                'updated_at'  => now(),
             ]);
 
         return response()->json([
@@ -130,36 +209,80 @@ class InventorySettingsController extends Controller
     }
 
     public function approveBatch($batchId)
-        {
-            DB::table('item_approval_requests')
-                ->where('batch_id', $batchId)
-                ->where('status', 'pending')
-                ->update([
-                    'status'      => 'approved',
-                    'approved_at' => now(),
-                    'updated_at'  => now(),
-                ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Batch approved.',
+    {
+        DB::table('item_approval_requests')
+            ->where('batch_id', $batchId)
+            ->where('status', 'pending')
+            ->update([
+                'status'      => 'approved',
+                'approved_at' => now(),
+                'updated_at'  => now(),
             ]);
-        }
 
-        public function rejectBatch($batchId)
-        {
-            DB::table('item_approval_requests')
-                ->where('batch_id', $batchId)
-                ->where('status', 'pending')
-                ->update([
-                    'status'      => 'rejected',
-                    'rejected_at' => now(),
-                    'updated_at'  => now(),
-                ]);
+        return response()->json([
+            'success' => true,
+            'message' => 'Batch approved.',
+        ]);
+    }
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Batch rejected.',
+    public function rejectBatch($batchId)
+    {
+        DB::table('item_approval_requests')
+            ->where('batch_id', $batchId)
+            ->where('status', 'pending')
+            ->update([
+                'status'      => 'rejected',
+                'rejected_at' => now(),
+                'updated_at'  => now(),
             ]);
-        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Batch rejected.',
+        ]);
+    }
+
+    /* ================================
+       CLASSIFICATION MANAGEMENT
+    ================================= */
+    public function updateClassification(Request $request)
+    {
+        $request->validate([
+            'item_name' => 'required|string',
+            'description' => 'required|string',
+            'classification' => 'required|string|max:255',
+        ]);
+
+        DB::table('items')
+            ->where('item_name', $request->item_name)
+            ->where('description', $request->description)
+            ->update([
+                'classification' => $request->classification,
+                'updated_at' => now(),
+            ]);
+
+        return redirect()
+            ->route('inventory.settings')
+            ->with('success', 'Classification updated successfully.');
+    }
+
+    public function deleteClassification(Request $request)
+    {
+        $request->validate([
+            'item_name' => 'required|string',
+            'description' => 'required|string',
+        ]);
+
+        DB::table('items')
+            ->where('item_name', $request->item_name)
+            ->where('description', $request->description)
+            ->update([
+                'classification' => null,
+                'updated_at' => now(),
+            ]);
+
+        return redirect()
+            ->route('inventory.settings')
+            ->with('success', 'Classification reset successfully.');
+    }
 }

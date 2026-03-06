@@ -189,6 +189,18 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/inventory/get-tool/{tool_name}', [InventoryController::class, 'getTool']);
         Route::get('/check-property-no/{property_no}', [InventoryController::class, 'checkPropertyNo']);
 
+        Route::post('/inventory/settings/lifespan/update', [InventorySettingsController::class, 'updateLifespan'])
+            ->name('inventory.settings.lifespan.update');
+
+        Route::post('/inventory/settings/lifespan/delete', [InventorySettingsController::class, 'deleteLifespan'])
+            ->name('inventory.settings.lifespan.delete');
+
+        Route::post('/inventory/settings/classification/update', [InventorySettingsController::class, 'updateClassification'])
+            ->name('inventory.settings.classification.update');
+
+        Route::post('/inventory/settings/classification/delete', [InventorySettingsController::class, 'deleteClassification'])
+            ->name('inventory.settings.classification.delete');
+
         Route::get('/check-serial-no/{serial_no}', function ($serial_no) {
             $exists = DB::table('tools')->where('serial_no', $serial_no)->exists();
             return response()->json(['exists' => $exists]);
