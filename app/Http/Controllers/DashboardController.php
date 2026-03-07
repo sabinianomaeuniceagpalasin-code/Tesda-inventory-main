@@ -336,41 +336,48 @@ class DashboardController extends Controller
     {
         $issuedItemsList = DB::table('issuedlog as i')
             ->join('items as it', 'i.serial_no', '=', 'it.serial_no')
-            ->leftJoin('formrecords as f', 'i.reference_no', '=', 'f.reference_no')
-            ->where('it.status', 'Issued')
-            ->whereRaw('i.issue_id = (
-            SELECT MAX(issue_id)
-            FROM issuedlog
-            WHERE serial_no = i.serial_no
-        )')
+            ->leftJoin('users as u', 'i.issued_by', '=', 'u.user_id')
+            ->where('it.status', '=', 'Issued')
+            ->whereRaw('i.issue_id = (SELECT MAX(issue_id) FROM issuedlog WHERE serial_no = i.serial_no)')
             ->select(
                 'i.issue_id',
-                'i.property_no',
                 'i.serial_no',
-                'i.return_date',
-                'i.borrower_name',
-                'f.issued_by as issued_by',
                 'i.issued_date',
-                'f.reference_no',
+                'i.return_date',
+                'i.form_type',
+                'i.reference_no',
                 'it.item_name as item',
-                'it.classification as classification',
+                DB::raw("COALESCE(i.borrower_name, 'N/A') as issued_to"),
+                DB::raw("COALESCE(CONCAT(u.first_name, ' ', u.last_name), 'N/A') as issued_by")
             )
-            ->orderBy('i.issued_date', 'desc')
-            ->limit(10)
+            ->orderByDesc('i.issued_date')
             ->get();
 
         $html = '';
         foreach ($issuedItemsList as $item) {
             $returnDate = $item->return_date ? Carbon::parse($item->return_date)->format('F d, Y') : '-';
             $html .= "
-            <tr>
-                <td>{$item->item}</td>
-                <td>{$item->classification}</td>
-                <td>{$item->issued_to}</td>
-                <td>" . Carbon::parse($item->issued_date)->format('F d, Y') . "</td>
-                <td>{$returnDate}</td>
-            </tr>
-        ";
+                <tr>
+                    <td>{$item->serial_no}</td>
+                    <td>{$item->item}</td>
+                    <td>{$item->issued_to}</td>
+                    <td>{$item->issued_by}</td>
+                    <td>{$item->form_type}</td>
+                    <td>{$item->reference_no}</td>
+                    
+                    <td class='action-buttons-issued'>
+                        <button class='action-btn-issued return-btn-issued' title='Return' data-id='{$item->issue_id}'>
+                            <i class='fas fa-undo'></i>
+                        </button>
+                        <button class='action-btn-issued damaged-btn-issued' data-id='{$item->serial_no}' title='Damaged'>
+                            <i class='fas fa-exclamation-triangle'></i>
+                        </button>
+                        <button class='action-btn-issued unserviceable-btn-issued' title='Unserviceable'>
+                            <i class='fas fa-times-circle'></i>
+                        </button>
+                    </td>
+                </tr>
+            ";
         }
 
         return response()->json(['html' => $html]);

@@ -13,9 +13,9 @@ const dashboardConfigs = {
         apiUrl: "/dashboard/get-available-items",
         targetSection: "inventory",
     },
-    issued: {
+     issued: {
         title: "List of Issued Items",
-        headers: ["Serial Number", "Item name", "Borrower Name", "Issued By", "Form Type", "Reference Item"],
+        headers: ["Serial Number", "Item name", "Borrower Name", "Issued By", "Form Type", "Reference Number", "Action"],
         buttonText: "View Issued Item Section",
         apiUrl: "/dashboard/get-issued-items",
         targetSection: "issued",

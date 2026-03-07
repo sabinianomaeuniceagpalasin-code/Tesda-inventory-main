@@ -21,6 +21,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DamageReportController;
 use App\Http\Controllers\NotificationController; // ✅ added
 use App\Http\Controllers\LockController;
+use App\Http\Controllers\ItemMissingController;
 
 Route::get('/', fn() => redirect()->route('login'));
 
@@ -65,6 +66,9 @@ Route::middleware(['auth'])->group(function () {
 
     Route::post('/unlock-screen', [App\Http\Controllers\LockController::class, 'unlockScreen'])
         ->name('unlock.screen');
+
+        //Missing
+         Route::post('/items/missing', [ItemMissingController::class, 'markMissing'])->name('items.missing');
 
 
     // =========================

@@ -986,6 +986,11 @@ td {
     font-size: 14px;
 }
 
+.missing-btn-issued {
+    background: #ff9800;
+    color: #fff;
+}
+
 .maintenance-btn-issued {
     background-color: #007bff;
     color: white;

@@ -44,11 +44,12 @@
           <img src="{{ asset('images/inventory.png') }}" class="menu-icon">
           Inventory
         </a>
-
+        @if($isAdmin || $isPropertyCustodian)
         <a href="#" data-target="issued">
           <img src="{{ asset('images/issued.png') }}" class="menu-icon">
           Issued Item
         </a>
+        @endif
 
         <a href="#" data-target="form">
           <img src="{{ asset('images/form.png') }}" class="menu-icon">
@@ -65,12 +66,12 @@
           <img src="{{ asset('images/maintenance.png') }}" class="menu-icon">
           Maintenance
         </a>
+        @endif
 
         <a href="#" data-target="generate">
           <img src="{{ asset('images/maintenance.png') }}" class="menu-icon">
           QR Generator
         </a>
-      @endif
         
 
       </nav>
@@ -230,10 +231,12 @@
             <button>+ Export</button>
             <button type="button" id="clearInventoryFiltersBtn">Clear filters</button>
         </div>
-
+        
         <div class="right-buttons">
             <input type="text" id="inventorySearchInput" placeholder="Search Item Name...">
+            @if($isAdmin || $isPropertyCustodian)
             <button id="addItemBtn">+ Add new item</button>
+            @endif
         </div>
     </div>
 
@@ -511,7 +514,8 @@
           </div>
         </div>
 
-        <div id="issued" class="content-section">
+
+          <div id="issued" class="content-section">
           <div class="issued-header">
             <h2>Analytics Overview</h2>
           </div>
@@ -543,6 +547,10 @@
                 </div>
                 <div class="analytic-card clickable-card" onclick="openDynamicModal('pending')">
                   <h4>Pending issuances</h4>
+                  <p>0</p>
+                </div>
+                <div class="analytic-card clickable-card" onclick="openDynamicModal('missing')">
+                  <h4>Missing issuances</h4>
                   <p>0</p>
                 </div>
               </div>
@@ -597,6 +605,14 @@
                           <button class="action-btn-issued unserviceable-btn-issued" title="Unserviceable">
                             <i class="fas fa-times-circle"></i>
                           </button>
+                          <button class="action-btn-issued missing-btn-issued"
+                              data-serial="{{ $item->serial_no }}"
+                              data-borrower="{{ $item->issued_to }}"
+                              title="Missing">
+
+                          <i class="fas fa-question-circle"></i>
+
+                      </button>
                         </td>
                       </tr>
                     @endforeach
@@ -1360,6 +1376,8 @@
   <script src="{{ asset('js/dashboard-inventory-filter.js') }}"></script>
   <script src="{{ asset('js/maintenance-ticket.js') }}"></script>
   <script src="{{ asset('js/lock.js') }}"></script>
+  <script src="{{ asset('js/DashboardMissing.js') }}"></script>
+
 
 
 
