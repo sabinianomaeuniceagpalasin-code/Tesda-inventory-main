@@ -657,25 +657,18 @@ class DashboardController extends Controller
 
     public function getUnserviceableItemsTable()
 {
-    $items = DB::table('items as i')
-        ->leftJoin('issuedlog as il', function ($join) {
-            $join->on('i.serial_no', '=', 'il.serial_no')
-                 ->whereRaw('il.issue_id = (
-                     SELECT MAX(issue_id)
-                     FROM issuedlog
-                     WHERE serial_no = i.serial_no
-                 )');
-        })
+    $items = DB::table('unserviceablereports as ur')
+        ->leftJoin('items as i', 'ur.serial_no', '=', 'i.serial_no')
+        ->leftJoin('users as u', 'ur.reported_by', '=', 'u.user_id')
         ->select(
-            'i.serial_no',
-            'i.item_name',  
-            DB::raw("'Marked as unserviceable' as reason"),
-            DB::raw("COALESCE(il.borrower_name, 'N/A') as borrower_name"),
-            DB::raw("'System' as reported_by"),
-            'i.updated_at'
+            'ur.serial_no',
+            'i.item_name',
+            'ur.reason',
+            DB::raw("COALESCE(ur.borrower_name, 'N/A') as borrower_name"),
+            DB::raw("COALESCE(CONCAT(u.first_name, ' ', u.last_name), 'Unknown') as reported_by"),
+            'ur.reported_at'
         )
-        ->where('i.status', 'Unserviceable')
-        ->orderByDesc('i.updated_at')
+        ->orderByDesc('ur.reported_at')
         ->get();
 
     $html = '';
@@ -684,7 +677,9 @@ class DashboardController extends Controller
         $reason = $item->reason ?? '-';
         $borrowerName = $item->borrower_name ?? '-';
         $reportedBy = $item->reported_by ?? '-';
-        $reported = $item->updated_at ? Carbon::parse($item->updated_at)->format('F d, Y') : '-';
+        $reported = $item->reported_at
+            ? Carbon::parse($item->reported_at)->format('F d, Y')
+            : '-';
 
         $html .= "
             <tr>
