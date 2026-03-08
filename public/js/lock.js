@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {
-    let idleSeconds = 0;
     const lockAfterSeconds = 30;
     let isLocked = false;
+    let idleTimeout = null;
 
     const overlay = document.getElementById("idleLockOverlay");
     const unlockForm = document.getElementById("unlockForm");
@@ -10,54 +10,72 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (!overlay || !unlockForm || !unlockPassword || !unlockError) return;
 
-    function resetTimer() {
-        if (!isLocked) {
-            idleSeconds = 0;
-        }
-    }
-
     function lockScreen() {
+        if (isLocked) return;
+
         isLocked = true;
         sessionStorage.setItem("is_screen_locked", "true");
         overlay.style.display = "flex";
         unlockPassword.value = "";
         unlockError.textContent = "";
+
+        clearTimeout(idleTimeout);
+
         setTimeout(() => unlockPassword.focus(), 100);
     }
 
     function unlockScreenUI() {
         isLocked = false;
-        idleSeconds = 0;
         sessionStorage.removeItem("is_screen_locked");
         overlay.style.display = "none";
         unlockPassword.value = "";
         unlockError.textContent = "";
+        startIdleTimer();
+    }
+
+    function startIdleTimer() {
+        clearTimeout(idleTimeout);
+
+        if (isLocked) return;
+
+        idleTimeout = setTimeout(() => {
+            lockScreen();
+        }, lockAfterSeconds * 1000);
+    }
+
+    function resetTimer() {
+        if (!isLocked) {
+            startIdleTimer();
+        }
     }
 
     // restore lock after refresh
     if (sessionStorage.getItem("is_screen_locked") === "true") {
         lockScreen();
+    } else {
+        startIdleTimer();
     }
 
-    ['mousemove', 'keydown', 'click', 'scroll', 'touchstart', 'mousedown'].forEach(event => {
+    // any activity resets timer
+    [
+        "mousemove",
+        "keydown",
+        "click",
+        "scroll",
+        "touchstart",
+        "mousedown",
+        "mouseenter",
+        "wheel"
+    ].forEach(event => {
         document.addEventListener(event, resetTimer, true);
     });
-
-    setInterval(() => {
-        if (!isLocked) {
-            idleSeconds++;
-            if (idleSeconds >= lockAfterSeconds) {
-                lockScreen();
-            }
-        }
-    }, 1000);
 
     unlockForm.addEventListener("submit", function (e) {
         e.preventDefault();
 
         unlockError.textContent = "";
 
-        const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const token = document.querySelector('meta[name="csrf-token"]').getAttribute("content");
         const password = unlockPassword.value;
 
         fetch("/unlock-screen", {

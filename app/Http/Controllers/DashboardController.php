@@ -17,12 +17,30 @@ class DashboardController extends Controller
         $maintenanceRecords = $maintenanceData['records'];
         $maintenanceCounts = $maintenanceData['counts'];
 
-        $notifications = Notification::whereIn('role', ['All', auth()->user()->role])
-            ->orderByDesc('created_at')
+        $notifications = DB::table('notification_recipients as nr')
+            ->join('notifications as n', 'n.notif_id', '=', 'nr.notif_id')
+            ->where('nr.recipient_user_id', auth()->user()->user_id)
+            ->whereNull('nr.deleted_at')
+            ->orderByDesc('n.created_at')
+            ->select(
+                'nr.recipient_id',
+                'nr.read_at',
+                'n.notif_id',
+                'n.title',
+                'n.message',
+                'n.type',
+                'n.severity',
+                'n.action_url',
+                'n.entity_type',
+                'n.entity_id',
+                'n.created_at'
+            )
             ->get();
 
-        $unreadCount = Notification::whereIn('role', ['All', auth()->user()->role])
-            ->where('is_read', 0)
+        $unreadCount = DB::table('notification_recipients')
+            ->where('recipient_user_id', auth()->user()->user_id)
+            ->whereNull('read_at')
+            ->whereNull('deleted_at')
             ->count();
 
         $damageData = $this->getDamageReports();

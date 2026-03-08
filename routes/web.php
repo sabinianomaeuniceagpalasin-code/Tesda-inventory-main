@@ -130,7 +130,9 @@ Route::middleware(['auth'])->group(function () {
     // =========================
     // NOTIFICATIONS
     // =========================
-    Route::post('/notifications/{id}/read', [NotificationController::class, 'MarkAsRead'])->name('notifications.read');
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+Route::post('/notifications/{recipientId}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.readAll');
 
     // =========================
     // ITEM APPROVAL

@@ -176,71 +176,288 @@ class InventorySettingsController extends Controller
     /* ================================
        ITEM APPROVAL
     ================================= */
-    public function approveItem($id)
-    {
+    public function approveItem($request_id)
+{
+    DB::beginTransaction();
+
+    try {
+        $admin = auth()->user();
+        $adminUserId = $admin->user_id;
+        $adminName = trim(($admin->first_name ?? '') . ' ' . ($admin->last_name ?? ''));
+
+        $requestRow = DB::table('item_approval_requests')
+            ->where('request_id', $request_id)
+            ->lockForUpdate()
+            ->first();
+
+        if (!$requestRow) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Request not found.',
+            ], 404);
+        }
+
+        if ($requestRow->status !== 'pending') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only pending requests can be approved.',
+            ], 422);
+        }
+
         DB::table('item_approval_requests')
-            ->where('request_id', $id)
+            ->where('request_id', $request_id)
             ->update([
                 'status'      => 'approved',
                 'approved_at' => now(),
                 'updated_at'  => now(),
             ]);
 
+        $this->notifyRequester(
+            $requestRow,
+            'approved',
+            $adminUserId,
+            $adminName
+        );
+
+        DB::commit();
+
         return response()->json([
             'success' => true,
-            'message' => 'Item request approved.'
+            'message' => 'Request approved successfully.',
         ]);
-    }
+    } catch (\Throwable $e) {
+        DB::rollBack();
 
-    public function rejectItem($id)
-    {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to approve request.',
+            'error'   => $e->getMessage(),
+        ], 500);
+    }
+}
+
+    public function rejectItem($request_id)
+{
+    DB::beginTransaction();
+
+    try {
+        $admin = auth()->user();
+        $adminUserId = $admin->user_id;
+        $adminName = trim(($admin->first_name ?? '') . ' ' . ($admin->last_name ?? ''));
+
+        $requestRow = DB::table('item_approval_requests')
+            ->where('request_id', $request_id)
+            ->lockForUpdate()
+            ->first();
+
+        if (!$requestRow) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Request not found.',
+            ], 404);
+        }
+
+        if ($requestRow->status !== 'pending') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only pending requests can be rejected.',
+            ], 422);
+        }
+
         DB::table('item_approval_requests')
-            ->where('request_id', $id)
+            ->where('request_id', $request_id)
             ->update([
                 'status'      => 'rejected',
                 'rejected_at' => now(),
                 'updated_at'  => now(),
             ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Item request rejected.'
-        ]);
-    }
+        $this->notifyRequester(
+            $requestRow,
+            'rejected',
+            $adminUserId,
+            $adminName
+        );
 
-    public function approveBatch($batchId)
-    {
-        DB::table('item_approval_requests')
-            ->where('batch_id', $batchId)
-            ->where('status', 'pending')
-            ->update([
-                'status'      => 'approved',
-                'approved_at' => now(),
-                'updated_at'  => now(),
-            ]);
+        DB::commit();
 
         return response()->json([
             'success' => true,
-            'message' => 'Batch approved.',
+            'message' => 'Request rejected successfully.',
         ]);
-    }
+    } catch (\Throwable $e) {
+        DB::rollBack();
 
-    public function rejectBatch($batchId)
-    {
-        DB::table('item_approval_requests')
-            ->where('batch_id', $batchId)
-            ->where('status', 'pending')
-            ->update([
-                'status'      => 'rejected',
-                'rejected_at' => now(),
-                'updated_at'  => now(),
-            ]);
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to reject request.',
+            'error'   => $e->getMessage(),
+        ], 500);
+    }
+}
+
+    public function approveBatch($batch_id)
+{
+    DB::beginTransaction();
+
+    try {
+        $admin = auth()->user();
+        $adminUserId = $admin->user_id;
+        $adminName = trim(($admin->first_name ?? '') . ' ' . ($admin->last_name ?? ''));
+
+        $batchRequests = DB::table('item_approval_requests')
+            ->where('batch_id', $batch_id)
+            ->lockForUpdate()
+            ->get();
+
+        if ($batchRequests->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Batch not found.',
+            ], 404);
+        }
+
+        foreach ($batchRequests as $requestRow) {
+            if ($requestRow->status !== 'pending') {
+                continue;
+            }
+
+            DB::table('item_approval_requests')
+                ->where('request_id', $requestRow->request_id)
+                ->update([
+                    'status'      => 'approved',
+                    'approved_at' => now(),
+                    'updated_at'  => now(),
+                ]);
+
+            $this->notifyRequester(
+                $requestRow,
+                'approved',
+                $adminUserId,
+                $adminName
+            );
+        }
+
+        DB::commit();
 
         return response()->json([
             'success' => true,
-            'message' => 'Batch rejected.',
+            'message' => 'Batch approved successfully.',
         ]);
+    } catch (\Throwable $e) {
+        DB::rollBack();
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to approve batch.',
+            'error'   => $e->getMessage(),
+        ], 500);
     }
+}
+
+    public function rejectBatch($batch_id)
+{
+    DB::beginTransaction();
+
+    try {
+        $admin = auth()->user();
+        $adminUserId = $admin->user_id;
+        $adminName = trim(($admin->first_name ?? '') . ' ' . ($admin->last_name ?? ''));
+
+        $batchRequests = DB::table('item_approval_requests')
+            ->where('batch_id', $batch_id)
+            ->lockForUpdate()
+            ->get();
+
+        if ($batchRequests->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Batch not found.',
+            ], 404);
+        }
+
+        foreach ($batchRequests as $requestRow) {
+            if ($requestRow->status !== 'pending') {
+                continue;
+            }
+
+            DB::table('item_approval_requests')
+                ->where('request_id', $requestRow->request_id)
+                ->update([
+                    'status'      => 'rejected',
+                    'rejected_at' => now(),
+                    'updated_at'  => now(),
+                ]);
+
+            $this->notifyRequester(
+                $requestRow,
+                'rejected',
+                $adminUserId,
+                $adminName
+            );
+        }
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Batch rejected successfully.',
+        ]);
+    } catch (\Throwable $e) {
+        DB::rollBack();
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to reject batch.',
+            'error'   => $e->getMessage(),
+        ], 500);
+    }
+}
+
+private function notifyRequester($requestRow, $status, $adminUserId, $adminName)
+{
+    if (!$requestRow || !$requestRow->requested_by_user_id) {
+        return;
+    }
+
+    $title = $status === 'approved'
+        ? 'QR Request Approved'
+        : 'QR Request Rejected';
+
+    $type = $status === 'approved'
+        ? 'approval_approved'
+        : 'approval_rejected';
+
+    $severity = $status === 'approved'
+        ? 'success'
+        : 'danger';
+
+    $message = 'Your request for ' . $requestRow->item_name .
+        ' (Batch #' . $requestRow->batch_id . ') was ' . $status .
+        ' by ' . $adminName . '.';
+
+    $notifId = DB::table('notifications')->insertGetId([
+        'type'               => $type,
+        'title'              => $title,
+        'message'            => $message,
+        'severity'           => $severity,
+        'entity_type'        => 'item_approval_request',
+        'entity_id'          => $requestRow->request_id,
+        'action_url'         => route('dashboard') . '?section=generate',
+        'created_by_user_id' => $adminUserId,
+        'created_at'         => now(),
+        'updated_at'         => now(),
+    ]);
+
+    DB::table('notification_recipients')->insert([
+        'notif_id'          => $notifId,
+        'recipient_user_id' => $requestRow->requested_by_user_id,
+        'read_at'           => null,
+        'deleted_at'        => null,
+        'created_at'        => now(),
+        'updated_at'        => now(),
+    ]);
+}
 
     /* ================================
        CLASSIFICATION MANAGEMENT

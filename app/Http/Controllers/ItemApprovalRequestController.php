@@ -21,15 +21,17 @@ class ItemApprovalRequestController extends Controller
         DB::beginTransaction();
 
         try {
-            // ✅ If batch_id is varchar in DB, cast to unsigned for numeric max
+            $loggedInUser = auth()->user();
+            $loggedInUserId = $loggedInUser->user_id;
+            $requesterName = trim(($loggedInUser->first_name ?? '') . ' ' . ($loggedInUser->last_name ?? ''));
+
             $lastBatch = DB::table('item_approval_requests')
                 ->lockForUpdate()
                 ->selectRaw("MAX(CAST(batch_id AS UNSIGNED)) as max_batch")
                 ->value('max_batch');
 
-            $batchId = ((int)($lastBatch ?? 0)) + 1;
+            $batchId = ((int) ($lastBatch ?? 0)) + 1;
 
-            // ✅ GROUP ITEMS (name + type + department + description)
             $groups = [];
 
             foreach ($request->items as $item) {
@@ -50,34 +52,51 @@ class ItemApprovalRequestController extends Controller
             }
 
             foreach ($groups as $group) {
-
-                // ✅ INSERT request row and capture ID
                 $itemRequestId = DB::table('item_approval_requests')->insertGetId([
-                    'batch_id'      => (string)$batchId,
-                    'item_name'     => $group['item_name'],
-                    'department'    => $group['department'],
-                    'description'   => $group['description'],
-                    'serial_number' => implode(', ', $group['serials']),
-                    'quantity'      => count($group['serials']),
-                    'request_type'  => $group['request_type'],
-                    'status'        => 'pending',
-                    'requested_at'  => now(),
-                    'created_at'    => now(),
-                    'updated_at'    => now(),
+                    'batch_id'             => (string) $batchId,
+                    'item_name'            => $group['item_name'],
+                    'department'           => $group['department'],
+                    'description'          => $group['description'],
+                    'serial_number'        => implode(', ', $group['serials']),
+                    'quantity'             => count($group['serials']),
+                    'request_type'         => $group['request_type'],
+                    'status'               => 'pending',
+                    'requested_by_user_id' => $loggedInUserId,
+                    'requested_at'         => now(),
+                    'created_at'           => now(),
+                    'updated_at'           => now(),
                 ]);
 
-                // ✅ Notification using correct request_id
-                DB::table('notifications')->insert([
-                    'item_id'    => $itemRequestId,
-                    'user_id'    => auth()->id(),
-                    'title'      => 'Item Needs Approval',
-                    'message'    => 'Batch #' . $batchId . ': ' . $group['item_name'] . ' (' . count($group['serials']) . ') request submitted.',
-                    'type'       => 'approval',
-                    'role'       => 'Admin',
-                    'is_read'    => 0,
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                // 1) create main notification
+                $notifId = DB::table('notifications')->insertGetId([
+                    'type'               => 'approval_request',
+                    'title'              => 'New QR Approval Request',
+                    'message'            => $requesterName . ' submitted Batch #' . $batchId . ' for ' . $group['item_name'] . ' (' . count($group['serials']) . ' item/s).',
+                    'severity'           => 'info',
+                    'entity_type'        => 'item_approval_request',
+                    'entity_id'          => $itemRequestId,
+                    'action_url'         => route('inventory.settings', ['tab' => 'approval-requests']),
+                    'created_by_user_id' => $loggedInUserId,
+                    'created_at'         => now(),
+                    'updated_at'         => now(),
                 ]);
+
+                // 2) get ADMIN users only
+                $adminIds = DB::table('users')
+                    ->where('role', 'Admin')
+                    ->pluck('user_id');
+
+                // 3) assign only admins as recipients
+                foreach ($adminIds as $adminUserId) {
+                    DB::table('notification_recipients')->insert([
+                        'notif_id'           => $notifId,
+                        'recipient_user_id'  => $adminUserId,
+                        'read_at'            => null,
+                        'deleted_at'         => null,
+                        'created_at'         => now(),
+                        'updated_at'         => now(),
+                    ]);
+                }
             }
 
             DB::commit();
@@ -87,14 +106,12 @@ class ItemApprovalRequestController extends Controller
                 'message'  => 'Item approval request sent successfully',
                 'batch_id' => $batchId,
             ]);
-
         } catch (\Throwable $e) {
             DB::rollBack();
 
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to submit approval request',
-                // ✅ include real error so you can see it in Swal
                 'error'   => $e->getMessage(),
             ], 500);
         }

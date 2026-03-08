@@ -99,7 +99,14 @@
         <h1 id="page-title">Dashboard</h1>
         <div class="right-section">
           <div class="icons">
-            <span id="notifBell" style="cursor:pointer;">🔔</span>
+            <div id="notifBellWrap" class="notif-bell-wrap">
+                <button type="button" id="notifBell" class="notif-bell-btn">
+                    <i class="fa-regular fa-bell"></i>
+                    @if($unreadCount > 0)
+                        <span class="notif-badge">{{ $unreadCount > 99 ? '99+' : $unreadCount }}</span>
+                    @endif
+                </button>
+            </div>
             <span id="profileIcon" style="cursor:pointer;">👤</span>
           </div>
 

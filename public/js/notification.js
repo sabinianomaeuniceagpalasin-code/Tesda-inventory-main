@@ -1,71 +1,115 @@
 document.addEventListener("DOMContentLoaded", function () {
     const bell = document.getElementById("notifBell");
-    const panel = document.getElementById("notificationPanel");
+    const panel = document.getElementById("notifDropdown");
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content");
+    const markAllBtn = document.getElementById("markAllReadBtn");
 
-    // Toggle panel
-    bell.addEventListener("click", () => panel.classList.toggle("hidden"));
+    if (!bell || !panel) return;
 
-    // Hide panel on outside click
-    document.addEventListener("click", (e) => {
-        if (!bell.contains(e.target) && !panel.contains(e.target)) {
-            panel.classList.add("hidden");
-        }
+    // Toggle dropdown
+    bell.addEventListener("click", function (e) {
+        e.stopPropagation();
+        panel.classList.toggle("show");
     });
 
-    // Mark notification as read and redirect/tab switch
-    document.querySelectorAll(".notif-view").forEach((link) => {
-        link.addEventListener("click", async function (e) {
-            e.preventDefault();
-            const notifItem = this.closest(".notif-item");
-            const notifId = notifItem.dataset.id;
+    // Prevent closing when clicking inside panel
+    panel.addEventListener("click", function (e) {
+        e.stopPropagation();
+    });
 
-            // Mark as read via backend
-            if (notifId && notifItem.classList.contains("unread")) {
+    // Close when clicking outside
+    document.addEventListener("click", function () {
+        panel.classList.remove("show");
+    });
+
+    // Single notification click
+    panel.querySelectorAll(".notif-card").forEach((card) => {
+        card.addEventListener("click", async function (e) {
+            const recipientId = this.dataset.recipientId;
+            const isUnread = this.classList.contains("unread");
+            const href = this.getAttribute("href");
+
+            // mark as read first
+            if (recipientId && isUnread) {
                 try {
-                    const token = document.querySelector('meta[name="csrf-token"]').getAttribute("content");
-                    const res = await fetch(`/notifications/${notifId}/read`, {
+                    const res = await fetch(`/notifications/${recipientId}/read`, {
                         method: "POST",
                         headers: {
-                            "X-CSRF-TOKEN": token,
+                            "X-CSRF-TOKEN": csrfToken,
                             "Accept": "application/json",
                         },
                     });
 
                     if (res.ok) {
-                        notifItem.classList.remove("unread");
+                        this.classList.remove("unread");
 
-                        // Update bell badge
+                        const dot = this.querySelector(".notif-dot");
+                        if (dot) dot.remove();
+
                         const badge = document.querySelector(".notif-badge");
                         if (badge) {
-                            let count = parseInt(badge.textContent);
+                            let count = parseInt(badge.textContent, 10) || 0;
                             count = Math.max(0, count - 1);
-                            if (count === 0) badge.remove();
-                            else badge.textContent = count;
+
+                            if (count <= 0) {
+                                badge.remove();
+                            } else {
+                                badge.textContent = count > 99 ? "99+" : count;
+                            }
+                        }
+
+                        const unreadText = panel.querySelector(".notif-header p");
+                        if (unreadText) {
+                            const current = parseInt(unreadText.textContent, 10) || 0;
+                            const next = Math.max(0, current - 1);
+                            unreadText.textContent = `${next} unread`;
                         }
                     }
                 } catch (err) {
-                    console.error(err);
+                    console.error("Failed to mark notification as read:", err);
                 }
             }
 
-            // Redirect if approval
-            if (this.dataset.url) {
-                window.location.href = this.dataset.url;
+            // allow real navigation if href exists and is not javascript:void(0)
+            if (href && href !== "#" && href !== "javascript:void(0)") {
                 return;
             }
 
-            // Switch dashboard tab
-            if (this.dataset.target) {
-                document.querySelectorAll("nav.menu a").forEach((a) => a.classList.remove("active"));
-                const menuLink = document.querySelector(`nav.menu a[data-target='${this.dataset.target}']`);
-                if (menuLink) menuLink.classList.add("active");
-
-                document.querySelectorAll(".content-section").forEach((s) => s.classList.remove("active"));
-                const section = document.getElementById(this.dataset.target);
-                if (section) section.classList.add("active");
-            }
-
-            panel.classList.add("hidden");
+            e.preventDefault();
+            panel.classList.remove("show");
         });
     });
+
+    // Mark all as read
+    if (markAllBtn) {
+        markAllBtn.addEventListener("click", async function (e) {
+            e.preventDefault();
+
+            try {
+                const res = await fetch("/notifications/read-all", {
+                    method: "POST",
+                    headers: {
+                        "X-CSRF-TOKEN": csrfToken,
+                        "Accept": "application/json",
+                    },
+                });
+
+                if (res.ok) {
+                    panel.querySelectorAll(".notif-card.unread").forEach((card) => {
+                        card.classList.remove("unread");
+                    });
+
+                    panel.querySelectorAll(".notif-dot").forEach((dot) => dot.remove());
+
+                    const badge = document.querySelector(".notif-badge");
+                    if (badge) badge.remove();
+
+                    const unreadText = panel.querySelector(".notif-header p");
+                    if (unreadText) unreadText.textContent = "0 unread";
+                }
+            } catch (err) {
+                console.error("Failed to mark all as read:", err);
+            }
+        });
+    }
 });
