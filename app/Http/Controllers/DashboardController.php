@@ -36,7 +36,8 @@ class DashboardController extends Controller
         $availableItems = DB::table('items')->where('status', 'Available')->count();
         $issuedItems = DB::table('items')->where('status', 'Issued')->count();
         $forRepair = DB::table('items')->whereIn('status', ['For Repair', 'Damaged'])->count();
-        $missingItems = DB::table('items')->where('status', 'Lost')->count();
+        $missingItems = DB::table('items')->whereIn('status', ['Missing', 'Lost'])->count();
+        $unserviceableItems = DB::table('items')->where('status', 'Unserviceable')->count();
 
         $lowStockThreshold = 5;
         $lowStock = DB::table('propertyinventory')->where('quantity', '<', $lowStockThreshold)->count();
@@ -167,6 +168,7 @@ class DashboardController extends Controller
             'forRepair',
             'lowStock',
             'missingItems',
+            'unserviceableItems',
             'inventory',
             'issuedForms',
             'formSummaryCounts',
@@ -186,6 +188,7 @@ class DashboardController extends Controller
             'damageReports',
             'damageCounts',
             'items',
+        
         ));
     }
 
@@ -652,6 +655,106 @@ class DashboardController extends Controller
         ]);
     }
 
+    public function getUnserviceableItemsTable()
+{
+    $items = DB::table('items as i')
+        ->leftJoin('issuedlog as il', function ($join) {
+            $join->on('i.serial_no', '=', 'il.serial_no')
+                 ->whereRaw('il.issue_id = (
+                     SELECT MAX(issue_id)
+                     FROM issuedlog
+                     WHERE serial_no = i.serial_no
+                 )');
+        })
+        ->select(
+            'i.serial_no',
+            'i.item_name',  
+            DB::raw("'Marked as unserviceable' as reason"),
+            DB::raw("COALESCE(il.borrower_name, 'N/A') as borrower_name"),
+            DB::raw("'System' as reported_by"),
+            'i.updated_at'
+        )
+        ->where('i.status', 'Unserviceable')
+        ->orderByDesc('i.updated_at')
+        ->get();
+
+    $html = '';
+
+    foreach ($items as $item) {
+        $reason = $item->reason ?? '-';
+        $borrowerName = $item->borrower_name ?? '-';
+        $reportedBy = $item->reported_by ?? '-';
+        $reported = $item->updated_at ? Carbon::parse($item->updated_at)->format('F d, Y') : '-';
+
+        $html .= "
+            <tr>
+                <td>{$item->serial_no}</td>
+                <td>{$item->item_name}</td>
+                <td>{$reason}</td>
+                <td>{$borrowerName}</td>
+                <td>{$reportedBy}</td>
+                <td>{$reported}</td>
+            </tr>
+        ";
+    }
+
+    if ($html === '') {
+        $html = "<tr><td colspan='6' style='text-align:center; padding:20px;'>No unserviceable items found.</td></tr>";
+    }
+
+    return response()->json(['html' => $html]);
+}
+
+    public function getMissingItemsTable()
+{
+    $missingItems = DB::table('missing as m')
+        ->leftJoin('items as i', 'm.serial_number', '=', 'i.serial_no')
+        ->leftJoin('issuedlog as il', function ($join) {
+            $join->on('m.serial_number', '=', 'il.serial_no')
+                 ->whereRaw('il.issue_id = (
+                     SELECT MAX(issue_id)
+                     FROM issuedlog
+                     WHERE serial_no = m.serial_number
+                 )');
+        })
+        ->select(
+            'm.serial_number',
+            'm.item_name',
+            'i.classification',
+            'm.borrower_name',
+            'il.issued_date',
+            'm.reported_at'
+        )
+        ->orderByDesc('m.reported_at')
+        ->get();
+
+    $html = '';
+
+    foreach ($missingItems as $item) {
+        $classification = $item->classification ?? '-';
+        $borrowerName   = $item->borrower_name ?? '-';
+        $issuedDate     = $item->issued_date ? Carbon::parse($item->issued_date)->format('F d, Y') : '-';
+        $reportedAt     = $item->reported_at ? Carbon::parse($item->reported_at)->format('F d, Y') : '-';
+
+        $html .= "
+            <tr>
+                <td>{$item->serial_number}</td>
+                <td>{$item->item_name}</td>
+                <td>{$classification}</td>
+                <td>{$borrowerName}</td>
+                <td>{$issuedDate}</td>
+                <td>{$reportedAt}</td>
+            </tr>
+        ";
+    }
+
+    if ($html === '') {
+        $html = "<tr><td colspan='6' style='text-align:center; padding:20px;'>No missing items found.</td></tr>";
+    }
+
+    return response()->json(['html' => $html]);
+}
+
     public function report($serial_no)
     {
         $damage = DB::table('damagereports')
@@ -676,6 +779,9 @@ class DashboardController extends Controller
 
         return response()->json(['message' => 'Item successfully reported to maintenance!']);
     }
+
+
+    
 
     public function moveDamageToMaintenance(Request $request, $damage_id)
 {

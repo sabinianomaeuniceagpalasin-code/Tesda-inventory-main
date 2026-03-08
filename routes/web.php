@@ -69,6 +69,7 @@ Route::middleware(['auth'])->group(function () {
 
         //Missing
          Route::post('/items/missing', [ItemMissingController::class, 'markMissing'])->name('items.missing');
+         
 
 
     // =========================
@@ -245,9 +246,9 @@ Route::middleware(['auth'])->group(function () {
 
     // ⚠️ This returns array, not HTML. Keep if used, but don't inject directly into table.
     Route::get('/dashboard/get-under-maintenance', [DashboardController::class, 'getMaintenanceRecords']);
-
+    Route::get('/dashboard/get-missing-items', [DashboardController::class, 'getMissingItemsTable']);
     Route::get('/dashboard/get-low-stock-items', [DashboardController::class, 'getLowStockItems']);
-    Route::get('/dashboard/get-missing-items', [DashboardController::class, 'getMissingItems']);
+    Route::get('/dashboard/get-unserviceable-items', [DashboardController::class, 'getUnserviceableItemsTable']);
     Route::get('/dashboard/items', [DashboardController::class, 'items']);
 });
 
