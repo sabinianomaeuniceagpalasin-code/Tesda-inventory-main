@@ -139,7 +139,7 @@
                 <p>| Missing Items</p><span>{{ $missingItems }}</span>
               </div>
               <div class="summary-item clickable-item" onclick="openDashboardModal('unserviceable')">
-                <p>| Unserviceable Items</p><span>{{ $missingItems }}</span>
+                <p>| Unserviceable Items</p><span>{{ $unserviceableItems }}</span>
               </div>
             </div>
 
@@ -1094,7 +1094,7 @@
           <button class="btn-sort">Sort by field <i class="fas fa-filter"></i></button>
         </div>
 
-        <div class="table-responsive">
+        <div class="table-responsive dashboard-table-scroll">
           <table class="dashboard-list-table">
             <thead id="dt-thead">
             </thead>

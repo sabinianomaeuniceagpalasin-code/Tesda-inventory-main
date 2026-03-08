@@ -682,6 +682,7 @@ class DashboardController extends Controller
             : '-';
 
         $html .= "
+        
             <tr>
                 <td>{$item->serial_no}</td>
                 <td>{$item->item_name}</td>

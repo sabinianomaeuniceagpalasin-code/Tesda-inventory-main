@@ -304,6 +304,30 @@ body {
     box-sizing: border-box;
 }
 
+.dashboard-table-scroll {
+    max-height: 400px;
+    overflow-y: auto;
+    overflow-x: auto;
+}
+
+.dashboard-table-scroll thead th {
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 2;
+}
+
+#dashboardTableModal .modal-contents.list-modal-wide {
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+#dashboardTableModal .modal-body {
+    overflow: hidden;
+    flex: 1;
+}
+
 .chart-wrapper canvas {
     width: 100% !important;
     height: 100% !important;
