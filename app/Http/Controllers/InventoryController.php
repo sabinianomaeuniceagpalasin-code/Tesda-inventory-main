@@ -49,26 +49,54 @@ class InventoryController extends Controller
         return response()->json(['exists' => false]);
     }
 
+    private function getOrCreatePropertyNoByItemName(string $itemName): string
+    {
+        $normalizedName = trim(mb_strtolower($itemName));
+
+        $existing = DB::table('items')
+            ->whereRaw('LOWER(TRIM(item_name)) = ?', [$normalizedName])
+            ->whereNotNull('property_no')
+            ->orderBy('item_id')
+            ->value('property_no');
+
+        if ($existing !== null && $existing !== '') {
+            return (string) $existing;
+        }
+
+        $maxPropertyNo = DB::table('items')
+            ->whereNotNull('property_no')
+            ->whereRaw("property_no REGEXP '^[0-9]+$'")
+            ->lockForUpdate()
+            ->max(DB::raw('CAST(property_no AS UNSIGNED)'));
+
+        return (string) (($maxPropertyNo ?? 0) + 1);
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
             'item_name' => 'required|string',
-            'classification' => 'required|string',
-            'source_of_fund' => 'required|string',
+            'classification' => 'nullable|string',
+            'source_of_fund' => 'nullable|string',
             'date_acquired' => 'required|date',
-            'property_no' => 'required|string',
+            'property_no' => 'nullable|string',
             'quantity' => 'required|integer|min:1',
-            'unit_cost' => 'required|numeric|min:0',
+            'unit_cost' => 'nullable|numeric|min:0',
             'remarks' => 'nullable|string',
             'manual_serial' => 'nullable|string',
             'maintenance_interval_days' => 'nullable|integer|min:0',
             'maintenance_threshold_usage' => 'nullable|integer|min:0',
             'expected_life_hours' => 'nullable|integer|min:0',
+            'description' => 'nullable|string',
         ]);
 
         $quantity = $validated['quantity'];
 
         DB::transaction(function () use ($validated, $quantity) {
+            $propertyNo = $this->getOrCreatePropertyNoByItemName($validated['item_name']);
+
+            $validated['property_no'] = $propertyNo;
+
             if (!empty($validated['manual_serial']) && $quantity == 1) {
                 if (DB::table('items')->where('serial_no', $validated['manual_serial'])->exists()) {
                     throw new \Exception("Serial number already exists.");
@@ -76,7 +104,6 @@ class InventoryController extends Controller
                 $this->insertItemRecord($validated, $validated['manual_serial']);
             } else {
                 $lastNumber = DB::table('items')
-                    ->where('property_no', $validated['property_no'])
                     ->where('serial_no', 'like', 'SN%')
                     ->lockForUpdate()
                     ->max(DB::raw('CAST(SUBSTRING(serial_no, 3) AS UNSIGNED)')) ?? 0;
@@ -93,24 +120,29 @@ class InventoryController extends Controller
             }
 
             $existingInventory = DB::table('propertyinventory')
-                ->where('property_no', $validated['property_no'])
+                ->where('property_no', $propertyNo)
                 ->first();
 
             if ($existingInventory) {
                 DB::table('propertyinventory')
-                    ->where('property_no', $validated['property_no'])
+                    ->where('property_no', $propertyNo)
                     ->update([
                         'quantity' => DB::raw("quantity + $quantity"),
+                        'item_name' => $validated['item_name'],
+                        'unit_cost' => $validated['unit_cost'] ?? $existingInventory->unit_cost,
+                        'sources_of_fund' => $validated['source_of_fund'] ?? DB::raw('sources_of_fund'),
+                        'classification' => $validated['classification'] ?? DB::raw('classification'),
+                        'date_acquired' => $validated['date_acquired'],
                         'updated_at' => now(),
                     ]);
             } else {
                 DB::table('propertyinventory')->insert([
-                    'property_no' => $validated['property_no'],
+                    'property_no' => $propertyNo,
                     'item_name' => $validated['item_name'],
                     'quantity' => $quantity,
-                    'unit_cost' => $validated['unit_cost'],
-                    'sources_of_fund' => $validated['source_of_fund'],
-                    'classification' => $validated['classification'],
+                    'unit_cost' => $validated['unit_cost'] ?? null,
+                    'sources_of_fund' => $validated['source_of_fund'] ?? null,
+                    'classification' => $validated['classification'] ?? null,
                     'date_acquired' => $validated['date_acquired'],
                     'status' => 'Available',
                     'created_at' => now(),
@@ -126,13 +158,18 @@ class InventoryController extends Controller
     {
         DB::table('items')->insert([
             'item_name' => $validated['item_name'] ?? 'New Item',
-            'classification' => $validated['classification'] ?? 'Unclassified',
-            'source_of_fund' => $validated['source_of_fund'] ?? 'N/A',
+            'description' => $validated['description'] ?? null,
+            'classification' => $validated['classification'] ?? null,
+            'source_of_fund' => $validated['source_of_fund'] ?? null,
             'date_acquired' => $validated['date_acquired'] ?? now(),
-            'property_no' => $validated['property_no'] ?? ('AUTO-' . time()),
+            'property_no' => $validated['property_no'],
             'serial_no' => $serial_no,
             'stock' => 1,
             'status' => 'Available',
+            'remarks' => $validated['remarks'] ?? null,
+            'maintenance_interval_days' => $validated['maintenance_interval_days'] ?? null,
+            'maintenance_threshold_usage' => $validated['maintenance_threshold_usage'] ?? null,
+            'expected_life_hours' => $validated['expected_life_hours'] ?? null,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -155,21 +192,12 @@ class InventoryController extends Controller
                 throw new \Exception("Item with serial {$serial_no} not found.");
             }
 
-            $property_no = $item->property_no;
-
-            DB::table('propertyinventory')
-                ->where('property_no', $property_no)
-                ->update([
-                    'item_name' => $request->item_name,
-                    'sources_of_fund' => $request->source_of_fund,
-                    'date_acquired' => $request->date_acquired,
-                    'status' => $request->status,
-                    'updated_at' => now(),
-                ]);
+            $newPropertyNo = $this->getOrCreatePropertyNoByItemName($request->item_name);
 
             DB::table('items')
                 ->where('serial_no', $serial_no)
                 ->update([
+                    'property_no' => $newPropertyNo,
                     'classification' => $request->classification,
                     'item_name' => $request->item_name,
                     'source_of_fund' => $request->source_of_fund,
@@ -177,6 +205,24 @@ class InventoryController extends Controller
                     'status' => $request->status,
                     'updated_at' => now(),
                 ]);
+
+            $countForProperty = DB::table('items')
+                ->where('property_no', $newPropertyNo)
+                ->count();
+
+            DB::table('propertyinventory')->updateOrInsert(
+                ['property_no' => $newPropertyNo],
+                [
+                    'item_name' => $request->item_name,
+                    'quantity' => $countForProperty,
+                    'sources_of_fund' => $request->source_of_fund,
+                    'classification' => $request->classification,
+                    'date_acquired' => $request->date_acquired,
+                    'status' => $request->status,
+                    'updated_at' => now(),
+                    'created_at' => now(),
+                ]
+            );
         });
 
         return redirect()->back()->with('success', 'Item updated successfully.');
@@ -193,13 +239,26 @@ class InventoryController extends Controller
 
             $property_no = $item->property_no;
 
-            DB::table('propertyinventory')
-                ->where('property_no', $property_no)
-                ->delete();
-
             DB::table('items')
                 ->where('serial_no', $serial_no)
                 ->delete();
+
+            $remaining = DB::table('items')
+                ->where('property_no', $property_no)
+                ->count();
+
+            if ($remaining <= 0) {
+                DB::table('propertyinventory')
+                    ->where('property_no', $property_no)
+                    ->delete();
+            } else {
+                DB::table('propertyinventory')
+                    ->where('property_no', $property_no)
+                    ->update([
+                        'quantity' => $remaining,
+                        'updated_at' => now(),
+                    ]);
+            }
         });
 
         return response()->json([
@@ -257,17 +316,15 @@ class InventoryController extends Controller
             $item = DB::table('items')->where('serial_no', $serial_no)->first();
 
             if (!$item) {
-                $tempPropNo = 'AUTO-' . strtoupper(substr(md5(time()), 0, 6));
-                $lastId = DB::table('items')->max('item_id') ?? 0;
-                $newId = $lastId + 1;
+                $propertyNo = $this->getOrCreatePropertyNoByItemName($itemName);
 
                 $newItemData = [
-                    'item_id' => $newId,
                     'item_name' => $itemName,
-                    'classification' => 'Equipment',
-                    'source_of_fund' => 'Scanned Entry',
+                    'description' => $approval->description ?? null,
+                    'classification' => $approval->classification ?? null,
+                    'source_of_fund' => $approval->source_of_fund ?? null,
                     'date_acquired' => now(),
-                    'property_no' => $tempPropNo,
+                    'property_no' => $propertyNo,
                     'serial_no' => $serial_no,
                     'stock' => 1,
                     'status' => 'Available',
@@ -281,14 +338,16 @@ class InventoryController extends Controller
 
                 DB::table('items')->insert($newItemData);
 
+                $count = DB::table('items')->where('property_no', $propertyNo)->count();
+
                 DB::table('propertyinventory')->updateOrInsert(
-                    ['property_no' => $tempPropNo],
+                    ['property_no' => $propertyNo],
                     [
                         'item_name' => $itemName,
-                        'quantity' => DB::raw('COALESCE(quantity,0) + 1'),
-                        'unit_cost' => 0,
-                        'sources_of_fund' => 'Scanned Entry',
-                        'classification' => 'Equipment',
+                        'quantity' => $count,
+                        'unit_cost' => $approval->unit_cost ?? null,
+                        'sources_of_fund' => $approval->source_of_fund ?? null,
+                        'classification' => $approval->classification ?? null,
                         'date_acquired' => now(),
                         'status' => 'Available',
                         'created_at' => now(),
@@ -297,36 +356,6 @@ class InventoryController extends Controller
                 );
 
                 $item = DB::table('items')->where('serial_no', $serial_no)->first();
-            } else {
-                if ($item->item_name !== $itemName) {
-                    DB::table('items')->where('serial_no', $serial_no)->update([
-                        'item_name' => $itemName,
-                        'updated_at' => now()
-                    ]);
-                    $item->item_name = $itemName;
-                }
-
-                if ($item->status !== 'Available') {
-                    DB::table('items')->where('serial_no', $serial_no)->update([
-                        'status' => 'Available',
-                        'updated_at' => now()
-                    ]);
-
-                    DB::table('propertyinventory')->updateOrInsert(
-                        ['property_no' => $item->property_no],
-                        [
-                            'item_name' => $itemName,
-                            'quantity' => DB::raw('COALESCE(quantity,0) + 1'),
-                            'unit_cost' => 0,
-                            'sources_of_fund' => $item->source_of_fund ?? 'Scanned Entry',
-                            'classification' => $item->classification ?? 'Equipment',
-                            'date_acquired' => $item->date_acquired ?? now(),
-                            'status' => 'Available',
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ]
-                    );
-                }
             }
 
             return response()->json([
@@ -412,12 +441,14 @@ class InventoryController extends Controller
             ], 409);
         }
 
+        $propertyNo = $this->getOrCreatePropertyNoByItemName($approval->item_name);
+
         return response()->json([
             'success' => true,
             'item' => [
                 'item_name' => $approval->item_name,
                 'serial_no' => $serial_no,
-                'property_no' => null,
+                'property_no' => $propertyNo,
             ]
         ]);
     }
@@ -442,29 +473,21 @@ class InventoryController extends Controller
                     continue;
                 }
 
-                $itemName = $approval->item_name;
-
-                $lookup = DB::table('items_lookup')
-                    ->whereRaw('LOWER(item_name) = ?', [strtolower($itemName)])
-                    ->first();
-
-                if (!$lookup) {
-                    continue;
-                }
-
-                $propertyNo = $lookup->property_no;
-                $unitCost   = $lookup->unit_cost ?? 0;
-                $sof        = $lookup->source_of_fund ?? 'N/A';
-                $class      = $lookup->classification ?? 'N/A';
-
                 if (DB::table('items')->where('serial_no', $serial_no)->exists()) {
                     continue;
                 }
 
+                $itemName = $approval->item_name;
+                $description = $approval->description ?? null;
+                $classification = $approval->classification ?? null;
+                $sourceOfFund = $approval->source_of_fund ?? null;
+                $propertyNo = $this->getOrCreatePropertyNoByItemName($itemName);
+
                 DB::table('items')->insert([
                     'item_name' => $itemName,
-                    'classification' => $class,
-                    'source_of_fund' => $sof,
+                    'description' => $description,
+                    'classification' => $classification,
+                    'source_of_fund' => $sourceOfFund,
                     'date_acquired' => now(),
                     'property_no' => $propertyNo,
                     'serial_no' => $serial_no,
@@ -483,9 +506,9 @@ class InventoryController extends Controller
                     [
                         'item_name' => $itemName,
                         'quantity' => $count,
-                        'unit_cost' => $unitCost,
-                        'sources_of_fund' => $sof,
-                        'classification' => $class,
+                        'unit_cost' => $approval->unit_cost ?? null,
+                        'sources_of_fund' => $sourceOfFund,
+                        'classification' => $classification,
                         'date_acquired' => now(),
                         'status' => 'Available',
                         'updated_at' => now(),

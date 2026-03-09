@@ -1,8 +1,4 @@
 // public/js/scanner.js
-// Inventory scanner modal
-// POST /items/scan/validate
-// POST /items/receive-batch
-
 (() => {
   const scannerModal = document.getElementById("scannerModal");
   const scannerInput = document.getElementById("scannerInput");
@@ -10,40 +6,81 @@
   const markReceivedBtn = document.getElementById("markReceivedBtn");
   const addItemBtn = document.getElementById("addItemBtn");
 
-  // Must exist
   if (!scannerModal || !scannerInput || !scannedList || !markReceivedBtn || !addItemBtn) {
-    console.warn("[scanner.js] Missing elements:", {
-      scannerModal: !!scannerModal,
-      scannerInput: !!scannerInput,
-      scannedList: !!scannedList,
-      markReceivedBtn: !!markReceivedBtn,
-      addItemBtn: !!addItemBtn,
-    });
+    console.warn("[scanner.js] Missing required elements");
     return;
   }
-
-  const scannedSerials = new Set();
-
-  const getCSRFToken = () =>
-    document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
 
   const closeBtn = scannerModal.querySelector(".scanner-modal__close");
   const cancelBtn = scannerModal.querySelector(".scanner-btn--cancel");
 
-  // ✅ show row + optionally auto remove after X ms
+  const scannedSerials = new Set();
+
+  let modalOpen = false;
+  let scanBuffer = "";
+  let scanTimer = null;
+  let isProcessing = false;
+
+  const getCSRFToken = () =>
+    document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+
+  const escapeHtml = (str) => {
+    return String(str || "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  };
+
+  const focusScannerInput = () => {
+    if (!modalOpen) return;
+    setTimeout(() => {
+      scannerInput.focus();
+      scannerInput.select();
+    }, 20);
+  };
+
+  const resetModal = () => {
+    scannerInput.value = "";
+    scannedList.innerHTML = "";
+    scannedSerials.clear();
+    markReceivedBtn.disabled = true;
+    markReceivedBtn.textContent = "Mark as Received";
+    scanBuffer = "";
+    isProcessing = false;
+
+    if (scanTimer) {
+      clearTimeout(scanTimer);
+      scanTimer = null;
+    }
+  };
+
+  const openModal = () => {
+    scannerModal.classList.remove("hidden");
+    modalOpen = true;
+    focusScannerInput();
+  };
+
+  const closeModal = () => {
+    scannerModal.classList.add("hidden");
+    modalOpen = false;
+    resetModal();
+  };
+
   const showInfoRow = (title, message, ok = true, autoRemoveMs = 0) => {
     const row = document.createElement("div");
     row.className = "scanned-item-entry";
     row.style.cssText =
-      "padding:12px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;border-radius:4px;border-left:5px solid;"
-      + (ok
-          ? "background:#f0fff4;border-left-color:#2ecc71;"
-          : "background:#fff5f5;border-left-color:#e74c3c;");
+      "padding:12px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;border-radius:6px;border-left:5px solid;" +
+      (ok
+        ? "background:#f0fff4;border-left-color:#2ecc71;"
+        : "background:#fff5f5;border-left-color:#e74c3c;");
 
     row.innerHTML = `
       <span>
-        <b style="color:${ok ? "#2c3e50" : "#c0392b"};">${title}</b><br>
-        <small style="color:#7f8c8d;">${message || ""}</small>
+        <b style="color:${ok ? "#2c3e50" : "#c0392b"};">${escapeHtml(title)}</b><br>
+        <small style="color:#7f8c8d;">${escapeHtml(message || "")}</small>
       </span>
       <span style="color:${ok ? "#27ae60" : "#c0392b"};font-weight:bold;font-size:0.85em;">
         ${ok ? "✓" : "✗"}
@@ -52,7 +89,6 @@
 
     scannedList.prepend(row);
 
-    // ✅ Auto remove after X ms (nice fade)
     if (autoRemoveMs > 0) {
       setTimeout(() => {
         row.style.transition = "opacity 250ms ease";
@@ -64,31 +100,121 @@
     return row;
   };
 
-  const resetModal = () => {
-    scannerInput.value = "";
-    scannedList.innerHTML = "";
-    scannedSerials.clear();
-    markReceivedBtn.disabled = true;
-    markReceivedBtn.textContent = "Mark as Received";
+  const postJSON = async (url, body) => {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "X-CSRF-TOKEN": getCSRFToken(),
+          "X-Requested-With": "XMLHttpRequest",
+        },
+        body: JSON.stringify(body),
+      });
+
+      const contentType = res.headers.get("content-type") || "";
+
+      if (!contentType.includes("application/json")) {
+        const text = await res.text().catch(() => "");
+        return {
+          ok: false,
+          status: res.status,
+          data: {
+            success: false,
+            code: "non_json",
+            message: `Server returned non-JSON (${res.status}).`,
+            debug: text.slice(0, 300),
+          },
+        };
+      }
+
+      const data = await res.json().catch(() => ({}));
+      return { ok: res.ok, status: res.status, data };
+    } catch (err) {
+      return {
+        ok: false,
+        status: 0,
+        data: {
+          success: false,
+          code: "fetch_error",
+          message: err.message || "Network error.",
+        },
+      };
+    }
   };
 
-  const openModal = () => {
-    scannerModal.classList.remove("hidden");
-    setTimeout(() => scannerInput.focus(), 0);
+  const validateAndRenderScan = async (rawData) => {
+    const clean = String(rawData || "").trim();
+    if (!clean || isProcessing) return;
+
+    isProcessing = true;
+
+    try {
+      const { ok, data, status } = await postJSON("/items/scan/validate", { input: clean });
+
+      if (!ok || !data.success) {
+        const code = data?.code || "blocked";
+
+        if (code === "already_exists") {
+          showInfoRow("ALREADY EXISTS", data.message || "This serial already exists.", false, 1500);
+          return;
+        }
+
+        if (code === "rejected") {
+          showInfoRow("REJECTED", data.message || "This serial was rejected.", false, 1500);
+          return;
+        }
+
+        if (code === "no_request") {
+          showInfoRow("NO REQUEST", data.message || "This serial is not in approval requests.", false, 1500);
+          return;
+        }
+
+        showInfoRow("NOT ADDED", `${data.message || "Scan blocked."} (HTTP ${status})`, false, 1500);
+        return;
+      }
+
+      const item = data.item || {};
+      const serial = String(item.serial_no || "").trim();
+
+      if (!serial) {
+        showInfoRow("NOT ADDED", "Missing serial number from server response.", false, 1500);
+        return;
+      }
+
+      if (scannedSerials.has(serial)) {
+        showInfoRow("DUPLICATE", `Serial ${serial} already scanned in this batch.`, false, 1200);
+        return;
+      }
+
+      scannedSerials.add(serial);
+
+      showInfoRow(
+        item.item_name || "READY",
+        `SN: ${serial} | Prop: ${item.property_no || "—"}`,
+        true,
+        0
+      );
+
+      markReceivedBtn.disabled = scannedSerials.size === 0;
+    } finally {
+      scannerInput.value = "";
+      scanBuffer = "";
+      if (scanTimer) {
+        clearTimeout(scanTimer);
+        scanTimer = null;
+      }
+      isProcessing = false;
+      focusScannerInput();
+    }
   };
 
-  const closeModal = () => {
-    scannerModal.classList.add("hidden");
-    resetModal();
-  };
-
-  // OPEN
   addItemBtn.addEventListener("click", (e) => {
     e.preventDefault();
     openModal();
   });
 
-  // CLOSE
   closeBtn?.addEventListener("click", (e) => {
     e.preventDefault();
     closeModal();
@@ -99,95 +225,70 @@
     closeModal();
   });
 
-  // click outside closes
   scannerModal.addEventListener("click", (e) => {
-    if (e.target === scannerModal) closeModal();
+    if (e.target === scannerModal) {
+      closeModal();
+    } else {
+      focusScannerInput();
+    }
   });
 
-  const postJSON = async (url, body) => {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "X-CSRF-TOKEN": getCSRFToken(),
-      },
-      body: JSON.stringify(body),
-    });
+  document.addEventListener("click", () => {
+    if (modalOpen) focusScannerInput();
+  });
 
-    const contentType = res.headers.get("content-type") || "";
+  window.addEventListener("focus", () => {
+    if (modalOpen) focusScannerInput();
+  });
 
-    if (!contentType.includes("application/json")) {
-      const text = await res.text().catch(() => "");
-      return {
-        ok: false,
-        data: {
-          success: false,
-          code: "non_json",
-          message: `Server returned non-JSON (${res.status}). Likely 419 CSRF or redirected to login.`,
-          _debug: text.slice(0, 200),
-        },
-        status: res.status,
-      };
-    }
+  // Only ONE scan handler: global capture
+  document.addEventListener("keydown", async (e) => {
+    if (!modalOpen) return;
 
-    const data = await res.json().catch(() => ({}));
-    return { ok: res.ok, data, status: res.status };
-  };
-
-  // SCAN (validate only)
-  scannerInput.addEventListener("keydown", async (e) => {
-    if (!(e.key === "Enter" || e.code === "Enter" || e.code === "NumpadEnter")) return;
-
-    e.preventDefault();
-
-    const rawData = scannerInput.value.trim();
-    scannerInput.value = "";
-    if (!rawData) return;
-
-    const { ok, data, status } = await postJSON("/items/scan/validate", { input: rawData });
-
-    // ✅ blocked cases: auto-remove after 3 seconds
-    if (!ok || !data.success) {
-      const code = data?.code || "blocked";
-
-      if (code === "already_exists") {
-        showInfoRow("ALREADY EXISTS", data.message || "This serial already exists.", false, 1000);
-        return;
-      }
-
-      if (code === "rejected") {
-        showInfoRow("REJECTED", data.message || "This serial was rejected.", false, 1000);
-        return;
-      }
-
-      showInfoRow("NOT ADDED", `${data.message || "Scan blocked."} (HTTP ${status})`, false, 1000);
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeModal();
       return;
     }
 
-    const item = data.item || {};
-    const serial = item.serial_no;
+    const active = document.activeElement;
+    const typingElsewhere =
+      active &&
+      active !== scannerInput &&
+      (active.tagName === "TEXTAREA" || active.isContentEditable);
 
-    if (!serial) {
-      showInfoRow("NOT ADDED", `Missing serial_no from server response (HTTP ${status})`, false, 1000);
+    if (typingElsewhere) return;
+
+    if (e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta" || e.key === "Tab") {
       return;
     }
 
-    // prevent duplicates (READY items stay)
-    if (scannedSerials.has(serial)) return;
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const raw = scanBuffer.trim() || scannerInput.value.trim();
+      await validateAndRenderScan(raw);
+      return;
+    }
 
-    scannedSerials.add(serial);
-    showInfoRow(
-      item.item_name || "READY",
-      `SN: ${serial} | Prop: ${item.property_no || "—"}`,
-      true,
-      0 // ✅ do not auto-remove READY rows
-    );
+    if (e.key === "Backspace") {
+      e.preventDefault();
+      scanBuffer = scanBuffer.slice(0, -1);
+      scannerInput.value = scanBuffer;
+      return;
+    }
 
-    markReceivedBtn.disabled = scannedSerials.size === 0;
+    if (e.key.length === 1) {
+      scanBuffer += e.key;
+      scannerInput.value = scanBuffer;
+
+      if (scanTimer) clearTimeout(scanTimer);
+      scanTimer = setTimeout(() => {
+        scanBuffer = "";
+        scannerInput.value = "";
+      }, 250);
+    }
   });
 
-  // COMMIT
   markReceivedBtn.disabled = true;
 
   markReceivedBtn.addEventListener("click", async (e) => {
@@ -202,14 +303,15 @@
     const { ok, data, status } = await postJSON("/items/receive-batch", { serials });
 
     if (!ok || !data.success) {
-      showInfoRow("FAILED", `${data.message || "Failed to mark received."} (HTTP ${status})`, false, 1000);
+      showInfoRow("FAILED", `${data.message || "Failed to mark received."} (HTTP ${status})`, false, 1800);
       markReceivedBtn.disabled = false;
       markReceivedBtn.textContent = "Mark as Received";
+      focusScannerInput();
       return;
     }
 
     closeModal();
-    location.reload();
+    window.location.reload();
   });
 
   console.log("[scanner.js] Loaded OK");

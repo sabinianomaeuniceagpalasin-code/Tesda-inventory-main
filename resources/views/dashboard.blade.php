@@ -252,6 +252,7 @@
             <tr>
                 <th>Serial #</th>
                 <th>Item</th>
+                <th>Description</th>
                 <th>Sources of Fund</th>
                 <th>Classification</th>
                 <th>Date Acquired</th>
@@ -264,6 +265,7 @@
                 <tr class="inventory-row" data-item='@json($item)' style="cursor:pointer;">
                     <td>{{ $item->serial_no }}</td>
                     <td>{{ $item->item_name }}</td>
+                    <td>{{ $item->description ?? '-' }}</td>
                     <td>{{ $item->source_of_fund }}</td>
                     <td>{{ $item->classification }}</td>
                     <td>{{ \Carbon\Carbon::parse($item->date_acquired)->format('F d, Y') }}</td>
@@ -509,7 +511,14 @@
                 <button class="scanner-modal__close">&times;</button>
               </div>
               <div class="scanner-modal__body">
-                <input id="scannerInput" type="text" placeholder="Scan QR/Barcode here" autofocus>
+                <input
+                  id="scannerInput"
+                  type="text"
+                  placeholder="Scan QR/Barcode here"
+                  autocomplete="off"
+                  autocapitalize="off"
+                  spellcheck="false"
+                >
                 <p class="scanner-instruction">Scanned items will appear below</p>
                 <div id="scanned-items-list" class="scanned-items-container"></div>
               </div>

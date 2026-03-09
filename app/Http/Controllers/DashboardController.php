@@ -65,7 +65,15 @@ class DashboardController extends Controller
             ->groupBy('serial_no');
 
         $inventory = DB::table('items')
-            ->select('status', 'serial_no', 'item_name', 'source_of_fund', 'classification', DB::raw('DATE(date_acquired) as date_acquired'))
+            ->select(
+                'status',
+                'serial_no',
+                'item_name',
+                'description',
+                'source_of_fund',
+                'classification',
+                DB::raw('DATE(date_acquired) as date_acquired')
+            )
             ->get();
 
         // Latest issue_id per serial_no (subquery)
@@ -249,58 +257,68 @@ class DashboardController extends Controller
     }
 
     public function getInventoryTable(Request $request)
-        {
-            $status = $request->query('status', 'All');
+{
+    $status = $request->query('status', 'All');
 
-            $query = DB::table('items')
-                ->select('serial_no', 'item_name', 'source_of_fund', 'classification', 'date_acquired', 'status')
-                ->orderBy('item_name', 'asc');
+    $query = DB::table('items')
+        ->select(
+            'serial_no',
+            'item_name',
+            'description',
+            'source_of_fund',
+            'classification',
+            'date_acquired',
+            'status'
+        )
+        ->orderByDesc('item_id'); // show newest first
 
-            // Map "Missing" filter to your DB value.
-            // If your DB uses 'Lost', keep 'Lost'.
-            // If your DB uses 'Missing', change to 'Missing'.
-            if ($status !== 'All') {
-                if ($status === 'Missing') {
-                    $query->whereIn('status', ['Lost', 'Missing']);
-                } else {
-                    $query->where('status', $status);
-                }
-            }
-
-            $inventory = $query->limit(10)->get();
-
-            $html = '';
-
-            foreach ($inventory as $item) {
-                if ($item->status === 'Available') $statusClass = 'text-green';
-                elseif ($item->status === 'For Repair') $statusClass = 'text-brown';
-                elseif ($item->status === 'Issued') $statusClass = 'text-blue';
-                elseif (in_array($item->status, ['Unserviceable', 'Damaged', 'Lost', 'Missing'])) $statusClass = 'text-red';
-                else $statusClass = '';
-
-                $dateAcquired = $item->date_acquired ? Carbon::parse($item->date_acquired)->format('F d, Y') : '-';
-
-                // ✅ Encode item into attribute safely
-                $itemJson = htmlspecialchars(json_encode($item), ENT_QUOTES, 'UTF-8');
-
-                $html .= "
-                    <tr class='inventory-row' data-item='{$itemJson}' style='cursor:pointer;'>
-                        <td>{$item->serial_no}</td>
-                        <td>{$item->item_name}</td>
-                        <td>{$item->source_of_fund}</td>
-                        <td>{$item->classification}</td>
-                        <td>{$dateAcquired}</td>
-                        <td><span class='{$statusClass}'>{$item->status}</span></td>
-                        <td class='action-buttons'>
-                            <button class='edit-btn' onclick='event.stopPropagation();'>✏️</button>
-                            <button class='delete-btn' onclick='event.stopPropagation();'>🗑️</button>
-                        </td>
-                    </tr>
-                ";
-            }
-
-            return response()->json(['html' => $html]);
+    if ($status !== 'All') {
+        if ($status === 'Missing') {
+            $query->whereIn('status', ['Lost', 'Missing']);
+        } else {
+            $query->where('status', $status);
         }
+    }
+
+    $inventory = $query->get(); // removed limit(10)
+
+    $html = '';
+
+    foreach ($inventory as $item) {
+        if ($item->status === 'Available') $statusClass = 'text-green';
+        elseif ($item->status === 'For Repair') $statusClass = 'text-brown';
+        elseif ($item->status === 'Issued') $statusClass = 'text-blue';
+        elseif (in_array($item->status, ['Unserviceable', 'Damaged', 'Lost', 'Missing'])) $statusClass = 'text-red';
+        else $statusClass = '';
+
+        $dateAcquired = $item->date_acquired
+            ? Carbon::parse($item->date_acquired)->format('F d, Y')
+            : '-';
+
+        $sourceOfFund = $item->source_of_fund ?? '-';
+        $classification = $item->classification ?? '-';
+
+        $itemJson = htmlspecialchars(json_encode($item), ENT_QUOTES, 'UTF-8');
+
+        $html .= "
+            <tr class='inventory-row' data-item='{$itemJson}' style='cursor:pointer;'>
+                <td>{$item->serial_no}</td>
+                <td>{$item->item_name}</td>
+                <td>" . ($item->description ?? '-') . "</td>  <!-- ✅ ADD THIS -->
+                <td>{$sourceOfFund}</td>
+                <td>{$classification}</td>
+                <td>{$dateAcquired}</td>
+                <td><span class='{$statusClass}'>{$item->status}</span></td>
+                <td class='action-buttons'>
+                    <button class='edit-btn' onclick='event.stopPropagation();'>✏️</button>
+                    <button class='delete-btn' onclick='event.stopPropagation();'>🗑️</button>
+                </td>
+            </tr>
+        ";
+    }
+
+    return response()->json(['html' => $html]);
+}
 
     public function getListOfAllItemsTable()
     {
