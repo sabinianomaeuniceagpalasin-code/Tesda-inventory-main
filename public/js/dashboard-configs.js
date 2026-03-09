@@ -29,7 +29,7 @@ const dashboardConfigs = {
     },
     lowstock: {
         title: "Low Stock Items",
-        headers: ["Serial Number", "Item name", "Classification", "Current Quantity"],
+        headers: ["Property Number", "Item name", "Classification", "Current Quantity"],
         buttonText: "View Inventory Section",
         apiUrl: "/dashboard/get-low-stock-items",
         targetSection: "inventory",

@@ -57,8 +57,10 @@ class DashboardController extends Controller
         $missingItems = DB::table('items')->whereIn('status', ['Missing', 'Lost'])->count();
         $unserviceableItems = DB::table('items')->where('status', 'Unserviceable')->count();
 
-        $lowStockThreshold = 5;
-        $lowStock = DB::table('propertyinventory')->where('quantity', '<', $lowStockThreshold)->count();
+        $lowStockThreshold = 10;
+        $lowStock = DB::table('propertyinventory')
+            ->where('quantity', '<', $lowStockThreshold)
+            ->count();
 
         $itemsUsage = DB::table('issuedlog')
             ->select('serial_no', DB::raw('SUM(usage_hours) as total_usage_hours'))
@@ -334,55 +336,57 @@ class DashboardController extends Controller
 }
 
     public function getListOfAllItemsTable()
-    {
-        $inventory = DB::table('items')
-            ->select('item_name', 'serial_no', 'status')
-            ->orderBy('item_name', 'asc')
-            ->limit(10)
-            ->get();
+{
+    $inventory = DB::table('items')
+        ->select('item_name', 'serial_no', 'status')
+        ->orderBy('item_name', 'asc')
+        ->get();
 
-        $html = '';
+    $html = '';
 
-        foreach ($inventory as $item) {
-            if ($item->status === 'Available') $statusClass = 'text-green';
-            elseif ($item->status === 'For Repair') $statusClass = 'text-brown';
-            elseif ($item->status === 'Issued') $statusClass = 'text-blue';
-            elseif ($item->status === 'Damaged' || $item->status === 'Lost') $statusClass = 'text-red';
-            else $statusClass = '';
+    foreach ($inventory as $item) {
+        if ($item->status === 'Available') $statusClass = 'text-green';
+        elseif ($item->status === 'For Repair') $statusClass = 'text-brown';
+        elseif ($item->status === 'Issued') $statusClass = 'text-blue';
+        elseif ($item->status === 'Damaged' || $item->status === 'Lost' || $item->status === 'Missing' || $item->status === 'Unserviceable') $statusClass = 'text-red';
+        else $statusClass = '';
 
-            $html .= "
-                <tr>
-                    <td>{$item->serial_no}</td>
-                    <td>{$item->item_name}</td>
-                    <td><span class='{$statusClass}'>{$item->status}</span></td>
-                </tr>
-            ";
-        }
-
-        return response()->json(['html' => $html]);
+        $html .= "
+            <tr>
+                <td>{$item->serial_no}</td>
+                <td>{$item->item_name}</td>
+                <td><span class='{$statusClass}'>{$item->status}</span></td>
+            </tr>
+        ";
     }
+
+    return response()->json(['html' => $html]);
+}
 
     public function getListofAllAvailableItemsTable()
-    {
-        $inventory = DB::table('items')
-            ->select('item_name', 'serial_no')
-            ->where('status', 'Available')
-            ->orderBy('item_name', 'asc')
-            ->limit(10)
-            ->get();
+{
+    $inventory = DB::table('items')
+        ->select('item_name', 'serial_no')
+        ->where('status', 'Available')
+        ->orderBy('item_name', 'asc')
+        ->get();
 
-        $html = '';
-        foreach ($inventory as $item) {
-            $html .= "
-                <tr>
-                    <td>{$item->serial_no}</td>
-                    <td>{$item->item_name}</td>
-                </tr>
-            ";
-        }
-
-        return response()->json(['html' => $html]);
+    $html = '';
+    foreach ($inventory as $item) {
+        $html .= "
+            <tr>
+                <td>{$item->serial_no}</td>
+                <td>{$item->item_name}</td>
+            </tr>
+        ";
     }
+
+    if ($html === '') {
+        $html = "<tr><td colspan='2' style='text-align:center; padding:20px;'>No available items found.</td></tr>";
+    }
+
+    return response()->json(['html' => $html]);
+}
 
     public function getListofIssuedItemsTable()
     {
@@ -1009,6 +1013,47 @@ class DashboardController extends Controller
     }
 
     return response($html, 200)->header('Content-Type', 'text/html');
+}
+
+public function getLowStockItems()
+{
+    $lowStockThreshold = 10;
+
+    $items = DB::table('propertyinventory as pi')
+        ->select(
+            'pi.property_no',
+            'pi.item_name',
+            'pi.classification',
+            'pi.quantity'
+        )
+        ->where('pi.quantity', '<', $lowStockThreshold)
+        ->orderBy('pi.quantity', 'asc')
+        ->orderBy('pi.item_name', 'asc')
+        ->get();
+
+    $html = '';
+
+    foreach ($items as $item) {
+        $propertyNo = $item->property_no ?? '-';
+        $itemName = $item->item_name ?? '-';
+        $classification = $item->classification ?? '-';
+        $quantity = $item->quantity ?? 0;
+
+        $html .= "
+            <tr>
+                <td>{$propertyNo}</td>
+                <td>{$itemName}</td>
+                <td>{$classification}</td>
+                <td>{$quantity}</td>
+            </tr>
+        ";
+    }
+
+    if ($html === '') {
+        $html = "<tr><td colspan='4' style='text-align:center; padding:20px;'>No low stock items found.</td></tr>";
+    }
+
+    return response()->json(['html' => $html]);
 }
 
 public function maintenanceTableHtml()
