@@ -2,15 +2,23 @@ window.showItemDetails = function (item) {
     const elItem = document.getElementById("modal-item");
     const elDisplay = document.getElementById("modal-item-display");
     const elSerial = document.getElementById("modal-serial");
-    const elFund = document.getElementById("modal-fund");
     const statusEl = document.getElementById("modal-status");
     const dateEl = document.getElementById("modal-date");
     const qrImg = document.getElementById("modal-qr");
 
+    // NEW FIELDS
+    const sourceOfFundEl = document.getElementById("modal-source-of-fund");
+    const classificationEl = document.getElementById("modal-classification");
+    const unitCostEl = document.getElementById("modal-unit-cost");
+
+    // EDITOR INPUTS
+    const sourceOfFundInput = document.getElementById("modal-source-of-fund-input");
+    const classificationInput = document.getElementById("modal-classification-input");
+    const unitCostInput = document.getElementById("modal-unit-cost-input");
+
     if (elItem) elItem.innerText = item.item_name || "---";
     if (elDisplay) elDisplay.innerText = item.item_name || "---";
     if (elSerial) elSerial.innerText = item.serial_no || "---";
-    if (elFund) elFund.innerText = item.source_of_fund || "---";
 
     if (statusEl) {
         statusEl.innerText = item.status || "---";
@@ -32,27 +40,172 @@ window.showItemDetails = function (item) {
             month: "long",
             day: "numeric",
         });
+    } else if (dateEl) {
+        dateEl.innerText = "---";
     }
 
     if (qrImg) {
         qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(item.serial_no || "")}`;
     }
 
+    // =========================
+    // SAVE CURRENT SERIAL
+    // =========================
+    window.currentModalSerialNo = item.serial_no || null;
+
+    // =========================
+    // SOURCE OF FUND
+    // =========================
+    const sourceOfFundValue = (item.source_of_fund || "").trim();
+
+    if (sourceOfFundEl) {
+        sourceOfFundEl.textContent = sourceOfFundValue || "Not set";
+        sourceOfFundEl.classList.toggle("text-muted", !sourceOfFundValue);
+        sourceOfFundEl.classList.remove("d-none");
+    }
+
+    if (sourceOfFundInput) {
+        sourceOfFundInput.value = sourceOfFundValue;
+        sourceOfFundInput.classList.remove("input-error");
+    }
+
+    if (typeof resetSingleFieldEditorState === "function") {
+        resetSingleFieldEditorState("source_of_fund");
+    }
+
+    // =========================
+    // CLASSIFICATION
+    // =========================
+    const classificationValue = (item.classification || "").trim();
+
+    if (classificationEl) {
+        classificationEl.textContent = classificationValue || "Not set";
+        classificationEl.classList.toggle("text-muted", !classificationValue);
+        classificationEl.classList.remove("d-none");
+    }
+
+    if (classificationInput) {
+        classificationInput.value = classificationValue;
+        classificationInput.classList.remove("input-error");
+    }
+
+    if (typeof resetSingleFieldEditorState === "function") {
+        resetSingleFieldEditorState("classification");
+    }
+
+    // =========================
+    // UNIT COST
+    // =========================
+    const rawUnitCost = item.unit_cost;
+
+    if (unitCostEl) {
+        if (rawUnitCost !== null && rawUnitCost !== undefined && rawUnitCost !== "") {
+            unitCostEl.textContent = `₱${Number(rawUnitCost).toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            })}`;
+            unitCostEl.classList.remove("text-muted");
+        } else {
+            unitCostEl.textContent = "Not set";
+            unitCostEl.classList.add("text-muted");
+        }
+
+        unitCostEl.classList.remove("d-none");
+    }
+
+    if (unitCostInput) {
+        unitCostInput.value =
+            rawUnitCost !== null && rawUnitCost !== undefined && rawUnitCost !== ""
+                ? Number(rawUnitCost).toFixed(2)
+                : "";
+        unitCostInput.classList.remove("input-error");
+    }
+
+    if (typeof resetSingleFieldEditorState === "function") {
+        resetSingleFieldEditorState("unit_cost");
+    }
+
+    // =========================
+    // SPECIFICATIONS SECTION
+    // =========================
+    const specsEl = document.getElementById("modal-specifications");
+    const specsInput = document.getElementById("modal-specifications-input");
+    const specsEditor = document.getElementById("modal-specifications-editor");
+    const specsBtn = document.getElementById("specsEditBtn");
+    const specsCounter = document.getElementById("specifications-counter");
+
+    const specsValue = item.specification ? item.specification.trim() : "";
+
+    if (specsEl) {
+        specsEl.textContent = specsValue || "Not set";
+        specsEl.classList.toggle("text-muted", !specsValue);
+        specsEl.classList.remove("d-none");
+    }
+
+    if (specsInput) {
+        specsInput.value = specsValue;
+        specsInput.style.height = "auto";
+        specsInput.classList.remove("input-error");
+    }
+
+    if (specsEditor) {
+        specsEditor.classList.add("d-none");
+        specsEditor.classList.remove("show-editor");
+    }
+
+    if (specsBtn) {
+        specsBtn.textContent = "Edit";
+        specsBtn.dataset.mode = "view";
+        specsBtn.style.pointerEvents = "auto";
+    }
+
+    if (specsCounter) {
+        const max = parseInt(specsInput?.getAttribute("maxlength")) || 1000;
+        specsCounter.textContent = `${specsValue.length} / ${max}`;
+        specsCounter.classList.remove("limit-near", "limit-reached");
+    }
+
+    if (typeof resetSpecificationsEditorState === "function") {
+        resetSpecificationsEditorState();
+    }
+
+    if (typeof autoResizeTextarea === "function" && specsInput) {
+        autoResizeTextarea(specsInput);
+    }
+
+    if (typeof updateSpecsCounter === "function") {
+        updateSpecsCounter();
+    }
+
+    // =========================
+    // EXPECTED LIFESPAN
+    // =========================
+    const lifespanEl = document.getElementById("modal-lifespan");
+    const expectedLifeYears = Number(item.expected_life_years || 0);
+
+    let lifespanValue = "";
+    if (expectedLifeYears > 0) {
+        lifespanValue = `${expectedLifeYears} year${expectedLifeYears === 1 ? "" : "s"}`;
+    }
+
+    if (lifespanEl) {
+        lifespanEl.textContent = lifespanValue || "Not set";
+        lifespanEl.classList.toggle("text-muted", !lifespanValue);
+    }
+
     const modalEl = document.getElementById("inventoryModal");
     if (modalEl && typeof bootstrap !== "undefined") {
-        const myModal = new bootstrap.Modal(modalEl);
+        const myModal = new bootstrap.Modal(modalEl, {
+            backdrop: true,
+            keyboard: true
+        });
         myModal.show();
     } else if (modalEl) {
         modalEl.style.display = "flex";
     }
 };
 
-// ===============================
-// OPEN INVENTORY EDIT MODAL
-// ===============================
 window.openInventoryEditModal = function (button) {
-    console.log("button clicked!");
-
     const modal = document.getElementById("inventoryEditModal");
     if (!modal) return;
 
@@ -92,9 +245,6 @@ window.openInventoryEditModal = function (button) {
     }
 };
 
-// ===============================
-// CLOSE INVENTORY EDIT MODAL
-// ===============================
 window.closeInventoryEditModal = function () {
     const modal = document.getElementById("inventoryEditModal");
     if (modal) {
@@ -102,9 +252,6 @@ window.closeInventoryEditModal = function () {
     }
 };
 
-// ===============================
-// CLOSE MODAL WHEN CLICKING OUTSIDE
-// ===============================
 window.onclick = function (event) {
     const modal = document.getElementById("inventoryEditModal");
     if (modal && event.target === modal) {
@@ -112,9 +259,6 @@ window.onclick = function (event) {
     }
 };
 
-// ===============================
-// DELETE ITEM
-// ===============================
 window.deleteItem = function (serial_no) {
     if (!confirm("Are you sure you want to delete this item?")) return;
 
@@ -154,12 +298,10 @@ document.addEventListener("click", function (e) {
     }
 });
 
-// ✅ Works even after table is replaced by AJAX
 document.addEventListener("click", function (e) {
     const row = e.target.closest("#inventoryTable tbody tr.inventory-row");
     if (!row) return;
 
-    // Prevent opening modal when clicking buttons
     if (e.target.closest("button")) return;
 
     const raw = row.getAttribute("data-item");
@@ -167,6 +309,7 @@ document.addEventListener("click", function (e) {
 
     try {
         const item = JSON.parse(raw);
+        console.log("Clicked item:", item); // debug
         window.showItemDetails(item);
     } catch (err) {
         console.error("Failed to parse data-item:", raw, err);

@@ -6,8 +6,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const sections = document.querySelectorAll(".content-section");
     const pageTitle = document.getElementById("page-title");
 
-    function activateSection(targetId) {
-        if (!targetId) return;
+    const validSections = Array.from(sections).map(sec => sec.id);
+
+    function activateSection(targetId, updateUrl = true) {
+        if (!targetId || !validSections.includes(targetId)) {
+            targetId = "dashboard";
+        }
 
         menuLinks.forEach((link) => {
             link.classList.remove("active");
@@ -30,6 +34,14 @@ document.addEventListener("DOMContentLoaded", () => {
             if (pageTitle) {
                 pageTitle.textContent = targetLink.textContent.trim();
             }
+        } else if (pageTitle) {
+            pageTitle.textContent = "Dashboard";
+        }
+
+        if (updateUrl) {
+            const url = new URL(window.location.href);
+            url.searchParams.set("section", targetId);
+            window.history.replaceState({}, "", url);
         }
     }
 
@@ -38,23 +50,35 @@ document.addEventListener("DOMContentLoaded", () => {
             e.preventDefault();
 
             const targetId = link.dataset.target;
-            activateSection(targetId);
+            activateSection(targetId, true);
 
             localStorage.setItem("activeSection", targetId);
         });
     });
 
-    // Auto-open saved section after reload
-    const savedSection = localStorage.getItem("activeSection");
+    // 1. URL section has priority
+    const params = new URLSearchParams(window.location.search);
+    const urlSection = params.get("section");
 
-    if (savedSection && document.getElementById(savedSection)) {
-        activateSection(savedSection);
+    if (urlSection && validSections.includes(urlSection)) {
+        activateSection(urlSection, false);
         localStorage.removeItem("activeSection");
+        return;
+    }
+
+    // 2. localStorage fallback
+    const savedSection = localStorage.getItem("activeSection");
+    if (savedSection && validSections.includes(savedSection)) {
+        activateSection(savedSection, false);
+        localStorage.removeItem("activeSection");
+        return;
+    }
+
+    // 3. fallback to current active link
+    const activeLink = document.querySelector(".menu a.active[data-target]");
+    if (activeLink) {
+        activateSection(activeLink.dataset.target, false);
     } else {
-        // fallback: ensure active menu and section are synced
-        const activeLink = document.querySelector(".menu a.active[data-target]");
-        if (activeLink) {
-            activateSection(activeLink.dataset.target);
-        }
+        activateSection("dashboard", false);
     }
 });

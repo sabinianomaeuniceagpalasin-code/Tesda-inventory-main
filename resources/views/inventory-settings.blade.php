@@ -73,7 +73,7 @@
                     <tr>
                         <td>{{ $item->item_name }}</td>
                         <td>{{ $item->description }}</td>
-                        <td class="text-center">{{ $item->expected_life_hours ?? 0 }}</td>
+                        <td class="text-center">{{ $item->expected_life_years ?? 0 }}</td>
                         <td class="text-center">
                             <button
                                 type="button"
@@ -82,7 +82,7 @@
                                 data-bs-target="#editLifespanModal"
                                 data-item-name="{{ $item->item_name }}"
                                 data-description="{{ $item->description }}"
-                                data-lifespan="{{ $item->expected_life_hours ?? 0 }}"
+                                data-lifespan="{{ $item->expected_life_years ?? 0 }}"
                             >
                                 <i class="bi bi-pencil text-primary"></i>
                             </button>
@@ -120,75 +120,139 @@
                 </div>
 
                 <!-- Category & Classification Management Card -->
-            <!-- Category & Classification Management Card -->
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title fw-bold mb-4">Category & Classification Management</h5>
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h5 class="card-title fw-bold mb-4">Category & Classification Management</h5>
 
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <label class="form-label fw-semibold mb-0">Manage Item Classification</label>
-                            <a href="#" class="text-primary small" data-bs-toggle="modal" data-bs-target="#viewAllClassificationModal">
-                                View all
-                            </a>
-                        </div>
-
-                        <div class="table-responsive">
-                            <table class="table table-sm align-middle classification-table">
-                                <thead>
-                                    <tr>
-                                        <th>Item Name</th>
-                                        <th>Description</th>
-                                        <th class="text-center">Classification</th>
-                                        <th class="text-center">Edit</th>
-                                        <th class="text-center">Delete</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @forelse($classificationsPreview as $item)
-                                        <tr>
-                                            <td>{{ $item->item_name }}</td>
-                                            <td>{{ $item->description }}</td>
-                                            <td class="text-center">{{ $item->classification ?: 'Unclassified' }}</td>
-                                            <td class="text-center">
-                                                <button
-                                                    type="button"
-                                                    class="btn btn-sm btn-link p-0 open-edit-classification"
-                                                    data-bs-toggle="modal"
-                                                    data-bs-target="#editClassificationModal"
-                                                    data-item-name="{{ $item->item_name }}"
-                                                    data-description="{{ $item->description }}"
-                                                    data-classification="{{ $item->classification ?: '' }}"
-                                                >
-                                                    <i class="bi bi-pencil text-primary"></i>
-                                                </button>
-                                            </td>
-                                            <td class="text-center">
-                                                <form action="{{ route('inventory.settings.classification.delete') }}" method="POST" class="d-inline">
-                                                    @csrf
-                                                    <input type="hidden" name="item_name" value="{{ $item->item_name }}">
-                                                    <input type="hidden" name="description" value="{{ $item->description }}">
-                                                    <button
-                                                        type="submit"
-                                                        class="btn btn-sm btn-link p-0"
-                                                        onclick="return confirm('Reset classification for this item group?')"
-                                                    >
-                                                        <i class="bi bi-trash text-danger"></i>
-                                                    </button>
-                                                </form>
-                                            </td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="5" class="text-center text-muted">No items found.</td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>  
+        <!-- Manage Item Classification -->
+        <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="form-label fw-semibold mb-0">Manage Item Classification</label>
+                <a href="#" class="text-primary small" data-bs-toggle="modal" data-bs-target="#viewAllClassificationModal">
+                    View all
+                </a>
             </div>
+
+            <div class="table-responsive">
+                <table class="table table-sm align-middle classification-table">
+                    <thead>
+                        <tr>
+                            <th>Item Name</th>
+                            <th>Description</th>
+                            <th class="text-center">Classification</th>
+                            <th class="text-center">Edit</th>
+                            <th class="text-center">Delete</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($classificationsPreview as $item)
+                            <tr>
+                                <td>{{ $item->item_name }}</td>
+                                <td>{{ $item->description }}</td>
+                                <td class="text-center">{{ $item->classification ?: 'Unclassified' }}</td>
+                                <td class="text-center">
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm btn-link p-0 open-edit-classification"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#editClassificationModal"
+                                        data-item-name="{{ $item->item_name }}"
+                                        data-description="{{ $item->description }}"
+                                        data-classification="{{ $item->classification ?: '' }}"
+                                    >
+                                        <i class="bi bi-pencil text-primary"></i>
+                                    </button>
+                                </td>
+                                <td class="text-center">
+                                    <form action="{{ route('inventory.settings.classification.delete') }}" method="POST" class="d-inline">
+                                        @csrf
+                                        <input type="hidden" name="item_name" value="{{ $item->item_name }}">
+                                        <input type="hidden" name="description" value="{{ $item->description }}">
+                                        <button
+                                            type="submit"
+                                            class="btn btn-sm btn-link p-0"
+                                            onclick="return confirm('Reset classification for this item group?')"
+                                        >
+                                            <i class="bi bi-trash text-danger"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">No items found.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Manage Source of Fund -->
+        <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="form-label fw-semibold mb-0">Manage Source of Fund</label>
+                <a href="#" class="text-primary small" data-bs-toggle="modal" data-bs-target="#viewAllSourceOfFundModal">
+                    View all
+                </a>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-sm align-middle classification-table">
+                    <thead>
+                        <tr>
+                            <th>Item Name</th>
+                            <th>Description</th>
+                            <th class="text-center">Source of Fund</th>
+                            <th class="text-center">Edit</th>
+                            <th class="text-center">Delete</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($sourceOfFundsPreview as $item)
+                            <tr>
+                                <td>{{ $item->item_name }}</td>
+                                <td>{{ $item->description }}</td>
+                                <td class="text-center">{{ $item->source_of_fund ?: 'Not set' }}</td>
+                                <td class="text-center">
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm btn-link p-0 open-edit-source-of-fund"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#editSourceOfFundModal"
+                                        data-item-name="{{ $item->item_name }}"
+                                        data-description="{{ $item->description }}"
+                                        data-source-of-fund="{{ $item->source_of_fund ?: '' }}"
+                                    >
+                                        <i class="bi bi-pencil text-primary"></i>
+                                    </button>
+                                </td>
+                                <td class="text-center">
+                                    <form action="{{ route('inventory.settings.source-of-fund.delete') }}" method="POST" class="d-inline">
+                                        @csrf
+                                        <input type="hidden" name="item_name" value="{{ $item->item_name }}">
+                                        <input type="hidden" name="description" value="{{ $item->description }}">
+                                        <button
+                                            type="submit"
+                                            class="btn btn-sm btn-link p-0"
+                                            onclick="return confirm('Reset source of fund for this item group?')"
+                                        >
+                                            <i class="bi bi-trash text-danger"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">No items found.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
             </div>
 
             <!-- Right Column -->
@@ -819,10 +883,10 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Expected Life Hours</label>
+                        <label class="form-label fw-semibold">Expected Life Years</label>
                         <input
                             type="number"
-                            name="expected_life_hours"
+                            name="expected_life_years"
                             id="edit_lifespan"
                             class="form-control"
                             min="0"
@@ -866,7 +930,7 @@
                                 <tr>
                                     <td>{{ $item->item_name }}</td>
                                     <td>{{ $item->description }}</td>
-                                    <td class="text-center">{{ $item->expected_life_hours ?? 0 }}</td>
+                                    <td class="text-center">{{ $item->expected_life_years ?? 0 }}</td>
                                     <td class="text-center">
                                         <button
                                             type="button"
@@ -876,7 +940,7 @@
                                             data-item-id="{{ $item->item_id }}"
                                             data-item-name="{{ $item->item_name }}"
                                             data-description="{{ $item->description }}"
-                                            data-lifespan="{{ $item->expected_life_hours ?? 0 }}"
+                                            data-lifespan="{{ $item->expected_life_years ?? 0 }}"
                                         >
                                             <i class="bi bi-pencil text-primary"></i>
                                         </button>
@@ -1008,6 +1072,122 @@
                                                 type="submit"
                                                 class="btn btn-sm btn-link p-0"
                                                 onclick="return confirm('Reset classification for this item group?')"
+                                            >
+                                                <i class="bi bi-trash text-danger"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">No items found.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editSourceOfFundModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form action="{{ route('inventory.settings.source-of-fund.update') }}" method="POST">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Edit Source of Fund</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <input type="hidden" name="item_name" id="edit_sof_item_name_hidden">
+                    <input type="hidden" name="description" id="edit_sof_description_hidden">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Item Name</label>
+                        <input type="text" id="edit_sof_item_name" class="form-control" readonly>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Description</label>
+                        <input type="text" id="edit_sof_description" class="form-control" readonly>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Source of Fund</label>
+                        <input
+                            type="text"
+                            name="source_of_fund"
+                            id="edit_source_of_fund_value"
+                            class="form-control"
+                            required
+                        >
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="viewAllSourceOfFundModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">All Source of Fund Records</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Item Name</th>
+                                <th>Description</th>
+                                <th class="text-center">Source of Fund</th>
+                                <th class="text-center">Edit</th>
+                                <th class="text-center">Delete</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($sourceOfFunds as $item)
+                                <tr>
+                                    <td>{{ $item->item_name }}</td>
+                                    <td>{{ $item->description }}</td>
+                                    <td class="text-center">{{ $item->source_of_fund ?: 'Not set' }}</td>
+                                    <td class="text-center">
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm btn-link p-0 open-edit-source-of-fund"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#editSourceOfFundModal"
+                                            data-item-name="{{ $item->item_name }}"
+                                            data-description="{{ $item->description }}"
+                                            data-source-of-fund="{{ $item->source_of_fund ?: '' }}"
+                                        >
+                                            <i class="bi bi-pencil text-primary"></i>
+                                        </button>
+                                    </td>
+                                    <td class="text-center">
+                                        <form action="{{ route('inventory.settings.source-of-fund.delete') }}" method="POST" class="d-inline">
+                                            @csrf
+                                            <input type="hidden" name="item_name" value="{{ $item->item_name }}">
+                                            <input type="hidden" name="description" value="{{ $item->description }}">
+                                            <button
+                                                type="submit"
+                                                class="btn btn-sm btn-link p-0"
+                                                onclick="return confirm('Reset source of fund for this item group?')"
                                             >
                                                 <i class="bi bi-trash text-danger"></i>
                                             </button>

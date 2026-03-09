@@ -67,8 +67,15 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/unlock-screen', [App\Http\Controllers\LockController::class, 'unlockScreen'])
         ->name('unlock.screen');
 
-        //Missing
-         Route::post('/items/missing', [ItemMissingController::class, 'markMissing'])->name('items.missing');
+    //Missing
+    Route::post('/items/missing', [ItemMissingController::class, 'markMissing'])->name('items.missing');
+
+    //EDIT ITEMS INVENTORY
+    Route::post('/inventory/update-specifications', [InventoryController::class, 'updateSpecifications'])
+    ->name('inventory.updateSpecifications');
+    Route::post('/inventory/update-source-of-fund', [InventoryController::class, 'updateSourceOfFund']);
+    Route::post('/inventory/update-classification', [InventoryController::class, 'updateClassification']);
+    Route::post('/inventory/update-unit-cost', [InventoryController::class, 'updateUnitCost']);
          
 
 
@@ -224,6 +231,12 @@ Route::post('/notifications/read-all', [NotificationController::class, 'markAllA
         Route::get('/chatbot/templates', [ChatbotController::class, 'templates']);
         Route::post('/chatbot/execute/{id}', [ChatbotController::class, 'execute']);
     });
+
+    Route::post('/inventory/settings/source-of-fund/update', [InventorySettingsController::class, 'updateSourceOfFund'])
+        ->name('inventory.settings.source-of-fund.update');
+
+    Route::post('/inventory/settings/source-of-fund/delete', [InventorySettingsController::class, 'deleteSourceOfFund'])
+        ->name('inventory.settings.source-of-fund.delete');
 
     // =========================
     // PROPERTY CUSTODIAN + USER + REGULAR EMPLOYEE

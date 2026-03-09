@@ -35,40 +35,41 @@
       <nav class="menu">
 
         <!-- Everyone -->
-        <a href="#" class="active" data-target="dashboard">
+        <a href="{{ route('dashboard', ['section' => 'dashboard']) }}" class="active" data-target="dashboard">
           <img src="{{ asset('images/reports.png') }}" class="menu-icon">
           Dashboard
         </a>
 
-        <a href="#" data-target="inventory">
+        <a href="{{ route('dashboard', ['section' => 'inventory']) }}" data-target="inventory">
           <img src="{{ asset('images/inventory.png') }}" class="menu-icon">
           Inventory
         </a>
+
         @if($isAdmin || $isPropertyCustodian)
-        <a href="#" data-target="issued">
+        <a href="{{ route('dashboard', ['section' => 'issued']) }}" data-target="issued">
           <img src="{{ asset('images/issued.png') }}" class="menu-icon">
           Issued Item
         </a>
         @endif
 
-        <a href="#" data-target="form">
+        <a href="{{ route('dashboard', ['section' => 'form']) }}" data-target="form">
           <img src="{{ asset('images/form.png') }}" class="menu-icon">
           Form Records
         </a>
 
-        <a href="#" data-target="damaged">
+        <a href="{{ route('dashboard', ['section' => 'damaged']) }}" data-target="damaged">
           <img src="{{ asset('images/form.png') }}" class="menu-icon">
           Damage Report
         </a>
         
       @if($isAdmin || $isPropertyCustodian)
-        <a href="#" data-target="reports">
-          <img src="{{ asset('images/maintenance.png') }}" class="menu-icon">
-          Maintenance
-        </a>
-        @endif
+      <a href="{{ route('dashboard', ['section' => 'reports']) }}" data-target="reports">
+        <img src="{{ asset('images/maintenance.png') }}" class="menu-icon">
+        Maintenance
+      </a>
+      @endif
 
-        <a href="#" data-target="generate">
+        <a href="{{ route('dashboard', ['section' => 'generate']) }}" data-target="generate">
           <img src="{{ asset('images/maintenance.png') }}" class="menu-icon">
           QR Generator
         </a>
@@ -310,98 +311,7 @@
         </button>
     </div>
 
-    <!-- INVENTORY VIEW MODAL -->
-    <div class="modal fade" id="inventoryModal" tabindex="-1">
-        <div class="modal-dialog modal-md modal-side-right">
-            <div class="modal-content item-detail-modal">
-                <div class="modal-header-custom">
-                    <button type="button" class="btn-action" data-bs-dismiss="modal">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
-
-                    <h5 class="modal-title-custom">Item detail</h5>
-
-                    <button type="button" class="btn-action" onclick="saveItemChanges()">
-                        <i class="bi bi-check-lg"></i>
-                    </button>
-                </div>
-
-                <div class="modal-body p-0">
-                    <div class="detail-row">
-                        <div class="detail-info">
-                            <label>Item name</label>
-                            <div id="modal-item" class="detail-value"></div>
-                        </div>
-                        <a href="#" class="detail-action">Rename <i class="bi bi-pencil"></i></a>
-                    </div>
-
-                    <div class="detail-row">
-                        <div class="detail-info">
-                            <label>Property No.</label>
-                            <div id="modal-serial" class="detail-value"></div>
-                        </div>
-                        <a href="#" class="detail-action">Change</a>
-                    </div>
-
-                    <div class="detail-row">
-                        <div class="detail-info">
-                            <label>Condition</label>
-                            <div id="modal-status" class="detail-value"></div>
-                        </div>
-                        <a href="#" class="detail-action">Change</a>
-                    </div>
-
-                    <div class="detail-row">
-                        <div class="detail-info">
-                            <label>Date Acquired</label>
-                            <div id="modal-date" class="detail-value"></div>
-                        </div>
-                        <a href="#" class="detail-action">Change</a>
-                    </div>
-
-                    <div class="detail-row empty">
-                        <label>Expected Lifespan</label>
-                        <div class="detail-value text-muted">Not set</div>
-                    </div>
-
-                    <div class="status-marking">
-                        <p class="section-title">Quick Status Update</p>
-                        <div class="marking-options">
-                            <span class="mark-label">Mark as:</span>
-
-                            <a href="javascript:void(0)" class="mark-link text-repair" onclick="updateStatus('For Repair')">
-                                [ For repair ]
-                            </a>
-
-                            <a href="javascript:void(0)" class="mark-link text-unserviceable" onclick="updateStatus('Unserviceable')">
-                                [ Unserviceable ]
-                            </a>
-
-                            <a href="javascript:void(0)" class="mark-link text-missing" onclick="updateStatus('Missing')">
-                                [ Missing ]
-                            </a>
-
-                            <a href="javascript:void(0)" class="mark-link text-maintenance" onclick="updateStatus('Maintenance')">
-                                [ Schedule maintenance ]
-                            </a>
-                        </div>
-                    </div>
-
-                    <div class="footer-links">
-                        <a href="javascript:void(0)" class="usage-history" onclick="showUsageHistory()">
-                            View item usage history
-                        </a>
-                    </div>
-
-                    <div class="tesda-custom-footer-group">
-                        <button type="button" class="tesda-btn-off" data-bs-dismiss="modal">
-                            Cancel
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    
 
     <!-- INVENTORY EDIT MODAL -->
     <div id="inventoryEditModal" class="inventory-modal">
@@ -1225,6 +1135,209 @@
     </div>
 </div>
 
+<!-- INVENTORY VIEW MODAL -->
+<div class="modal fade" id="inventoryModal" tabindex="-1"
+     data-bs-backdrop="true"
+     data-bs-keyboard="true">
+    <div class="modal-dialog modal-md modal-side-right">
+        <div class="modal-content item-detail-modal">
+            <div class="modal-header-custom">
+                <button type="button" class="btn-action" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+
+                <h5 class="modal-title-custom">Item detail</h5>
+
+                <button type="button" class="btn-action" onclick="saveItemChanges()">
+                    <i class="bi bi-check-lg"></i>
+                </button>
+            </div>
+
+            <div class="modal-body p-0">
+                <div class="detail-row">
+                    <div class="detail-info">
+                        <label>Item name</label>
+                        <div id="modal-item" class="detail-value"></div>
+                    </div>
+                    <a href="#" class="detail-action">Rename <i class="bi bi-pencil"></i></a>
+                </div>
+
+                <div class="detail-row">
+                    <div class="detail-info">
+                        <label>Serial No.</label>
+                        <div id="modal-serial" class="detail-value"></div>
+                    </div>
+                </div>
+
+                <div class="detail-row">
+                    <div class="detail-info">
+                        <label>Condition</label>
+                        <div id="modal-status" class="detail-value"></div>
+                    </div>
+                </div>
+
+                <div class="detail-row">
+                    <div class="detail-info">
+                        <label>Date Acquired</label>
+                        <div id="modal-date" class="detail-value"></div>
+                    </div>
+                    <a href="#" class="detail-action">Change</a>
+                </div>
+
+                <!-- SOURCE OF FUND -->
+                <div class="detail-row">
+                    <div class="detail-info">
+                        <label>Source of Fund</label>
+                        <div id="modal-source-of-fund" class="detail-value text-muted">Not set</div>
+
+                        <div id="modal-source-of-fund-editor" class="detail-editor d-none">
+                            <input
+                                type="text"
+                                id="modal-source-of-fund-input"
+                                class="detail-input"
+                                placeholder="Enter source of fund"
+                                maxlength="255"
+                            >
+                        </div>
+                    </div>
+
+                    <a href="javascript:void(0)"
+                       class="detail-action"
+                       id="sourceOfFundEditBtn"
+                       onclick="toggleSingleFieldEdit('source_of_fund')">
+                        Edit
+                    </a>
+                </div>
+
+                <!-- CLASSIFICATION -->
+                <div class="detail-row">
+                    <div class="detail-info">
+                        <label>Classification</label>
+                        <div id="modal-classification" class="detail-value text-muted">Not set</div>
+
+                        <div id="modal-classification-editor" class="detail-editor d-none">
+                            <input
+                                type="text"
+                                id="modal-classification-input"
+                                class="detail-input"
+                                placeholder="Enter classification"
+                                maxlength="255"
+                            >
+                        </div>
+                    </div>
+
+                    <a href="javascript:void(0)"
+                       class="detail-action"
+                       id="classificationEditBtn"
+                       onclick="toggleSingleFieldEdit('classification')">
+                        Edit
+                    </a>
+                </div>
+
+                <!-- UNIT COST -->
+                <div class="detail-row">
+                    <div class="detail-info">
+                        <label>Unit Cost</label>
+                        <div id="modal-unit-cost" class="detail-value text-muted">Not set</div>
+
+                        <div id="modal-unit-cost-editor" class="detail-editor d-none">
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                id="modal-unit-cost-input"
+                                class="detail-input"
+                                placeholder="Enter unit cost"
+                            >
+                        </div>
+                    </div>
+
+                    <a href="javascript:void(0)"
+                       class="detail-action"
+                       id="unitCostEditBtn"
+                       onclick="toggleSingleFieldEdit('unit_cost')">
+                        Edit
+                    </a>
+                </div>
+
+                <!-- SPECIFICATIONS -->
+                <div class="detail-row">
+                    <div class="detail-info">
+                        <label>Specifications</label>
+
+                        <div id="modal-specifications" class="detail-value text-muted">
+                            Not set
+                        </div>
+
+                        <div id="modal-specifications-editor" class="detail-editor d-none">
+                            <textarea
+                                id="modal-specifications-input"
+                                class="detail-textarea"
+                                placeholder="Enter specifications here..."
+                                rows="4"
+                                maxlength="1000"
+                            ></textarea>
+
+                            <div class="detail-editor-footer">
+                                <span id="specifications-counter" class="char-counter">0 / 1000</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <a href="javascript:void(0)"
+                       class="detail-action"
+                       id="specsEditBtn"
+                       onclick="toggleSpecificationsEdit()">
+                        Edit
+                    </a>
+                </div>
+
+                <div class="detail-row">
+                    <div class="detail-info">
+                        <label>Expected Lifespan Year</label>
+                        <div id="modal-lifespan" class="detail-value text-muted">Not set</div>
+                    </div>
+                </div>
+
+                <div class="status-marking">
+                    <p class="section-title">Quick Status Update</p>
+                    <div class="marking-options">
+                        <span class="mark-label">Mark as:</span>
+
+                        <a href="javascript:void(0)" class="mark-link text-repair" onclick="updateStatus('For Repair')">
+                            [ For repair ]
+                        </a>
+
+                        <a href="javascript:void(0)" class="mark-link text-unserviceable" onclick="updateStatus('Unserviceable')">
+                            [ Unserviceable ]
+                        </a>
+
+                        <a href="javascript:void(0)" class="mark-link text-missing" onclick="updateStatus('Missing')">
+                            [ Missing ]
+                        </a>
+
+                        <a href="javascript:void(0)" class="mark-link text-maintenance" onclick="updateStatus('Maintenance')">
+                            [ Schedule maintenance ]
+                        </a>
+                    </div>
+                </div>
+
+                <div class="footer-links">
+                    <a href="javascript:void(0)" class="usage-history" onclick="showUsageHistory()">
+                        View item usage history
+                    </a>
+                </div>
+
+                <div class="tesda-custom-footer-group">
+                    <button type="button" class="tesda-btn-off" data-bs-dismiss="modal">
+                        Back
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
   <script>
   function escapeHtml(str) {
     return String(str || '')
@@ -1237,26 +1350,27 @@
 
   function printFormModal() {
     const modal = document.getElementById('viewFormModal');
+    if (!modal) {
+      alert("Print modal not found.");
+      return;
+    }
+
     const bodyEl = modal.querySelector('.modal-body');
+    if (!bodyEl) {
+      alert("Nothing to print.");
+      return;
+    }
 
-    // Clone content safely
-    const modalContent = bodyEl ? bodyEl.cloneNode(true) : document.createElement('div');
+    const modalContent = bodyEl.cloneNode(true);
 
-    // ✅ Read from dataset (recommended)
     const borrowerName = modal.dataset.borrowerName || modal.dataset.borrower || '';
     const issuedByName = modal.dataset.issuedBy || '';
     let formType = modal.dataset.formType || '';
 
-    // Friendly form type header
     let formTypeLabel = '';
     if (formType === 'ICS') formTypeLabel = 'Inventory Custodian Slip (ICS)';
     else if (formType === 'PAR') formTypeLabel = 'Property Acknowledgement Receipt (PAR)';
     else formTypeLabel = formType;
-
-    // Fallbacks if dataset not set (optional)
-    // Try to find text nodes like "Issued To:" inside modal content
-    const borrowerSafe = borrowerName ? borrowerName : '__________________________';
-    const issuedBySafe = issuedByName ? issuedByName : '__________________________';
 
     const printHTML = `
       <html>
@@ -1287,7 +1401,6 @@
             grid-template-columns: 1fr;
             text-align: left;
           }
-
           .issued-meta div {
             margin: 2px 0;
           }
@@ -1300,7 +1413,6 @@
           ${formTypeLabel ? `<span style="font-size:16px;">${escapeHtml(formTypeLabel)}</span>` : ''}
         </div>
 
-        <!-- ✅ Top meta info -->
         <div class="meta">
           <div class="meta-row">
             <div><span class="label">Issued To:</span> ${escapeHtml(borrowerName || 'N/A')}</div>
@@ -1308,10 +1420,8 @@
           </div>
         </div>
 
-        <!-- Main form body -->
         <div>${modalContent.innerHTML}</div>
 
-        <!-- ✅ Signatures with printed names -->
         <div class="signature-block">
           <div>
             <div class="sig-title"><span class="label">Issued By (Processed By):</span></div>
@@ -1333,13 +1443,27 @@
       </html>
     `;
 
-    const printWindow = window.open('', 'TESDA', 'width=900,height=700');
+    const printWindow = window.open('', 'TESDA_PRINT', 'width=900,height=700');
+
+    if (!printWindow) {
+      alert("Popup blocked. Please allow popups for this site.");
+      return;
+    }
+
     printWindow.document.open();
     printWindow.document.write(printHTML);
     printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
+
+    printWindow.onload = function () {
+      setTimeout(() => {
+        printWindow.focus();
+        printWindow.print();
+
+        printWindow.onafterprint = function () {
+          printWindow.close();
+        };
+      }, 300);
+    };
   }
 </script>
 
@@ -1393,6 +1517,8 @@
   <script src="{{ asset('js/maintenance-ticket.js') }}"></script>
   <script src="{{ asset('js/lock.js') }}"></script>
   <script src="{{ asset('js/DashboardMissing.js') }}"></script>
+  <script src="{{ asset('js/dashboard-specification.js') }}"></script>
+
 
 
 

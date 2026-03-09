@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use App\Models\Item;
 
 class InventoryController extends Controller
 {
@@ -21,6 +22,111 @@ class InventoryController extends Controller
 
         return view('dashboard', compact('inventory', 'totalTools', 'availableItems', 'issuedItems', 'forRepair'));
     }
+
+    private function getGroupedItemContextBySerial(string $serialNo): array
+        {
+            $item = Item::where('serial_no', $serialNo)->firstOrFail();
+
+           return [
+                'item' => $item,
+                'item_name' => trim((string) $item->item_name),
+                'description' => trim((string) $item->description),
+                'property_no' => trim((string) $item->property_no),
+                'created_at' => optional($item->created_at)->format('Y-m-d H:i:s'),
+            ];
+        }
+
+        public function updateSourceOfFund(Request $request)
+{
+    $request->validate([
+        'serial_no' => 'required|string|exists:items,serial_no',
+        'value' => 'required|string|max:255',
+    ]);
+
+    $ctx = $this->getGroupedItemContextBySerial($request->serial_no);
+    $value = trim((string) $request->value);
+
+    DB::transaction(function () use ($ctx, $value) {
+        Item::whereRaw('TRIM(item_name) = ?', [$ctx['item_name']])
+            ->whereRaw('TRIM(COALESCE(description, "")) = ?', [$ctx['description']])
+            ->whereRaw('DATE_FORMAT(created_at, "%Y-%m-%d %H:%i:%s") = ?', [$ctx['created_at']])
+            ->update([
+                'source_of_fund' => $value,
+                'updated_at' => now(),
+            ]);
+
+        DB::table('propertyinventory')
+            ->where('property_no', $ctx['property_no'])
+            ->update([
+                'sources_of_fund' => $value,
+                'updated_at' => now(),
+            ]);
+    });
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Source of fund updated successfully.',
+        'value' => $value,
+    ]);
+}
+
+public function updateClassification(Request $request)
+{
+    $request->validate([
+        'serial_no' => 'required|string|exists:items,serial_no',
+        'value' => 'required|string|max:255',
+    ]);
+
+    $ctx = $this->getGroupedItemContextBySerial($request->serial_no);
+    $value = trim((string) $request->value);
+
+    DB::transaction(function () use ($ctx, $value) {
+        Item::whereRaw('TRIM(item_name) = ?', [$ctx['item_name']])
+            ->whereRaw('TRIM(COALESCE(description, "")) = ?', [$ctx['description']])
+            ->whereRaw('DATE_FORMAT(created_at, "%Y-%m-%d %H:%i:%s") = ?', [$ctx['created_at']])
+            ->update([
+                'classification' => $value,
+                'updated_at' => now(),
+            ]);
+
+        DB::table('propertyinventory')
+            ->where('property_no', $ctx['property_no'])
+            ->update([
+                'classification' => $value,
+                'updated_at' => now(),
+            ]);
+    });
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Classification updated successfully.',
+        'value' => $value,
+    ]);
+}
+
+public function updateUnitCost(Request $request)
+{
+    $request->validate([
+        'serial_no' => 'required|string|exists:items,serial_no',
+        'value' => 'required|numeric|min:0',
+    ]);
+
+    $ctx = $this->getGroupedItemContextBySerial($request->serial_no);
+    $value = number_format((float) $request->value, 2, '.', '');
+
+    DB::table('propertyinventory')
+        ->where('property_no', $ctx['property_no'])
+        ->update([
+            'unit_cost' => $value,
+            'updated_at' => now(),
+        ]);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Unit cost updated successfully.',
+        'value' => $value,
+    ]);
+}
 
     public function checkPropertyNo($property_no)
     {
@@ -452,6 +558,35 @@ class InventoryController extends Controller
             ]
         ]);
     }
+
+    public function updateSpecifications(Request $request)
+{
+    $request->validate([
+        'serial_no' => 'required|string|exists:items,serial_no',
+        'specifications' => 'nullable|string|max:1000',
+    ]);
+
+    $ctx = $this->getGroupedItemContextBySerial($request->serial_no);
+    $specification = trim((string) $request->specifications);
+
+    $updatedCount = Item::whereRaw('TRIM(item_name) = ?', [$ctx['item_name']])
+        ->whereRaw('TRIM(COALESCE(description, "")) = ?', [$ctx['description']])
+        ->whereRaw('DATE_FORMAT(created_at, "%Y-%m-%d %H:%i:%s") = ?', [$ctx['created_at']])
+        ->update([
+            'specification' => $specification,
+            'updated_at' => now(),
+        ]);
+
+    return response()->json([
+        'success' => true,
+        'message' => "Specifications updated successfully for {$updatedCount} matching item(s).",
+        'specifications' => $specification,
+        'matched_item_name' => $ctx['item_name'],
+        'matched_description' => $ctx['description'],
+        'matched_created_at' => $ctx['created_at'],
+        'updated_count' => $updatedCount,
+    ]);
+}
 
     public function receiveBatch(Request $request)
     {

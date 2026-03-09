@@ -15,7 +15,6 @@ class IssuedUnserviceableController extends Controller
             'reason' => 'required|string|max:1000',
         ]);
 
-        // ✅ Get issued + item details
         $issuedItem = DB::table('issuedlog as i')
             ->join('items as it', 'i.serial_no', '=', 'it.serial_no')
             ->where('i.issue_id', $id)
@@ -31,17 +30,45 @@ class IssuedUnserviceableController extends Controller
             ->first();
 
         if (!$issuedItem) {
-            return response()->json(['status' => 'error', 'message' => 'Issued item not found.']);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Issued item not found.'
+            ], 404);
         }
 
         $userId = Auth::id();
         if (!$userId) {
-            return response()->json(['status' => 'error', 'message' => 'Unauthorized action.'], 403);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized action.'
+            ], 403);
         }
 
         DB::beginTransaction();
+
         try {
-            // 1) Mark item as Unserviceable
+            // 1) Prevent duplicate unserviceable marking if already marked
+            $currentItem = DB::table('items')
+                ->where('serial_no', $issuedItem->serial_no)
+                ->first();
+
+            if (!$currentItem) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Item record not found.'
+                ], 404);
+            }
+
+            if (($currentItem->status ?? null) === 'Unserviceable') {
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Item is already marked as Unserviceable.'
+                ], 422);
+            }
+
+            // 2) Mark item as Unserviceable
             DB::table('items')
                 ->where('serial_no', $issuedItem->serial_no)
                 ->update([
@@ -49,41 +76,82 @@ class IssuedUnserviceableController extends Controller
                     'updated_at' => now()
                 ]);
 
-            // 2) Save unserviceable report (make sure columns exist)
+            // 3) Save unserviceable report
             DB::table('unserviceablereports')->insert([
                 'serial_no' => $issuedItem->serial_no,
                 'reason' => $request->reason,
-                'borrower_name' => $issuedItem->borrower_name, // if you added this column
+                'borrower_name' => $issuedItem->borrower_name,
                 'reported_by' => $userId,
                 'reported_at' => now(),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
 
-            // 3) Notification
-            DB::table('notifications')->insert([
-                'item_id' => $issuedItem->item_id,
-                'user_id' => $userId,
-                'title' => 'Item marked as Unserviceable',
-                'message' => "Item '{$issuedItem->item_name}' (Serial: {$issuedItem->serial_no}) marked unserviceable. Reason: {$request->reason}",
+            // 4) Create notification
+            $notifId = DB::table('notifications')->insertGetId([
                 'type' => 'inventory',
-                'role' => 'Admin',
-                'is_read' => 0,
+                'title' => 'Item Marked as Unserviceable',
+                'message' => "Item '{$issuedItem->item_name}' (Serial: {$issuedItem->serial_no}) was marked as unserviceable. Reason: {$request->reason}",
+                'severity' => 'warning',
+                'entity_type' => 'item',
+                'entity_id' => $issuedItem->item_id,
+                'action_url' => 'http://127.0.0.1:8000/dashboard?section=issued',
+                'data' => json_encode([
+                    'item_id' => $issuedItem->item_id,
+                    'item_name' => $issuedItem->item_name,
+                    'serial_no' => $issuedItem->serial_no,
+                    'property_no' => $issuedItem->property_no,
+                    'reference_no' => $issuedItem->reference_no,
+                    'borrower_name' => $issuedItem->borrower_name,
+                    'reason' => $request->reason,
+                    'reported_by_user_id' => $userId,
+                    'reported_at' => now()->toDateTimeString(),
+                ]),
+                'created_by_user_id' => $userId,
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
 
-            // 4) Archive check
+            // 5) Send only to Admin users
+            $adminUsers = DB::table('users')
+                ->where('role', 'Admin')
+                ->pluck('user_id');
+
+            $recipientRows = [];
+            foreach ($adminUsers as $adminUserId) {
+                $recipientRows[] = [
+                    'notif_id' => $notifId,
+                    'recipient_user_id' => $adminUserId,
+                    'read_at' => null,
+                    'deleted_at' => null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
+
+            if (!empty($recipientRows)) {
+                DB::table('notification_recipients')->insert($recipientRows);
+            }
+
+            // 6) Archive check
             if (!empty($issuedItem->reference_no)) {
                 FormArchiveService::tryArchiveByReference($issuedItem->reference_no);
             }
 
             DB::commit();
-            return response()->json(['status' => 'success', 'message' => 'Item marked as Unserviceable successfully.']);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Item marked as Unserviceable successfully.'
+            ]);
         } catch (\Throwable $e) {
             DB::rollBack();
             \Log::error("Unserviceable Error [Issue ID: {$id}]: " . $e->getMessage());
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
 }

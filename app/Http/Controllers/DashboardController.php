@@ -64,16 +64,23 @@ class DashboardController extends Controller
             ->select('serial_no', DB::raw('SUM(usage_hours) as total_usage_hours'))
             ->groupBy('serial_no');
 
-        $inventory = DB::table('items')
+        $inventory = DB::table('items as i')
+            ->leftJoin('propertyinventory as pi', 'i.property_no', '=', 'pi.property_no')
             ->select(
-                'status',
-                'serial_no',
-                'item_name',
-                'description',
-                'source_of_fund',
-                'classification',
-                DB::raw('DATE(date_acquired) as date_acquired')
+                'i.serial_no',
+                'i.item_name',
+                'i.description',
+                'i.specification',
+                'i.source_of_fund',
+                'i.classification',
+                DB::raw('DATE(i.date_acquired) as date_acquired'),
+                'i.status',
+                'i.property_no',
+                'i.expected_life_years',
+                'i.created_at',
+                'pi.unit_cost'
             )
+            ->orderByDesc('i.item_id')
             ->get();
 
         // Latest issue_id per serial_no (subquery)
@@ -257,65 +264,71 @@ class DashboardController extends Controller
     }
 
     public function getInventoryTable(Request $request)
-{
-    $status = $request->query('status', 'All');
+    {
+        $status = $request->query('status', 'All');
 
-    $query = DB::table('items')
+        $query = DB::table('items as i')
+        ->leftJoin('propertyinventory as pi', 'i.property_no', '=', 'pi.property_no')
         ->select(
-            'serial_no',
-            'item_name',
-            'description',
-            'source_of_fund',
-            'classification',
-            'date_acquired',
-            'status'
+            'i.serial_no',
+            'i.item_name',
+            'i.description',
+            'i.specification',
+            'i.source_of_fund',
+            'i.classification',
+            DB::raw('DATE(i.date_acquired) as date_acquired'),
+            'i.status',
+            'i.property_no',
+            'i.expected_life_years',
+            'i.created_at',
+            'pi.unit_cost'
         )
-        ->orderByDesc('item_id'); // show newest first
+        ->orderByDesc('i.item_id');
 
-    if ($status !== 'All') {
-        if ($status === 'Missing') {
-            $query->whereIn('status', ['Lost', 'Missing']);
-        } else {
-            $query->where('status', $status);
+        if ($status !== 'All') {
+            if ($status === 'Missing') {
+                $query->whereIn('status', ['Lost', 'Missing']);
+            } else {
+                $query->where('status', $status);
+            }
         }
-    }
 
-    $inventory = $query->get(); // removed limit(10)
+        $inventory = $query->get(); // removed limit(10)
 
-    $html = '';
+        $html = '';
 
-    foreach ($inventory as $item) {
-        if ($item->status === 'Available') $statusClass = 'text-green';
-        elseif ($item->status === 'For Repair') $statusClass = 'text-brown';
-        elseif ($item->status === 'Issued') $statusClass = 'text-blue';
-        elseif (in_array($item->status, ['Unserviceable', 'Damaged', 'Lost', 'Missing'])) $statusClass = 'text-red';
-        else $statusClass = '';
+        foreach ($inventory as $item) {
+            if ($item->status === 'Available') $statusClass = 'text-green';
+            elseif ($item->status === 'For Repair') $statusClass = 'text-brown';
+            elseif ($item->status === 'Issued') $statusClass = 'text-blue';
+            elseif (in_array($item->status, ['Unserviceable', 'Damaged', 'Lost', 'Missing'])) $statusClass = 'text-red';
+            else $statusClass = '';
 
-        $dateAcquired = $item->date_acquired
-            ? Carbon::parse($item->date_acquired)->format('F d, Y')
-            : '-';
+            $dateAcquired = $item->date_acquired
+                ? Carbon::parse($item->date_acquired)->format('F d, Y')
+                : '-';
 
-        $sourceOfFund = $item->source_of_fund ?? '-';
-        $classification = $item->classification ?? '-';
+            $sourceOfFund = $item->source_of_fund ?? '-';
+            $classification = $item->classification ?? '-';
 
-        $itemJson = htmlspecialchars(json_encode($item), ENT_QUOTES, 'UTF-8');
+            $itemJson = htmlspecialchars(json_encode($item), ENT_QUOTES, 'UTF-8');
 
-        $html .= "
-            <tr class='inventory-row' data-item='{$itemJson}' style='cursor:pointer;'>
-                <td>{$item->serial_no}</td>
-                <td>{$item->item_name}</td>
-                <td>" . ($item->description ?? '-') . "</td>  <!-- ✅ ADD THIS -->
-                <td>{$sourceOfFund}</td>
-                <td>{$classification}</td>
-                <td>{$dateAcquired}</td>
-                <td><span class='{$statusClass}'>{$item->status}</span></td>
-                <td class='action-buttons'>
-                    <button class='edit-btn' onclick='event.stopPropagation();'>✏️</button>
-                    <button class='delete-btn' onclick='event.stopPropagation();'>🗑️</button>
-                </td>
-            </tr>
-        ";
-    }
+            $html .= "
+                <tr class='inventory-row' data-item='{$itemJson}' style='cursor:pointer;'>
+                    <td>{$item->serial_no}</td>
+                    <td>{$item->item_name}</td>
+                    <td>" . ($item->description ?? '-') . "</td>  <!-- ✅ ADD THIS -->
+                    <td>{$sourceOfFund}</td>
+                    <td>{$classification}</td>
+                    <td>{$dateAcquired}</td>
+                    <td><span class='{$statusClass}'>{$item->status}</span></td>
+                    <td class='action-buttons'>
+                        <button class='edit-btn' onclick='event.stopPropagation();'>✏️</button>
+                        <button class='delete-btn' onclick='event.stopPropagation();'>🗑️</button>
+                    </td>
+                </tr>
+            ";
+        }
 
     return response()->json(['html' => $html]);
 }

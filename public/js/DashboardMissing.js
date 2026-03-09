@@ -60,7 +60,8 @@ document.addEventListener("DOMContentLoaded", function () {
                         title: "Item Marked Missing",
                         text: data.message || "The item has been recorded successfully."
                     }).then(() => {
-                        location.reload();
+                        // stay in issued section
+                        window.location.href = "/dashboard?section=issued";
                     });
                 })
                 .catch((error) => {

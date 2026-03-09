@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use App\Services\FormArchiveService;
 
 class ItemMissingController extends Controller
 {
@@ -20,6 +21,7 @@ class ItemMissingController extends Controller
         try {
             $serial = trim($request->serial_no);
             $borrower = trim($request->borrower_name);
+            $userId = Auth::id();
 
             $item = DB::table('items')
                 ->where('serial_no', $serial)
@@ -43,14 +45,20 @@ class ItemMissingController extends Controller
                 ], 409);
             }
 
+            // Get latest issued log for this serial
+            $issued = DB::table('issuedlog')
+                ->where('serial_no', $serial)
+                ->orderByDesc('issue_id')
+                ->first();
+
             DB::beginTransaction();
 
             DB::table('missing')->insert([
                 'item_name'     => (string) $item->item_name,
                 'serial_number' => (string) $serial,
                 'borrower_name' => (string) $borrower,
-                'reported_by'  => Auth::check() ? (Auth::user()->name ?? 'System') : 'System',
-                'reported_at'  => Carbon::today()->toDateString(),
+                'reported_by'   => Auth::check() ? (Auth::user()->name ?? 'System') : 'System',
+                'reported_at'   => Carbon::now(),
             ]);
 
             DB::table('items')
@@ -60,11 +68,63 @@ class ItemMissingController extends Controller
                     'updated_at' => Carbon::now(),
                 ]);
 
+            // Create notification
+            $notifId = DB::table('notifications')->insertGetId([
+                'type' => 'inventory',
+                'title' => 'Item Marked as Missing',
+                'message' => "Item '{$item->item_name}' (Serial: {$serial}) was marked as missing. Borrower: {$borrower}",
+                'severity' => 'warning',
+                'entity_type' => 'item',
+                'entity_id' => $item->item_id ?? null,
+                'action_url' => '/dashboard?section=issued',
+                'data' => json_encode([
+                    'item_id' => $item->item_id ?? null,
+                    'item_name' => $item->item_name ?? null,
+                    'serial_no' => $serial,
+                    'property_no' => $item->property_no ?? null,
+                    'borrower_name' => $borrower,
+                    'reference_no' => $issued->reference_no ?? null,
+                    'reported_by_user_id' => $userId,
+                    'reported_at' => Carbon::now()->toDateTimeString(),
+                    'status' => 'Missing',
+                ]),
+                'created_by_user_id' => $userId,
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now(),
+            ]);
+
+            // Notify Admin only
+            $adminUsers = DB::table('users')
+                ->where('role', 'Admin')
+                ->pluck('user_id');
+
+            $recipientRows = [];
+            foreach ($adminUsers as $adminUserId) {
+                $recipientRows[] = [
+                    'notif_id' => $notifId,
+                    'recipient_user_id' => $adminUserId,
+                    'read_at' => null,
+                    'deleted_at' => null,
+                    'created_at' => Carbon::now(),
+                    'updated_at' => Carbon::now(),
+                ];
+            }
+
+            if (!empty($recipientRows)) {
+                DB::table('notification_recipients')->insert($recipientRows);
+            }
+
+            // Archive check like return / damage / unserviceable
+            if (!empty($issued?->reference_no)) {
+                FormArchiveService::tryArchiveByReference($issued->reference_no);
+            }
+
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Item marked as missing successfully.'
+                'message' => 'Item marked as missing successfully.',
+                'reference_no' => $issued->reference_no ?? null,
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();
