@@ -13,6 +13,9 @@ class DashboardController extends Controller
 {
     public function index()
     {
+
+        $this->createLowStockNotifications();
+
         $maintenanceData = $this->getMaintenanceRecords();
         $maintenanceRecords = $maintenanceData['records'];
         $maintenanceCounts = $maintenanceData['counts'];
@@ -824,6 +827,8 @@ public function getUnderMaintenanceItemsTable()
     return response()->json(['html' => $html]);
 }
 
+
+
     public function getMissingItemsTable()
 {
     $missingItems = DB::table('missing as m')
@@ -899,8 +904,98 @@ public function getUnderMaintenanceItemsTable()
         return response()->json(['message' => 'Item successfully reported to maintenance!']);
     }
 
+    private function createLowStockNotifications()
+{
+    $lowStockThreshold = 10;
 
-    
+    // Mark/delete old low stock notifications if stock is no longer low
+    $normalStockPropertyNos = DB::table('propertyinventory')
+        ->where('quantity', '>=', $lowStockThreshold)
+        ->pluck('property_no');
+
+    if ($normalStockPropertyNos->isNotEmpty()) {
+        DB::table('notification_recipients as nr')
+            ->join('notifications as n', 'n.notif_id', '=', 'nr.notif_id')
+            ->where('n.entity_type', 'low_stock')
+            ->whereIn('n.entity_id', $normalStockPropertyNos)
+            ->whereNull('nr.deleted_at')
+            ->update([
+                'nr.deleted_at' => now(),
+                'nr.updated_at' => now(),
+            ]);
+    }
+
+    // Get low stock grouped items
+    $lowStockItems = DB::table('propertyinventory')
+        ->where('quantity', '<', $lowStockThreshold)
+        ->select('property_no', 'item_name', 'quantity', 'classification')
+        ->get();
+
+    if ($lowStockItems->isEmpty()) {
+        return;
+    }
+
+    // Get recipients: Admin + Property Custodian
+    $recipients = DB::table('users')
+        ->whereIn('role', ['Admin', 'Property Custodian'])
+        ->pluck('user_id');
+
+    if ($recipients->isEmpty()) {
+        return;
+    }
+
+    foreach ($lowStockItems as $item) {
+        // Prevent duplicate active notification for same property_no
+        $existingNotif = DB::table('notifications as n')
+            ->join('notification_recipients as nr', 'n.notif_id', '=', 'nr.notif_id')
+            ->where('n.entity_type', 'low_stock')
+            ->where('n.entity_id', $item->property_no)
+            ->whereNull('nr.read_at')
+            ->whereNull('nr.deleted_at')
+            ->select('n.notif_id')
+            ->first();
+
+        if ($existingNotif) {
+            continue;
+        }
+
+        // Create notification
+        $notifId = DB::table('notifications')->insertGetId([
+            'type' => 'stock_alert',
+            'title' => 'Low Stock Alert',
+            'message' => "{$item->item_name} is running low. Remaining stock: {$item->quantity}.",
+            'severity' => 'warning',
+            'entity_type' => 'low_stock',
+            'entity_id' => $item->property_no,
+            'action_url' => route('dashboard', ['section' => 'inventory']),
+            'data' => json_encode([
+                'property_no' => $item->property_no,
+                'item_name' => $item->item_name,
+                'classification' => $item->classification,
+                'quantity' => $item->quantity,
+                'threshold' => $lowStockThreshold,
+            ]),
+            'created_by_user_id' => auth()->user()->user_id ?? null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // Assign to all Admin and Property Custodian users
+        $recipientRows = [];
+        foreach ($recipients as $userId) {
+            $recipientRows[] = [
+                'notif_id' => $notifId,
+                'recipient_user_id' => $userId,
+                'read_at' => null,
+                'deleted_at' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+
+        DB::table('notification_recipients')->insert($recipientRows);
+    }
+}
 
     public function moveDamageToMaintenance(Request $request, $damage_id)
 {
@@ -1087,16 +1182,18 @@ public function getUnderMaintenanceItemsTable()
 
 public function getLowStockItems()
 {
-    $lowStockThreshold = 10;
+    $minimumQty = 10;
 
     $items = DB::table('propertyinventory as pi')
         ->select(
             'pi.property_no',
             'pi.item_name',
             'pi.classification',
-            'pi.quantity'
+            'pi.quantity',
+            DB::raw("$minimumQty as minimum_quantity"),
+            DB::raw("GREATEST($minimumQty - pi.quantity, 0) as needed_quantity")
         )
-        ->where('pi.quantity', '<', $lowStockThreshold)
+        ->where('pi.quantity', '<', $minimumQty)
         ->orderBy('pi.quantity', 'asc')
         ->orderBy('pi.item_name', 'asc')
         ->get();
@@ -1104,23 +1201,20 @@ public function getLowStockItems()
     $html = '';
 
     foreach ($items as $item) {
-        $propertyNo = $item->property_no ?? '-';
-        $itemName = $item->item_name ?? '-';
-        $classification = $item->classification ?? '-';
-        $quantity = $item->quantity ?? 0;
-
         $html .= "
             <tr>
-                <td>{$propertyNo}</td>
-                <td>{$itemName}</td>
-                <td>{$classification}</td>
-                <td>{$quantity}</td>
+                <td>{$item->property_no}</td>
+                <td>{$item->item_name}</td>
+                <td>{$item->classification}</td>
+                <td>{$item->quantity}</td>
+                <td>{$item->minimum_quantity}</td>
+                <td>{$item->needed_quantity}</td>
             </tr>
         ";
     }
 
     if ($html === '') {
-        $html = "<tr><td colspan='4' style='text-align:center; padding:20px;'>No low stock items found.</td></tr>";
+        $html = "<tr><td colspan='6' style='text-align:center; padding:20px;'>No low stock items found.</td></tr>";
     }
 
     return response()->json(['html' => $html]);

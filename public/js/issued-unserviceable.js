@@ -62,7 +62,7 @@ function submitUnserviceable(issueId, reason) {
         title: "Success",
         text: data.message,
         icon: "success",
-        timer: 1500,
+        timer: 2000,
         showConfirmButton: false
       });
 

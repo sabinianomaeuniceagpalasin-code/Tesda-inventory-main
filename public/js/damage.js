@@ -87,7 +87,7 @@
       title: "Success",
       text: data.message || "Damage reported.",
       icon: "success",
-      timer: 1200,
+      timer: 2000,
       showConfirmButton: false,
     }).then(() => {
       localStorage.setItem("activeSection", "damaged");
