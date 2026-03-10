@@ -10,8 +10,12 @@
     })
       .then(res => res.json())
       .then(data => {
+        console.log("Inventory filter response:", data);
+
         const tbody = document.querySelector("#inventoryTable tbody");
-        if (tbody) tbody.innerHTML = data.html;
+        if (tbody) {
+          tbody.innerHTML = data.html || `<tr><td colspan="8" style="text-align:center;">No items found.</td></tr>`;
+        }
       })
       .catch(err => console.error("Inventory filter reload error:", err));
   }
@@ -29,6 +33,5 @@
     });
   }
 
-  // Optional: load once on page load (keeps consistent)
   document.addEventListener("DOMContentLoaded", reloadInventoryTableWithFilters);
 })();

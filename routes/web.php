@@ -260,7 +260,7 @@ Route::post('/notifications/read-all', [NotificationController::class, 'markAllA
     Route::get('/dashboard/get-issued-items', [DashboardController::class, 'getListofIssuedItemsTable']);
 
     // ⚠️ This returns array, not HTML. Keep if used, but don't inject directly into table.
-    Route::get('/dashboard/get-under-maintenance', [DashboardController::class, 'getMaintenanceRecords']);
+    Route::get('/dashboard/get-under-maintenance', [DashboardController::class, 'getUnderMaintenanceItemsTable']);
     Route::get('/dashboard/get-missing-items', [DashboardController::class, 'getMissingItemsTable']);
     Route::get('/dashboard/get-low-stock-items', [DashboardController::class, 'getLowStockItems']);
     Route::get('/dashboard/get-unserviceable-items', [DashboardController::class, 'getUnserviceableItemsTable']);

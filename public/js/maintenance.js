@@ -52,7 +52,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (serialInput) serialInput.value = record.serial_no || "";
             if (itemNameInput) itemNameInput.value = record.item_name || "";
-            if (issueInput) issueInput.value = record.issue_type || "";
+            if (issueInput) issueInput.value = record.observation || "";
             if (dateInput) dateInput.value = record.date_reported || "";
             if (costInput) costInput.value = record.repair_cost ?? "";
             if (completionInput) completionInput.value = record.expected_completion || "";
@@ -89,7 +89,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const payload = {
                 serial_no: serialInput ? serialInput.value : "",
-                issue_type: issueInput ? issueInput.value : "",
+                observation: issueInput ? issueInput.value : "",
                 date_reported: dateInput ? dateInput.value : "",
                 repair_cost: costInput ? costInput.value : "",
                 expected_completion: completionInput && completionInput.value ? completionInput.value : null,

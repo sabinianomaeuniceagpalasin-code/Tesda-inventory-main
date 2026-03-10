@@ -15,14 +15,14 @@ const dashboardConfigs = {
     },
      issued: {
         title: "List of Issued Items",
-        headers: ["Serial Number", "Item name", "Borrower Name", "Issued By", "Form Type", "Reference Number", "Action"],
+        headers: ["Serial Number", "Item name", "Borrower Name", "Issued By", "Form Type", "Reference Number"],
         buttonText: "View Issued Item Section",
         apiUrl: "/dashboard/get-issued-items",
         targetSection: "issued",
     },
     repair: {
         title: "Under Maintenance List",
-        headers: ["Serial Number", "Item name", "Observation", "Borrower Name"],
+        headers: ["Serial Number", "Item name", "Observation", "Borrower Name", 'Status'],
         buttonText: "View Maintenance Section",
         apiUrl: "/dashboard/get-under-maintenance",
         targetSection: "reports",

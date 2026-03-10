@@ -56,11 +56,13 @@
           <img src="{{ asset('images/form.png') }}" class="menu-icon">
           Form Records
         </a>
-
+        
+        @if($isAdmin || $isPropertyCustodian)
         <a href="{{ route('dashboard', ['section' => 'damaged']) }}" data-target="damaged">
           <img src="{{ asset('images/form.png') }}" class="menu-icon">
           Damage Report
         </a>
+        @endif
         
       @if($isAdmin || $isPropertyCustodian)
       <a href="{{ route('dashboard', ['section' => 'reports']) }}" data-target="reports">
@@ -205,8 +207,8 @@
         </div>
 
         <!-- ======================
-     INVENTORY SECTION
-======================= -->
+              INVENTORY SECTION
+          ======================= -->
 <div id="inventory" class="content-section">
     <div class="inventory-summary">
         <div class="summary-box">
@@ -258,7 +260,9 @@
                 <th>Classification</th>
                 <th>Date Acquired</th>
                 <th>Status</th>
-                <th>Actions</th>
+                @if($isAdmin || $isPropertyCustodian)
+                    <th>Actions</th>
+                @endif
             </tr>
         </thead>
         <tbody>
@@ -283,6 +287,7 @@
                             {{ $item->status }}
                         </span>
                     </td>
+                    @if($isAdmin || $isPropertyCustodian)
                     <td class="action-buttons">
                         <button
                             type="button"
@@ -300,6 +305,7 @@
                             🗑️
                         </button>
                     </td>
+                    @endif
                 </tr>
             @endforeach
         </tbody>
@@ -570,15 +576,15 @@
             </div>
             <div class="summary-card">
               <p>Complete Repairs</p>
-              <h2>{{ $maintenanceCounts['pending'] }}</h2>
+              <h2>Under Develop</h2>
             </div>
             <div class="summary-card">
               <p>Unserviceable</p>
-              <h2>{{ $maintenanceCounts['completed'] }}</h2>
+              <h2>Under Develop</h2>
             </div>
             <div class="summary-card">
               <p>Total Repair Cost</p>
-              <h2>{{ $maintenanceCounts['upcoming'] }}</h2>
+              <h2>Under Develop</h2>
             </div>
           </div>
 
@@ -644,7 +650,7 @@
                       {{ $record->serial_no }}
                     </td>
                     <td>{{ $record->item_name ?? '-' }}</td>
-                    <td>{{ $record->issue_type ?? '-' }}</td>
+                    <td>{{ $record->observation ?? '-' }}</td>
                     <td>{{ \Carbon\Carbon::parse($record->date_reported)->format('F d, Y') }}</td>
                     <td>{{ $record->repair_cost ? '₱' . number_format($record->repair_cost, 2) : '-' }}</td>
                     <td>
@@ -780,7 +786,9 @@
           <div class="form-controls">
 
             <button class="sort-btn"><i class="fas fa-filter"></i> Sort by field</button>
+            @if($isAdmin || $isPropertyCustodian)
             <button id="addFormBtn" class="add-btn"><i class="fas fa-plus"></i> Add New Form</button>
+            @endif
           </div>
 
           <div class="form-table-container">
@@ -1058,7 +1066,7 @@
 
         <div class="form-group">
           <label>Issue / Problem*</label>
-         <input type="text" id="m_issue" name="issue_type" required>
+         <input type="text" id="m_issue" name="observation" required>
         </div>
 
         <div class="form-group">
@@ -1159,7 +1167,9 @@
                         <label>Item name</label>
                         <div id="modal-item" class="detail-value"></div>
                     </div>
+                    @if($isAdmin || $isPropertyCustodian)
                     <a href="#" class="detail-action">Rename <i class="bi bi-pencil"></i></a>
+                    @endif
                 </div>
 
                 <div class="detail-row">
@@ -1181,7 +1191,9 @@
                         <label>Date Acquired</label>
                         <div id="modal-date" class="detail-value"></div>
                     </div>
+                    @if($isAdmin || $isPropertyCustodian)
                     <a href="#" class="detail-action">Change</a>
+                    @endif
                 </div>
 
                 <!-- SOURCE OF FUND -->
@@ -1190,6 +1202,7 @@
                         <label>Source of Fund</label>
                         <div id="modal-source-of-fund" class="detail-value text-muted">Not set</div>
 
+                        
                         <div id="modal-source-of-fund-editor" class="detail-editor d-none">
                             <input
                                 type="text"
@@ -1200,13 +1213,14 @@
                             >
                         </div>
                     </div>
-
+                    @if($isAdmin || $isPropertyCustodian)
                     <a href="javascript:void(0)"
                        class="detail-action"
                        id="sourceOfFundEditBtn"
                        onclick="toggleSingleFieldEdit('source_of_fund')">
                         Edit
                     </a>
+                    @endif
                 </div>
 
                 <!-- CLASSIFICATION -->
@@ -1225,13 +1239,14 @@
                             >
                         </div>
                     </div>
-
+                    @if($isAdmin || $isPropertyCustodian)
                     <a href="javascript:void(0)"
                        class="detail-action"
                        id="classificationEditBtn"
                        onclick="toggleSingleFieldEdit('classification')">
                         Edit
                     </a>
+                    @endif
                 </div>
 
                 <!-- UNIT COST -->
@@ -1251,13 +1266,14 @@
                             >
                         </div>
                     </div>
-
+                    @if($isAdmin || $isPropertyCustodian)
                     <a href="javascript:void(0)"
                        class="detail-action"
                        id="unitCostEditBtn"
                        onclick="toggleSingleFieldEdit('unit_cost')">
                         Edit
                     </a>
+                    @endif
                 </div>
 
                 <!-- SPECIFICATIONS -->
@@ -1283,13 +1299,14 @@
                             </div>
                         </div>
                     </div>
-
+                    @if($isAdmin || $isPropertyCustodian)
                     <a href="javascript:void(0)"
                        class="detail-action"
                        id="specsEditBtn"
                        onclick="toggleSpecificationsEdit()">
                         Edit
                     </a>
+                    @endif
                 </div>
 
                 <div class="detail-row">
@@ -1298,7 +1315,7 @@
                         <div id="modal-lifespan" class="detail-value text-muted">Not set</div>
                     </div>
                 </div>
-
+                @if($isAdmin || $isPropertyCustodian)
                 <div class="status-marking">
                     <p class="section-title">Quick Status Update</p>
                     <div class="marking-options">
@@ -1321,6 +1338,7 @@
                         </a>
                     </div>
                 </div>
+                @endif
 
                 <div class="footer-links">
                     <a href="javascript:void(0)" class="usage-history" onclick="showUsageHistory()">
