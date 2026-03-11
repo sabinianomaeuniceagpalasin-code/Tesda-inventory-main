@@ -76,6 +76,14 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/inventory/update-source-of-fund', [InventoryController::class, 'updateSourceOfFund']);
     Route::post('/inventory/update-classification', [InventoryController::class, 'updateClassification']);
     Route::post('/inventory/update-unit-cost', [InventoryController::class, 'updateUnitCost']);
+
+    //EXPORT PDF INVENTORY
+    Route::get('/inventory/export/pdf', [InventoryController::class, 'exportPdf'])
+    ->name('inventory.export.pdf');
+
+    //EXPORT PDF DAMAGE REPORT 
+    Route::get('/damage-reports/export/pdf', [InventoryController::class, 'exportDamagePdf'])
+    ->name('damage.export.pdf');
          
 
 

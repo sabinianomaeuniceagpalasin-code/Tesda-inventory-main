@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use App\Models\LoginHistory;
+use Illuminate\Validation\Rules\Password;
 
 
 
@@ -17,7 +18,7 @@ class ProfileController extends Controller
     }
 
     public function update(Request $request)
-    {
+    {   
         $user = $request->user();
 
         // Validate basic info
@@ -41,8 +42,7 @@ class ProfileController extends Controller
 
         if ($wantsPasswordChange) {
             $rules['current_password'] = ['required'];
-            $rules['new_password'] = ['required', 'min:8', 'confirmed']; 
-            // confirmed => expects new_password_confirmation
+            $rules['new_password'] = ['required', 'confirmed', Password::min(8) ->letters() ->mixedCase() ->numbers() ->symbols(),];
         }
 
         $data = $request->validate($rules);
@@ -54,7 +54,7 @@ class ProfileController extends Controller
 
         // Only set if column exists in users table
         if ($request->has('contact_no')) {
-            $user->contact_number = $data['contact_no'] ?? null;
+            $user->contact_no = $data['contact_no'] ?? null;
         }
 
         // Update password if requested

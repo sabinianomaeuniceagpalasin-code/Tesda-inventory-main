@@ -238,7 +238,7 @@
                 <option value="Unserviceable">Unserviceable</option>
                 <option value="Missing">Missing</option>
             </select>
-            <button>+ Export</button>
+            <button type="button" id="exportInventoryBtn">+ Export</button>
             <button type="button" id="clearInventoryFiltersBtn">Clear filters</button>
         </div>
         
@@ -685,6 +685,10 @@
         <div id="damaged" class="content-section">
           <div class="form-header">
             <h2>Damage Records History</h2>
+            <div class="right-buttons">
+            <input type="text" id="damageSearchInput" placeholder="Search Item Name...">
+            <button type="button" id="exportDamageBtn">Export to PDF</button>
+        </div>
           </div>
 
           <div class="damaged-layout">

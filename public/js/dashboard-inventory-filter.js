@@ -35,3 +35,22 @@
 
   document.addEventListener("DOMContentLoaded", reloadInventoryTableWithFilters);
 })();
+
+document.addEventListener('DOMContentLoaded', function () {
+    const exportBtn = document.getElementById('exportInventoryBtn');
+    const statusFilter = document.getElementById('inventoryStatusFilter');
+    const searchInput = document.getElementById('inventorySearchInput');
+
+    if (exportBtn) {
+        exportBtn.addEventListener('click', function () {
+            const status = statusFilter ? statusFilter.value : 'All';
+            const search = searchInput ? searchInput.value.trim() : '';
+
+            const url = new URL('/inventory/export/pdf', window.location.origin);
+            url.searchParams.append('status', status);
+            url.searchParams.append('search', search);
+
+            window.open(url.toString(), '_blank');
+        });
+    }
+});

@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use App\Models\Item;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 
 class InventoryController extends Controller
 {
@@ -586,6 +588,77 @@ public function updateUnitCost(Request $request)
         'matched_created_at' => $ctx['created_at'],
         'updated_count' => $updatedCount,
     ]);
+}
+
+public function exportDamagePdf(Request $request)
+{
+    $search = $request->get('search', '');
+
+    $query = DB::table('damagereports as d')
+        ->leftJoin('items as i', 'd.serial_no', '=', 'i.serial_no')
+        ->select(
+            'd.damage_id',
+            'd.serial_no',
+            'd.observation',
+            'd.borrower_name',
+            'd.reported_at',
+            'i.item_name'
+        );
+
+    if (!empty($search)) {
+        $query->where(function ($q) use ($search) {
+            $q->where('d.serial_no', 'like', '%' . $search . '%')
+              ->orWhere('i.item_name', 'like', '%' . $search . '%')
+              ->orWhere('d.observation', 'like', '%' . $search . '%')
+              ->orWhere('d.borrower_name', 'like', '%' . $search . '%');
+        });
+    }
+
+    $damageReports = $query->orderByDesc('d.reported_at')->get();
+
+    $pdf = Pdf::loadView('exports.damage-report-pdf', [
+        'damageReports' => $damageReports,
+        'search' => $search,
+        'generatedAt' => Carbon::now()->format('F d, Y h:i A'),
+    ])->setPaper('a4', 'landscape');
+
+    $fileName = 'damage_reports_' . now()->format('Ymd_His') . '.pdf';
+
+    return $pdf->download($fileName);
+}
+
+public function exportPdf(Request $request)
+{
+    $status = $request->get('status', 'All');
+    $search = $request->get('search', '');
+
+    $query = Item::query();
+
+    // Filter by status
+    if ($status !== 'All') {
+        $query->where('status', $status);
+    }
+
+    // Search by item name or serial number
+    if (!empty($search)) {
+        $query->where(function ($q) use ($search) {
+            $q->where('item_name', 'like', '%' . $search . '%')
+              ->orWhere('serial_no', 'like', '%' . $search . '%');
+        });
+    }
+
+    $items = $query->orderBy('item_name', 'asc')->get();
+
+    $pdf = Pdf::loadView('exports.inventory-pdf', [
+        'items' => $items,
+        'status' => $status,
+        'search' => $search,
+        'generatedAt' => Carbon::now()->format('F d, Y h:i A'),
+    ])->setPaper('a4', 'landscape');
+
+    $fileName = 'inventory_' . strtolower(str_replace(' ', '_', $status)) . '_' . now()->format('Ymd_His') . '.pdf';
+
+    return $pdf->download($fileName);
 }
 
     public function receiveBatch(Request $request)

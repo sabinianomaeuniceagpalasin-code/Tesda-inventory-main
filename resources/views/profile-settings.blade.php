@@ -106,14 +106,8 @@
                     />
                 </div>
               <div class="field">
-                <label for="contact_number">Contact Number</label>
-                <input
-                  id="contact_number"
-                  name="contact_number"
-                  type="text"
-                  value="{{ old('contact_number', auth()->user()->contact_number ?? '') }}"
-                  placeholder="09xxxxxxxxx"
-                />
+                <label for="contact_no">Contact Number</label>
+                <input id="contact_no" name="contact_no" type="text" value="{{ old('contact_no', auth()->user()->contact_no ?? '') }}" placeholder="09xxxxxxxxx"/>
               </div>
 
               <div class="field">
@@ -142,11 +136,19 @@
               </div>
 
               <div class="field">
-                <label for="new_password">New password</label>
-                <div class="input-wrap">
-                  <input id="new_password" name="new_password" type="password" placeholder="••••••••••" />
-                  <span class="lock">🔑</span>
-                </div>
+                  <label for="new_password">New password</label>
+                  <div class="input-wrap">
+                      <input id="new_password" name="new_password" type="password" placeholder="••••••••••" />
+                      <span class="lock">🔑</span>
+                  </div>
+
+                  <div id="passwordRules" style="margin-top:8px; font-size:13px;">
+                      <div id="rule-length" style="color:#dc2626;">✖ At least 8 characters</div>
+                      <div id="rule-upper" style="color:#dc2626;">✖ At least 1 uppercase letter</div>
+                      <div id="rule-lower" style="color:#dc2626;">✖ At least 1 lowercase letter</div>
+                      <div id="rule-number" style="color:#dc2626;">✖ At least 1 number</div>
+                      <div id="rule-special" style="color:#dc2626;">✖ At least 1 special character</div>
+                  </div>
               </div>
 
               <div class="field">
@@ -166,6 +168,14 @@
       </main>
     </div>
   </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script>
+      window.profileSuccessMessage = @json(session('success'));
+      window.profileErrorMessages = @json($errors->all());
+  </script>
+
+  <script src="{{ asset('js/profile-settings.js') }}"></script>
 
 </body>
 </html>
