@@ -459,31 +459,19 @@
               <div class="analytics-overview">
                 <div class="analytic-card clickable-card" onclick="openDynamicModal('total')">
                   <h4>Total issued items</h4>
-                  <p>309</p>
+                  <p>{{ $totalIssuedItems }}</p>
                 </div>
                 <div class="analytic-card clickable-card" onclick="openDynamicModal('active')">
                   <h4>Active issuances</h4>
-                  <p>0</p>
+                  <p>{{ $activeIssuances }}</p>
                 </div>
                 <div class="analytic-card clickable-card" onclick="openDynamicModal('returned')">
                   <h4>Returned items</h4>
-                  <p>0</p>
+                  <p>{{ $returnedItems }}</p>
                 </div>
                 <div class="analytic-card clickable-card" onclick="openDynamicModal('overdue')">
                   <h4>Overdue items</h4>
-                  <p>0</p>
-                </div>
-                <div class="analytic-card clickable-card" onclick="openDynamicModal('permanent')">
-                  <h4>Permanent issuances</h4>
-                  <p>0</p>
-                </div>
-                <div class="analytic-card clickable-card" onclick="openDynamicModal('pending')">
-                  <h4>Pending issuances</h4>
-                  <p>0</p>
-                </div>
-                <div class="analytic-card clickable-card" onclick="openDynamicModal('missing')">
-                  <h4>Missing issuances</h4>
-                  <p>0</p>
+                  <p>{{ $overdueItems }}</p>
                 </div>
               </div>
 

@@ -169,13 +169,29 @@
     </div>
   </div>
 
+  <div id="idleLockOverlay" style="display:none;">
+    <div class="idle-lock-box">
+        <h2>Session Locked</h2>
+        <p>Enter your password to continue</p>
+
+        <form id="unlockForm">
+            @csrf
+            <input type="password" id="unlockPassword" name="password" placeholder="Enter password" required>
+            <div id="unlockError" style="color:#ffb3b3; font-size:14px; margin-bottom:10px;"></div>
+            <button type="submit">Unlock</button>
+        </form>
+    </div>
+</div>
+
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  
   <script>
       window.profileSuccessMessage = @json(session('success'));
       window.profileErrorMessages = @json($errors->all());
   </script>
 
   <script src="{{ asset('js/profile-settings.js') }}"></script>
+  <script src="{{ asset('js/lock.js') }}"></script>
 
 </body>
 </html>

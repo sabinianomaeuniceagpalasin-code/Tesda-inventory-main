@@ -10,7 +10,7 @@ body {
 }
 
 .container-fluid {
-    max-width: 1400px;
+    max-width: 1600px;
     margin: 0 auto;
 }
 
@@ -608,7 +608,47 @@ td .action-btn i {
 }
 
 .lifespan-table td:nth-child(1),
-.lifespan-table td:nth-child(2) {
+.lifespan-table td:nth-child(2),
+.classification-table td:nth-child(1),
+.classification-table td:nth-child(2) {
+    white-space: normal;
+    word-break: break-word;
+}
+
+.lifespan-table,
+.classification-table {
+    width: 100%;
+    table-layout: fixed;
+}
+
+.lifespan-table th:nth-child(1),
+.lifespan-table td:nth-child(1),
+.classification-table th:nth-child(1),
+.classification-table td:nth-child(1) {
+    width: 24%;
+}
+
+.lifespan-table th:nth-child(2),
+.lifespan-table td:nth-child(2),
+.classification-table th:nth-child(2),
+.classification-table td:nth-child(2) {
+    width: 40%;
+}
+
+.lifespan-table th:nth-child(3),
+.lifespan-table td:nth-child(3),
+.classification-table th:nth-child(3),
+.classification-table td:nth-child(3) {
+    width: 20%;
+    text-align: center;
+}
+
+.lifespan-table th:nth-child(4),
+.lifespan-table td:nth-child(4),
+.classification-table th:nth-child(4),
+.classification-table td:nth-child(4) {
+    width: 16%;
+    text-align: center;
     white-space: nowrap;
 }
 
@@ -630,12 +670,59 @@ td .action-btn i {
     font-size: 0.85rem;
 }
 
-.classification-table td:nth-child(1),
-.classification-table td:nth-child(2) {
-    white-space: nowrap;
-}
-
 .classification-table td:nth-child(3) {
     font-weight: 600;
     color: #2c3e50;
+}
+
+#idleLockOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 99999;
+    display: none;
+    justify-content: center;
+    align-items: center;
+}
+
+.idle-lock-box {
+    width: 360px;
+    max-width: 90%;
+    background: #1e1e1e;
+    color: #fff;
+    padding: 30px;
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    text-align: center;
+}
+
+.idle-lock-box h2 {
+    margin-bottom: 10px;
+}
+
+.idle-lock-box p {
+    margin-bottom: 20px;
+    color: #ccc;
+}
+
+.idle-lock-box input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #444;
+    border-radius: 8px;
+    background: #2b2b2b;
+    color: #fff;
+    margin-bottom: 12px;
+    box-sizing: border-box;
+}
+
+.idle-lock-box button {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    background: #0d6efd;
+    color: white;
+    cursor: pointer;
+    font-weight: 600;
 }

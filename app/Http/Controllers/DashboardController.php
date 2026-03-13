@@ -117,6 +117,8 @@ class DashboardController extends Controller
             ->orderByDesc('i.issued_date')
             ->get();
 
+        $activeIssuances = $issuedItemsList->count();
+
         /**
          * ✅ FORMS LIST
          * NOTE: This assumes formrecords column is borrower_name.
@@ -192,6 +194,22 @@ class DashboardController extends Controller
                 || ($item->next_maintenance_date && Carbon::parse($item->next_maintenance_date)->isPast())
             );
 
+            $returnedItems = DB::table('issuedlog')
+                ->whereNotNull('actual_return_date')
+                ->count();
+
+                $overdueItems = DB::table('issuedlog as i')
+                    ->joinSub($latest, 'latest', function ($join) {
+                        $join->on('i.issue_id', '=', 'latest.issue_id');
+                    })
+                    ->join('items as it', 'i.serial_no', '=', 'it.serial_no')
+                    ->whereNull('i.actual_return_date')
+                    ->whereNotNull('i.return_date')
+                    ->where('i.return_date', '<', now())
+                    ->where('it.status', 'Issued')
+                    ->whereNotIn('it.status', ['Damaged', 'Unserviceable'])
+                    ->count();
+
         return view('dashboard', compact(
             'totalItems',
             'availableItems',
@@ -209,6 +227,7 @@ class DashboardController extends Controller
             'maintenanceCounts',
             'issuedItemsList',
             'totalIssuedItems',
+            'activeIssuances',
             'maintenanceForecast',
             'overdueMaintenance',
             'upcomingMaintenance',
@@ -219,6 +238,8 @@ class DashboardController extends Controller
             'damageReports',
             'damageCounts',
             'items',
+            'returnedItems',
+            'overdueItems',
         
         ));
     }

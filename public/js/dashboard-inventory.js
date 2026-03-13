@@ -194,15 +194,15 @@ window.showItemDetails = function (item) {
     }
 
     const modalEl = document.getElementById("inventoryModal");
-    if (modalEl && typeof bootstrap !== "undefined") {
-        const myModal = new bootstrap.Modal(modalEl, {
-            backdrop: true,
-            keyboard: true
-        });
-        myModal.show();
-    } else if (modalEl) {
-        modalEl.style.display = "flex";
-    }
+        if (modalEl && typeof bootstrap !== "undefined") {
+            const myModal = bootstrap.Modal.getOrCreateInstance(modalEl, {
+                backdrop: true,
+                keyboard: true
+            });
+            myModal.show();
+        } else if (modalEl) {
+            modalEl.style.display = "flex";
+        }
 };
 
 window.openInventoryEditModal = function (button) {
@@ -252,12 +252,12 @@ window.closeInventoryEditModal = function () {
     }
 };
 
-window.onclick = function (event) {
+window.addEventListener("click", function (event) {
     const modal = document.getElementById("inventoryEditModal");
     if (modal && event.target === modal) {
         modal.classList.remove("active");
     }
-};
+});
 
 window.deleteItem = function (serial_no) {
     if (!confirm("Are you sure you want to delete this item?")) return;
@@ -343,3 +343,33 @@ window.showUsageHistory = function () {
         }
     }
 };
+
+document.addEventListener("DOMContentLoaded", function () {
+    const modalEl = document.getElementById("inventoryModal");
+    if (!modalEl || typeof bootstrap === "undefined") return;
+
+    const inventoryModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+    // Close when clicking sidebar / module links
+    document.querySelectorAll(".sidebar a, .sidebar button, [data-target]").forEach((el) => {
+        el.addEventListener("click", function () {
+            inventoryModal.hide();
+        });
+    });
+
+    // Close when clicking anywhere outside the modal panel
+    document.addEventListener("click", function (e) {
+        if (!modalEl.classList.contains("show")) return;
+
+        const dialog = modalEl.querySelector(".modal-dialog");
+        if (!dialog) return;
+
+        const clickedInsideDialog = dialog.contains(e.target);
+        const clickedInventoryRow = e.target.closest("#inventoryTable tbody tr.inventory-row");
+        const clickedInventoryButton = e.target.closest("#inventoryTable button");
+
+        if (!clickedInsideDialog && !clickedInventoryRow && !clickedInventoryButton) {
+            inventoryModal.hide();
+        }
+    });
+});

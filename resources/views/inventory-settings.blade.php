@@ -12,7 +12,7 @@
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="inventory-settings.css">
+    <link rel="stylesheet" href="{{ asset('css/inventory-settings.css') }}">
 </head>
 
 <body>
@@ -32,7 +32,7 @@
 
         <div class="row g-4">
             <!-- Left Column -->
-            <div class="col-md-4">
+            <div class="col-md-5">
                 <!-- General Settings Card -->
                 <div class="card shadow-sm mb-4">
                     <div class="card-body">
@@ -214,7 +214,7 @@
             </div>
 
             <!-- Right Column -->
-            <div class="col-md-8">
+            <div class="col-md-7">
                 <!-- User Access & Roles Card -->
                 <div class="card shadow-sm mb-4">
                     <div class="card-body">
@@ -1124,13 +1124,29 @@
     </div>
 </div>
 
+
+<div id="idleLockOverlay" style="display:none;">
+    <div class="idle-lock-box">
+        <h2>Session Locked</h2>
+        <p>Enter your password to continue</p>
+
+        <form id="unlockForm">
+            @csrf
+            <input type="password" id="unlockPassword" name="password" placeholder="Enter password" required>
+            <div id="unlockError" style="color:#ffb3b3; font-size:14px; margin-bottom:10px;"></div>
+            <button type="submit">Unlock</button>
+        </form>
+    </div>
+</div>
+
+
     <!-- SWEET ALERT -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Custom JS -->
-    <script src="inventory-settings.js"></script>
+    <script src="{{ asset('js/inventory-settings.js') }}"></script>
     <script src="{{ asset('js/item-approval-request-modal.js') }}"></script>
     <script src="{{ asset('js/inventory-settings-user-approval.js') }}"></script>
     <script src="{{ asset('js/inventory-settings-item-approve-reject.js') }}"></script>
@@ -1139,6 +1155,7 @@
     <script src="{{ asset('js/inventory-settings-print.js') }}"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="{{ asset('js/inventory-settings-lifespan.js') }}"></script>
+    <script src="{{ asset('js/lock.js') }}"></script>
     
 
 
