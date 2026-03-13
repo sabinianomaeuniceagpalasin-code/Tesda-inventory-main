@@ -1313,6 +1313,10 @@
                     <div class="marking-options">
                         <span class="mark-label">Mark as:</span>
 
+                        <a href="javascript:void(0)" class="mark-link text-danger" onclick="markInventoryDamage()">
+                            [ Damaged ]
+                        </a>
+
                         <a href="javascript:void(0)" class="mark-link text-repair" onclick="updateStatus('For Repair')">
                             [ For repair ]
                         </a>
@@ -1528,14 +1532,8 @@
   <script src="{{ asset('js/lock.js') }}"></script>
   <script src="{{ asset('js/DashboardMissing.js') }}"></script>
   <script src="{{ asset('js/dashboard-specification.js') }}"></script>
-
-
-
-
-
-
+  <script src="{{ asset('js/inventory-modal-damage.js') }}"></script>
 
 
 </body>
-
 </html>

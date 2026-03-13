@@ -1313,6 +1313,151 @@ public function maintenanceTableHtml()
     return response()->json(['html' => $html]);
 }
 
+public function markInventoryDamageUponArrival(Request $request)
+{
+    $request->validate([
+        'serial_no' => 'required|string|exists:items,serial_no',
+        'reason'    => 'required|string|max:255',
+    ]);
+
+    $serialNo = trim($request->serial_no);
+    $reason   = trim($request->reason);
+
+    $item = Item::where('serial_no', $serialNo)->first();
+
+    if (!$item) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Item not found.'
+        ], 404);
+    }
+
+    $loggedInUser = auth()->user();
+
+    if (!$loggedInUser) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Unauthorized.'
+        ], 401);
+    }
+
+    if (empty($item->created_at)) {
+        return response()->json([
+            'success' => false,
+            'message' => 'This item has no creation date. Unable to mark as damaged upon arrival.'
+        ], 422);
+    }
+
+    $createdAt = Carbon::parse($item->created_at)->startOfDay();
+    $today = now()->startOfDay();
+    $daysSinceCreated = $createdAt->diffInDays($today, false);
+
+    // allow only items created within 3 days
+    if ($daysSinceCreated > 3) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Only items created within 3 days can be marked as damaged upon arrival.'
+        ], 422);
+    }
+
+    if ($daysSinceCreated < 0) {
+        return response()->json([
+            'success' => false,
+            'message' => 'This item has an invalid creation date in the future.'
+        ], 422);
+    }
+
+    if ($item->status === 'Damaged') {
+        return response()->json([
+            'success' => false,
+            'message' => 'This item is already marked as damaged.'
+        ], 422);
+    }
+
+    $finalObservation = $reason . ' - Upon Arrival';
+
+    DB::beginTransaction();
+
+    try {
+        // 1) update item status
+        $item->status = 'Damaged';
+        $item->updated_at = now();
+        $item->save();
+
+        // 2) create damage report with reported_by
+        $damageId = DB::table('damagereports')->insertGetId([
+            'serial_no'     => $item->serial_no,
+            'observation'   => $finalObservation,
+            'borrower_name' => null,
+            'reported_by'   => $loggedInUser->user_id,
+            'reported_at'   => now(),
+            'created_at'    => now(),
+            'updated_at'    => now(),
+        ]);
+
+        // 3) create admin notification
+        $notifId = DB::table('notifications')->insertGetId([
+            'type'               => 'damage_upon_arrival',
+            'title'              => 'Damage Upon Arrival Reported',
+            'message'            => "{$item->item_name} ({$item->serial_no}) was marked as damaged upon arrival. Reason: {$finalObservation}",
+            'severity'           => 'warning',
+            'entity_type'        => 'damage_report',
+            'entity_id'          => $damageId,
+            'action_url'         => route('dashboard', ['section' => 'inventory']),
+            'data'               => json_encode([
+                'serial_no'   => $item->serial_no,
+                'item_name'   => $item->item_name,
+                'observation' => $finalObservation,
+                'reported_by' => $loggedInUser->user_id,
+                'source'      => 'inventory_modal_upon_arrival',
+            ]),
+            'created_by_user_id' => $loggedInUser->user_id,
+            'created_at'         => now(),
+            'updated_at'         => now(),
+        ]);
+
+        // 4) send notification to all Admin users
+        $adminIds = DB::table('users')
+            ->where('role', 'Admin')
+            ->pluck('user_id');
+
+        $recipientRows = [];
+        foreach ($adminIds as $adminId) {
+            $recipientRows[] = [
+                'notif_id'           => $notifId,
+                'recipient_user_id'  => $adminId,
+                'read_at'            => null,
+                'deleted_at'         => null,
+                'created_at'         => now(),
+                'updated_at'         => now(),
+            ];
+        }
+
+        if (!empty($recipientRows)) {
+            DB::table('notification_recipients')->insert($recipientRows);
+        }
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Item marked as damaged upon arrival successfully.',
+            'data' => [
+                'serial_no'   => $item->serial_no,
+                'item_name'   => $item->item_name,
+                'observation' => $finalObservation,
+            ]
+        ]);
+    } catch (\Exception $e) {
+        DB::rollBack();
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to mark item as damaged: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
 public function damageTableHtml()
 {
     // ✅ IMPORTANT: show only not yet ticketed AND item still Damaged

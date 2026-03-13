@@ -632,22 +632,51 @@ public function exportPdf(Request $request)
     $status = $request->get('status', 'All');
     $search = $request->get('search', '');
 
-    $query = Item::query();
+    $query = DB::table('items as i')
+        ->select(
+            'i.serial_no',
+            'i.item_name',
+            'i.description',
+            'i.source_of_fund',
+            'i.classification',
+            'i.date_acquired',
+            'i.status'
+        );
 
-    // Filter by status
-    if ($status !== 'All') {
-        $query->where('status', $status);
+    if ($status === 'Damaged') {
+        $latestDamage = DB::table('damagereports')
+            ->selectRaw('serial_no, MAX(damage_id) as damage_id')
+            ->groupBy('serial_no');
+
+        $query->leftJoinSub($latestDamage, 'latest_damage', function ($join) {
+            $join->on('i.serial_no', '=', 'latest_damage.serial_no');
+        });
+
+        $query->leftJoin('damagereports as d', 'latest_damage.damage_id', '=', 'd.damage_id');
+
+        $query->addSelect('d.observation', 'd.reported_at');
     }
 
-    // Search by item name or serial number
+    if ($status !== 'All') {
+        if ($status === 'Missing') {
+            $query->whereIn('i.status', ['Missing', 'Lost']);
+        } else {
+            $query->where('i.status', $status);
+        }
+    }
+
     if (!empty($search)) {
-        $query->where(function ($q) use ($search) {
-            $q->where('item_name', 'like', '%' . $search . '%')
-              ->orWhere('serial_no', 'like', '%' . $search . '%');
+        $query->where(function ($q) use ($search, $status) {
+            $q->where('i.item_name', 'like', '%' . $search . '%')
+              ->orWhere('i.serial_no', 'like', '%' . $search . '%');
+
+            if ($status === 'Damaged') {
+                $q->orWhere('d.observation', 'like', '%' . $search . '%');
+            }
         });
     }
 
-    $items = $query->orderBy('item_name', 'asc')->get();
+    $items = $query->orderBy('i.item_name', 'asc')->get();
 
     $pdf = Pdf::loadView('exports.inventory-pdf', [
         'items' => $items,

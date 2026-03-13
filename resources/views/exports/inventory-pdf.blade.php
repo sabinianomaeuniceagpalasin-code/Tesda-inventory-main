@@ -2,7 +2,9 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Inventory Export</title>
+    <title>
+        {{ $status === 'Damaged' ? 'Damaged Items Export' : 'Inventory Export' }}
+    </title>
     <style>
         body {
             font-family: DejaVu Sans, sans-serif;
@@ -70,13 +72,14 @@
 </head>
 <body>
     <div class="header">
-        <h2>TESDA Inventory Report</h2>
+        <h2>
+            {{ $status === 'Damaged' ? 'TESDA Damaged Items Report' : 'TESDA Inventory Report' }}
+        </h2>
         <p>Automated Tools and Equipment Inventory Control System</p>
     </div>
 
     <div class="meta">
         <p><strong>Filter:</strong> {{ $status }}</p>
-        <p><strong>Search:</strong> {{ $search ?: 'None' }}</p>
         <p><strong>Date Generated:</strong> {{ $generatedAt }}</p>
         <p><strong>Total Records:</strong> {{ $items->count() }}</p>
     </div>
@@ -90,6 +93,12 @@
                 <th>Source of Fund</th>
                 <th>Classification</th>
                 <th>Date Acquired</th>
+
+                @if($status === 'Damaged')
+                    <th>Observation</th>
+                    <th>Reported At</th>
+                @endif
+
                 <th>Status</th>
             </tr>
         </thead>
@@ -104,11 +113,21 @@
                     <td>
                         {{ $item->date_acquired ? \Carbon\Carbon::parse($item->date_acquired)->format('F d, Y') : '-' }}
                     </td>
+
+                    @if($status === 'Damaged')
+                        <td>{{ $item->observation ?? '-' }}</td>
+                        <td>
+                            {{ $item->reported_at ? \Carbon\Carbon::parse($item->reported_at)->format('F d, Y') : '-' }}
+                        </td>
+                    @endif
+
                     <td class="status">{{ $item->status }}</td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="7" style="text-align:center;">No inventory records found.</td>
+                    <td colspan="{{ $status === 'Damaged' ? 9 : 7 }}" style="text-align:center;">
+                        No inventory records found.
+                    </td>
                 </tr>
             @endforelse
         </tbody>

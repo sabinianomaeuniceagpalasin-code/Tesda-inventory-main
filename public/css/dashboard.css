@@ -3446,3 +3446,128 @@ td {
     margin-left: 16px;
     white-space: nowrap;
 }
+.damage-swal-popup {
+    border-radius: 18px !important;
+    padding: 24px 24px 18px !important;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.18) !important;
+    font-family: Arial, sans-serif;
+}
+
+.damage-swal-title {
+    font-size: 2rem !important;
+    font-weight: 700 !important;
+    color: #1e3a8a !important;
+    margin-bottom: 10px !important;
+}
+
+.damage-modal-content {
+    text-align: left;
+    padding-top: 6px;
+}
+
+.damage-modal-icon-wrap {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 14px;
+}
+
+.damage-modal-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: #fef3c7;
+    color: #d97706;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    box-shadow: inset 0 0 0 1px rgba(217, 119, 6, 0.15);
+}
+
+.damage-modal-subtitle {
+    text-align: center;
+    font-size: 16px;
+    color: #475569;
+    margin-bottom: 20px;
+    line-height: 1.6;
+}
+
+.damage-item-name {
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.damage-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.damage-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #334155;
+}
+
+.damage-textarea {
+    width: 100%;
+    min-height: 130px;
+    resize: vertical;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 14px 15px;
+    font-size: 15px;
+    outline: none;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+    background: #f8fafc;
+    color: #0f172a;
+}
+
+.damage-textarea:focus {
+    border-color: #2563eb;
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.damage-help-text {
+    font-size: 13px;
+    color: #64748b;
+}
+
+.damage-counter {
+    text-align: right;
+    font-size: 12px;
+    color: #64748b;
+    margin-top: -2px;
+}
+
+.damage-swal-confirm {
+    background: #2563eb !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 10px !important;
+    padding: 10px 22px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    box-shadow: none !important;
+}
+
+.damage-swal-confirm:hover {
+    background: #1d4ed8 !important;
+}
+
+.damage-swal-cancel {
+    background: #e5e7eb !important;
+    color: #111827 !important;
+    border: none !important;
+    border-radius: 10px !important;
+    padding: 10px 22px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    box-shadow: none !important;
+}
+
+.damage-swal-cancel:hover {
+    background: #d1d5db !important;
+}

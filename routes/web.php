@@ -192,6 +192,9 @@ Route::post('/notifications/read-all', [NotificationController::class, 'markAllA
         Route::post('/maintenance/make-available/{serial}', [DashboardController::class, 'makeAvailable']);
         Route::get('/maintenance/history/{serial}', [DashboardController::class, 'getMaintenanceHistory']);
 
+        Route::post('/inventory/item/mark-damaged-upon-arrival', [DashboardController::class, 'markInventoryDamageUponArrival'])
+            ->name('inventory.damage.uponArrival');
+
         // Optional admin-only analytics in its own group below
     });
 
