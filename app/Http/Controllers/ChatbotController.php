@@ -11,6 +11,7 @@ class ChatbotController extends Controller
 {
     // session key for "memory"
     private const CTX_LAST_SERIAL = 'chatbot.last_serial';
+    private const CTX_LAST_LIST_SERIALS = 'chatbot.last_list_serials';
 
     public function chat(Request $request)
     {
@@ -77,7 +78,7 @@ class ChatbotController extends Controller
                 return $this->itemCount($msg);
 
             case 'LIST_DAMAGED':
-                return $this->listDamaged();
+                return $this->listDamaged($request);
 
             case 'DAMAGED_WITH_BORROWER':
                 return $this->damagedWithBorrower();
@@ -87,6 +88,12 @@ class ChatbotController extends Controller
 
             case 'UNSERVICEABLE_WITH_BORROWER':
                 return $this->unserviceableWithBorrower();
+
+            case 'LIST_MISSING':
+                return $this->listMissing($request);
+
+            case 'MISSING_WITH_BORROWER':
+                return $this->missingWithBorrower();    
 
             case 'ITEM_STATUS':
                 return $this->itemStatus($request, $raw);
@@ -123,11 +130,6 @@ class ChatbotController extends Controller
         if (preg_match('/\b(what\s+can\s+you\s+do|help|commands|what\s+can\s+i\s+ask|how\s+to\s+use)\b/i', $msg)) {
             return 'HELP';
         }
-
-        // OUT-OF-SCOPE (not related to inventory)
-        if ($this->isOutOfScope($msg)) {
-            return 'OUT_OF_SCOPE';
-        }
         // FAQ
         if (preg_match('/(why|what\s+is).*(serial|serial\s+number).*tracking.*(important|purpose)|importance.*serial/i', $msg)) {
             return 'FAQ_SERIAL_TRACKING_IMPORTANCE';
@@ -158,11 +160,17 @@ class ChatbotController extends Controller
         if (preg_match('/list\s+.*damaged|damaged\s+items/i', $msg)) {
             return 'LIST_DAMAGED';
         }
-        if (preg_match('/(who|last).*(borrower|borrowed).*(unserviceable)|unserviceable.*(who|last).*(borrower|borrowed)/i', $msg)) {
-            return 'UNSERVICEABLE_WITH_BORROWER';
+        if (preg_match('/(show|list|who|last).*(borrower|borrowed).*(unserviceable)|unserviceable.*(show|list|who|last).*(borrower|borrowed)|unserviceable.*with\s+borrower/i', $msg)) {
+    return 'UNSERVICEABLE_WITH_BORROWER';
         }
         if (preg_match('/list\s+.*unserviceable|show\s+.*unserviceable|unserviceable\s+items/i', $msg)) {
             return 'LIST_UNSERVICEABLE';
+        }
+        if (preg_match('/(show|list|who|last).*(borrower|borrowed|has).*(missing)|missing.*(show|list|who|last).*(borrower|borrowed|has)|missing.*with\s+borrower/i', $msg)) {
+            return 'MISSING_WITH_BORROWER';
+        }
+        if (preg_match('/list\s+.*missing|show\s+.*missing|missing\s+items/i', $msg)) {
+            return 'LIST_MISSING';
         }
         if (preg_match('/list\s+.*available/i', $msg)) {
             return 'LIST_AVAILABLE';
@@ -179,7 +187,7 @@ class ChatbotController extends Controller
 
         // SERIAL-BASED (with or without explicit SN)
         // If message contains SN -> direct handlers
-        if (preg_match('/who\s+(borrowed|issued|is\s+using|last).*sn[\-\s]?\d+/i', $msg)) {
+        if (preg_match('/\b(who\s+borrowed|who\s+issued|who\s+is\s+using|who\s+has)\s+(it|them)?\b/i', $msg)) {
             return 'WHO_BORROWED';
         }
         if (preg_match('/when.*(sn[\-\s]?\d+).*issued|when.*issued.*(sn[\-\s]?\d+)/i', $msg)) {
@@ -210,12 +218,37 @@ class ChatbotController extends Controller
             return 'WHO_DAMAGED';
         }
 
+        // OUT-OF-SCOPE (not related to inventory)
+        if ($this->isOutOfScope($msg)) {
+            return 'OUT_OF_SCOPE';
+        }
+
         return 'FALLBACK';
     }
 
     /* =========================
      | SESSION MEMORY (FAST)
      ========================= */
+     private function hasExplicitSerial(string $text): bool
+            {
+                return preg_match('/\bsn[\-\s]?\d+\b/i', $text) === 1;
+            }
+     private function getLastListSerials(Request $request): array
+        {
+            $v = $request->session()->get(self::CTX_LAST_LIST_SERIALS, []);
+            return is_array($v) ? $v : [];
+        }
+
+        private function setLastListSerials(Request $request, array $serials): void
+        {
+            $request->session()->put(self::CTX_LAST_LIST_SERIALS, array_values($serials));
+        }
+
+        private function clearLastListSerials(Request $request): void
+        {
+            $request->session()->forget(self::CTX_LAST_LIST_SERIALS);
+        }
+
     private function getLastSerial(Request $request): ?string
     {
         $v = $request->session()->get(self::CTX_LAST_SERIAL);
@@ -336,118 +369,169 @@ class ChatbotController extends Controller
     }
 
     private function unserviceableWithBorrower()
-    {
-        $items = DB::table('items')
-            ->where('status', 'Unserviceable')
-            ->select('item_name', 'serial_no')
-            ->orderBy('item_name')
-            ->orderBy('serial_no')
-            ->get();
+{
+    $items = DB::table('items')
+        ->where('status', 'Unserviceable')
+        ->select('item_name', 'serial_no')
+        ->orderBy('item_name')
+        ->orderBy('serial_no')
+        ->get();
 
-        if ($items->isEmpty()) {
-            return response()->json(['reply' => 'There are currently no unserviceable items.']);
-        }
-
-        $reply = "<strong>Unserviceable Items and Last Borrower:</strong><br><br>";
-
-        foreach ($items as $it) {
-
-            $issued = DB::table('issuedlog as i')
-                ->leftJoin('formrecords as f', 'i.reference_no', '=', 'f.reference_no')
-                ->where('i.serial_no', $it->serial_no)
-                ->orderByDesc('i.issue_id')
-                ->select(
-                    'i.issue_id',
-                    'i.issued_by',
-                    'i.issued_date',
-                    DB::raw("COALESCE(NULLIF(i.borrower_name,''), NULLIF(f.borrower_name,'')) as borrower_name")
-                )
-                ->first();
-
-            if ($issued) {
-                $borrower = $issued->borrower_name ?? 'N/A';
-                if (trim((string)$borrower) === '') $borrower = 'N/A';
-
-                $issuedByName = $this->issuedByName($issued->issued_by);
-                $issuedDate = $issued->issued_date ? date('F d, Y', strtotime($issued->issued_date)) : 'N/A';
-
-                $reply .= "<strong>{$it->item_name}</strong> ({$it->serial_no})<br>"
-                    . "Last Borrower: <strong>{$borrower}</strong><br>"
-                    . "Issued By: {$issuedByName}<br>"
-                    . "Date Issued: {$issuedDate}<br><br>";
-            } else {
-                $reply .= "<strong>{$it->item_name}</strong> ({$it->serial_no})<br>"
-                    . "No issuance record found.<br><br>";
-            }
-        }
-
-        return response()->json(['reply' => $reply]);
+    if ($items->isEmpty()) {
+        return response()->json(['reply' => 'There are currently no unserviceable items.']);
     }
 
-    private function listDamaged()
-    {
-        $items = DB::table('items')
-            ->where('status', 'Damaged')
-            ->select('item_name', 'serial_no')
-            ->orderBy('item_name')
-            ->orderBy('serial_no')
-            ->get();
+    $reply = "<strong>Unserviceable Items and Last Borrower:</strong><br><br>";
 
-        if ($items->isEmpty()) {
-            return response()->json(['reply' => 'There are currently no damaged items.']);
+    foreach ($items as $it) {
+        $issued = DB::table('issuedlog as i')
+            ->leftJoin('formrecords as f', 'i.reference_no', '=', 'f.reference_no')
+            ->where('i.serial_no', $it->serial_no)
+            ->orderByDesc('i.issue_id')
+            ->select(
+                'i.issue_id',
+                'i.issued_by',
+                'i.issued_date',
+                'i.return_date',
+                'i.actual_return_date',
+                DB::raw("COALESCE(NULLIF(i.borrower_name,''), NULLIF(f.borrower_name,'')) as borrower_name")
+            )
+            ->first();
+
+        if ($issued) {
+            $borrower = trim((string)($issued->borrower_name ?? '')) ?: 'N/A';
+            $issuedByName = $this->issuedByName($issued->issued_by);
+            $issuedDate = $issued->issued_date ? date('F d, Y', strtotime($issued->issued_date)) : 'N/A';
+            $returnDate = $issued->return_date ? date('F d, Y', strtotime($issued->return_date)) : 'N/A';
+            $actualReturn = $issued->actual_return_date ? date('F d, Y', strtotime($issued->actual_return_date)) : null;
+            $returnLine = $actualReturn ? "Returned: {$actualReturn}" : "Expected Return: {$returnDate}";
+
+            $reply .= "<strong>{$it->item_name}</strong><br>"
+                . "Serial No: {$it->serial_no}<br>"
+                . "Last Borrower: <strong>{$borrower}</strong><br>"
+                . "Issued By: {$issuedByName}<br>"
+                . "Date Issued: {$issuedDate}<br>"
+                . "{$returnLine}<br><br>";
+        } else {
+            $reply .= "<strong>{$it->item_name}</strong><br>"
+                . "Serial No: {$it->serial_no}<br>"
+                . "No issuance record found.<br><br>";
         }
-
-        $reply = "<strong>Damaged Items:</strong><br><br>";
-        $currentItem = null;
-
-        foreach ($items as $item) {
-            if ($currentItem !== $item->item_name) {
-                $currentItem = $item->item_name;
-                $reply .= "<br><strong>{$currentItem}</strong><br>";
-            }
-            $reply .= "• {$item->serial_no}<br>";
-        }
-
-        return response()->json(['reply' => $reply]);
     }
+
+    return response()->json(['reply' => $reply]);
+}
+
+    private function listDamaged(Request $request)
+{
+    $items = DB::table('items')
+        ->where('status', 'Damaged')
+        ->select('item_name', 'serial_no')
+        ->orderBy('item_name')
+        ->orderBy('serial_no')
+        ->get();
+
+    if ($items->isEmpty()) {
+        $this->clearLastListSerials($request);
+        return response()->json(['reply' => 'There are currently no damaged items.']);
+    }
+
+    $serials = $items->pluck('serial_no')->filter()->values()->toArray();
+    $this->setLastListSerials($request, $serials);
+
+    // keep this only if you still want single-item fallback
+    if (count($serials) === 1) {
+        $this->setLastSerial($request, $serials[0]);
+    }
+
+    $reply = "<strong>Damaged Items:</strong><br><br>";
+    $currentItem = null;
+
+    foreach ($items as $item) {
+        if ($currentItem !== $item->item_name) {
+            $currentItem = $item->item_name;
+            $reply .= "<br><strong>{$currentItem}</strong><br>";
+        }
+        $reply .= "• {$item->serial_no}<br>";
+    }
+
+    return response()->json(['reply' => $reply]);
+}
 
     private function damagedWithBorrower()
-    {
-        $damagedItems = DB::table('items')
-            ->where('status', 'Damaged')
-            ->select('item_name', 'serial_no')
-            ->orderBy('item_name')
-            ->get();
+{
+    $damagedItems = DB::table('items')
+        ->where('status', 'Damaged')
+        ->select('item_name', 'serial_no')
+        ->orderBy('item_name')
+        ->orderBy('serial_no')
+        ->get();
 
-        if ($damagedItems->isEmpty()) {
-            return response()->json(['reply' => 'There are currently no damaged items.']);
-        }
-
-        $reply = "<strong>Damaged Items and Last Issuance:</strong><br><br>";
-
-        foreach ($damagedItems as $it) {
-            $issued = DB::table('issuedlog')
-                ->where('serial_no', $it->serial_no)
-                ->orderByDesc('issue_id')
-                ->first();
-
-            if ($issued) {
-                $issuedByName = $this->issuedByName($issued->issued_by);
-                $borrower = $issued->borrower_name ?? 'N/A';
-                $issuedDate = $issued->issued_date ? date('F d, Y', strtotime($issued->issued_date)) : 'N/A';
-
-                $reply .= "<strong>{$it->item_name}</strong> ({$it->serial_no})<br>"
-                    . "Borrower: {$borrower}<br>"
-                    . "Issued By: {$issuedByName}<br>"
-                    . "Date Issued: {$issuedDate}<br><br>";
-            } else {
-                $reply .= "<strong>{$it->item_name}</strong> ({$it->serial_no})<br>"
-                    . "No issued record found.<br><br>";
-            }
-        }
-
-        return response()->json(['reply' => $reply]);
+    if ($damagedItems->isEmpty()) {
+        return response()->json(['reply' => 'There are currently no damaged items.']);
     }
+
+    $reply = "<strong>Damaged Items and Last Issuance:</strong><br><br>";
+
+    foreach ($damagedItems as $it) {
+        $issued = DB::table('issuedlog')
+            ->where('serial_no', $it->serial_no)
+            ->orderByDesc('issue_id')
+            ->first();
+
+        $damage = DB::table('damagereports')
+            ->where('serial_no', $it->serial_no)
+            ->orderByDesc('reported_at')
+            ->select('observation', 'borrower_name')
+            ->first();
+
+        $observation = trim((string)($damage->observation ?? ''));
+        $damageBorrower = trim((string)($damage->borrower_name ?? ''));
+
+        if ($issued) {
+            $issuedByName = $this->issuedByName($issued->issued_by);
+            $borrower = trim((string)($issued->borrower_name ?? '')) ?: 'N/A';
+            $issuedDate = $issued->issued_date ? date('F d, Y', strtotime($issued->issued_date)) : 'N/A';
+
+            $reply .= "<strong>{$it->item_name}</strong> ({$it->serial_no})<br>"
+                . "Borrower: {$borrower}<br>";
+
+            if ($observation !== '' && preg_match('/upon\s+arrival|upon\s+arival/i', $observation)) {
+                $nameToShow = $damageBorrower !== '' ? $damageBorrower : $borrower;
+                $reply .= "Borrower Name: {$nameToShow} - Damaged upon arrival<br>";
+            }
+
+            $reply .= "Issued By: {$issuedByName}<br>"
+                . "Date Issued: {$issuedDate}<br>";
+
+            if ($observation !== '') {
+                $reply .= "Observation: {$observation}<br>";
+            }
+
+            $reply .= "<br>";
+        } else {
+            $borrower = $damageBorrower !== '' ? $damageBorrower : 'N/A';
+
+            $reply .= "<strong>{$it->item_name}</strong> ({$it->serial_no})<br>";
+
+            if ($borrower !== 'N/A') {
+                $reply .= "Borrower: {$borrower}<br>";
+            }
+
+            if ($observation !== '' && preg_match('/upon\s+arrival|upon\s+arival/i', $observation)) {
+                $reply .= "Borrower Name: {$borrower} - Damaged upon arrival<br>";
+            }
+
+            if ($observation !== '') {
+                $reply .= "Observation: {$observation}<br>";
+            }
+
+            $reply .= "No issued record found.<br><br>";
+        }
+    }
+
+    return response()->json(['reply' => $reply]);
+}
 
     private function listAll()
     {
@@ -516,7 +600,7 @@ class ChatbotController extends Controller
     }
 
     return response()->json([
-        'reply' => "There are {$total} {$itemName}(s) in stock."
+        'reply' => "There are {$total} {$itemName} in stock."
     ]);
 }
 
@@ -568,111 +652,209 @@ class ChatbotController extends Controller
     }
 
     private function whoBorrowed(Request $request, string $rawMessage)
-    {
-        $serial = $this->resolveSerialFromMessageOrContext($request, $rawMessage);
+{
+    $hasExplicitSerial = $this->hasExplicitSerial($rawMessage);
+    $lastListSerials = $this->getLastListSerials($request);
 
-        if (!$serial) {
-            return response()->json(['reply' => "Please include a serial like SN0001 (or ask about the previous item)."]);
-        }
+    // If user did NOT type a serial, but there is a recent listed group,
+    // answer for the whole group (or single item if only one exists).
+    if (!$hasExplicitSerial && !empty($lastListSerials)) {
+        $reply = "<strong>Last Borrower of Listed Items:</strong><br><br>";
 
-        // 1 query (JOIN) for speed
-        $row = DB::table('issuedlog as i')
-            ->leftJoin('items as it', 'i.serial_no', '=', 'it.serial_no')
-            ->where('i.serial_no', $serial)
-            ->orderByDesc('i.issue_id')
-            ->select(
-                'i.borrower_name',
-                'i.issued_by',
-                'i.issued_date',
-                'i.return_date',
-                'i.actual_return_date',
-                'it.item_name',
-                'it.status'
-            )
-            ->first();
-
-        // If no issued log, still show item if exists
-        if (!$row) {
-            $item = DB::table('items')
-                ->where('serial_no', $serial)
-                ->select('item_name', 'status')
+        foreach ($lastListSerials as $listSerial) {
+            $row = DB::table('issuedlog as i')
+                ->leftJoin('items as it', 'i.serial_no', '=', 'it.serial_no')
+                ->leftJoin('damagereports as d', function ($join) {
+                    $join->on('d.serial_no', '=', 'i.serial_no');
+                })
+                ->where('i.serial_no', $listSerial)
+                ->orderByDesc('i.issue_id')
+                ->select(
+                    'i.borrower_name',
+                    'i.issued_by',
+                    'i.issued_date',
+                    'i.return_date',
+                    'i.actual_return_date',
+                    'it.item_name',
+                    'it.status',
+                    'i.serial_no',
+                    DB::raw('(SELECT dr.observation
+                              FROM damagereports dr
+                              WHERE dr.serial_no = i.serial_no
+                              ORDER BY dr.reported_at DESC
+                              LIMIT 1) as latest_observation')
+                )
                 ->first();
 
-            if (!$item) {
-                return response()->json(['reply' => "Item not found for serial {$serial}."]);
-            }
+            if ($row) {
+                $itemName = $row->item_name ?? 'Unknown item';
+                $borrower = trim((string)($row->borrower_name ?? '')) ?: 'N/A';
+                $issuedByName = $this->issuedByName($row->issued_by);
+                $issuedDate = $row->issued_date ? date('F d, Y', strtotime($row->issued_date)) : 'N/A';
+                $actualReturn = $row->actual_return_date ? date('F d, Y', strtotime($row->actual_return_date)) : null;
+                $returnDate = $row->return_date ? date('F d, Y', strtotime($row->return_date)) : 'N/A';
+                $returnLine = $actualReturn ? "Returned: {$actualReturn}" : "Expected Return: {$returnDate}";
 
-            return response()->json([
-                'reply' => "<strong>{$item->item_name}</strong><br>
-                            Serial No: {$serial}<br>
-                            Status: {$item->status}<br><br>
-                            No borrowing/issuance record found."
-            ]);
+                $observation = trim((string)($row->latest_observation ?? ''));
+                $arrivalNote = '';
+
+                if ($observation !== '' && preg_match('/upon\s+arrival|upon\s+arival/i', $observation)) {
+                    $arrivalNote = "<br>Borrower Name: {$borrower} - Damaged upon arrival";
+                }
+
+                $reply .= "<strong>{$itemName}</strong><br>"
+                    . "Serial No: {$listSerial}<br>"
+                    . "Status: " . ($row->status ?? 'Unknown') . "<br><br>"
+                    . "Borrower: {$borrower}{$arrivalNote}<br>"
+                    . "Issued By: {$issuedByName}<br>"
+                    . "Date Issued: {$issuedDate}<br>"
+                    . "{$returnLine}";
+
+                if ($observation !== '') {
+                    $reply .= "<br>Observation: {$observation}";
+                }
+
+                $reply .= "<br><br>";
+            } else {
+                $item = DB::table('items')
+                    ->where('serial_no', $listSerial)
+                    ->select('item_name', 'status')
+                    ->first();
+
+                $itemName = $item->item_name ?? 'Unknown item';
+                $status = $item->status ?? 'Unknown';
+
+                $latestDamage = DB::table('damagereports')
+                    ->where('serial_no', $listSerial)
+                    ->orderByDesc('reported_at')
+                    ->select('borrower_name', 'observation')
+                    ->first();
+
+                $borrower = trim((string)($latestDamage->borrower_name ?? '')) ?: 'N/A';
+                $observation = trim((string)($latestDamage->observation ?? ''));
+                $arrivalNote = '';
+
+                if ($observation !== '' && preg_match('/upon\s+arrival|upon\s+arival/i', $observation)) {
+                    $arrivalNote = " - Damaged upon arrival";
+                }
+
+                $reply .= "<strong>{$itemName}</strong><br>"
+                    . "Serial No: {$listSerial}<br>"
+                    . "Status: {$status}<br>";
+
+                if ($borrower !== 'N/A') {
+                    $reply .= "Borrower Name: {$borrower}{$arrivalNote}<br>";
+                }
+
+                if ($observation !== '') {
+                    $reply .= "Observation: {$observation}<br>";
+                }
+
+                $reply .= "No borrowing/issuance record found.<br><br>";
+            }
         }
 
-        $itemName = $row->item_name ?? 'Unknown item';
-        $status = $row->status ?? 'Unknown';
-
-        $borrower = $row->borrower_name ?: 'N/A';
-        $issuedByName = $this->issuedByName($row->issued_by);
-        $issuedDate = $row->issued_date ? date('F d, Y', strtotime($row->issued_date)) : 'N/A';
-        $returnDate = $row->return_date ? date('F d, Y', strtotime($row->return_date)) : 'N/A';
-        $actualReturn = $row->actual_return_date ? date('F d, Y', strtotime($row->actual_return_date)) : null;
-
-        $returnLine = $actualReturn ? "Returned: {$actualReturn}" : "Expected Return: {$returnDate}";
-
-        return response()->json([
-            'reply' => "<strong>{$itemName}</strong><br>
-                        Serial No: {$serial}<br>
-                        Status: {$status}<br><br>
-                        Borrower: {$borrower}<br>
-                        Issued By: {$issuedByName}<br>
-                        Date Issued: {$issuedDate}<br>
-                        {$returnLine}"
-        ]);
+        return response()->json(['reply' => $reply]);
     }
 
-    private function whoDamaged(Request $request, string $rawMessage)
-    {
-        $serial = $this->resolveSerialFromMessageOrContext($request, $rawMessage);
+    // Explicit serial OR fallback to single remembered serial
+    $serial = $this->resolveSerialFromMessageOrContext($request, $rawMessage);
 
-        if (!$serial) {
-            return response()->json(['reply' => "Please provide a serial number like SN0006."]);
-        }
+    if (!$serial) {
+        return response()->json(['reply' => "Please include a serial like SN0001 (or ask right after listing damaged items)."]);
+    }
 
-        $damage = DB::table('damagereports as d')
-            ->leftJoin('users as u', 'd.reported_by', '=', 'u.user_id')
-            ->where('d.serial_no', $serial)
-            ->orderByDesc('d.reported_at')
-            ->select(
-                'd.serial_no',
-                'd.observation',
-                'd.reported_at',
-                'd.borrower_name',
-                'u.first_name',
-                'u.last_name'
-            )
+    $row = DB::table('issuedlog as i')
+        ->leftJoin('items as it', 'i.serial_no', '=', 'it.serial_no')
+        ->where('i.serial_no', $serial)
+        ->orderByDesc('i.issue_id')
+        ->select(
+            'i.borrower_name',
+            'i.issued_by',
+            'i.issued_date',
+            'i.return_date',
+            'i.actual_return_date',
+            'it.item_name',
+            'it.status',
+            DB::raw('(SELECT dr.observation
+                      FROM damagereports dr
+                      WHERE dr.serial_no = i.serial_no
+                      ORDER BY dr.reported_at DESC
+                      LIMIT 1) as latest_observation')
+        )
+        ->first();
+
+    if (!$row) {
+        $item = DB::table('items')
+            ->where('serial_no', $serial)
+            ->select('item_name', 'status')
             ->first();
 
-        if (!$damage) {
-            return response()->json(['reply' => "No damage report found for {$serial}."]);
+        if (!$item) {
+            return response()->json(['reply' => "Item not found for serial {$serial}."]);
         }
 
-        $reportedBy = trim(($damage->first_name ?? '') . ' ' . ($damage->last_name ?? ''));
-        if ($reportedBy === '') $reportedBy = 'Unknown user';
+        $latestDamage = DB::table('damagereports')
+            ->where('serial_no', $serial)
+            ->orderByDesc('reported_at')
+            ->select('borrower_name', 'observation')
+            ->first();
 
-        $date = $damage->reported_at ? date('F d, Y', strtotime($damage->reported_at)) : 'Unknown date';
-        $borrower = $damage->borrower_name ?: 'N/A';
+        $borrower = trim((string)($latestDamage->borrower_name ?? '')) ?: 'N/A';
+        $observation = trim((string)($latestDamage->observation ?? ''));
+        $arrivalNote = '';
 
-        return response()->json([
-            'reply' =>
-                "<strong>{$serial}</strong><br>" .
-                "Damaged reported by: <strong>{$reportedBy}</strong><br>" .
-                "Borrower at time: <strong>{$borrower}</strong><br>" .
-                "Date reported: {$date}<br>" .
-                "Observation: {$damage->observation}"
-        ]);
+        if ($observation !== '' && preg_match('/upon\s+arrival|upon\s+arival/i', $observation)) {
+            $arrivalNote = " - Damaged upon arrival";
+        }
+
+        $reply = "<strong>{$item->item_name}</strong><br>
+                    Serial No: {$serial}<br>
+                    Status: {$item->status}<br><br>";
+
+        if ($borrower !== 'N/A') {
+            $reply .= "Borrower Name: {$borrower}{$arrivalNote}<br>";
+        }
+
+        if ($observation !== '') {
+            $reply .= "Observation: {$observation}<br>";
+        }
+
+        $reply .= "No borrowing/issuance record found.";
+
+        return response()->json(['reply' => $reply]);
     }
+
+    $itemName = $row->item_name ?? 'Unknown item';
+    $status = $row->status ?? 'Unknown';
+    $borrower = trim((string)($row->borrower_name ?? '')) ?: 'N/A';
+    $issuedByName = $this->issuedByName($row->issued_by);
+    $issuedDate = $row->issued_date ? date('F d, Y', strtotime($row->issued_date)) : 'N/A';
+    $returnDate = $row->return_date ? date('F d, Y', strtotime($row->return_date)) : 'N/A';
+    $actualReturn = $row->actual_return_date ? date('F d, Y', strtotime($row->actual_return_date)) : null;
+    $returnLine = $actualReturn ? "Returned: {$actualReturn}" : "Expected Return: {$returnDate}";
+
+    $observation = trim((string)($row->latest_observation ?? ''));
+    $arrivalNote = '';
+
+    if ($observation !== '' && preg_match('/upon\s+arrival|upon\s+arival/i', $observation)) {
+        $arrivalNote = "<br>Borrower Name: {$borrower} - Damaged upon arrival";
+    }
+
+    $reply = "<strong>{$itemName}</strong><br>
+                Serial No: {$serial}<br>
+                Status: {$status}<br><br>
+                Borrower: {$borrower}{$arrivalNote}<br>
+                Issued By: {$issuedByName}<br>
+                Date Issued: {$issuedDate}<br>
+                {$returnLine}";
+
+    if ($observation !== '') {
+        $reply .= "<br>Observation: {$observation}";
+    }
+
+    return response()->json(['reply' => $reply]);
+}
 
     /* =========================
      | FAQs (same as yours)
@@ -736,6 +918,7 @@ class ChatbotController extends Controller
             "List available items",
             "List damaged items",
             "List unserviceable items",
+            "List missing items",
             "List all items",
             "How many items are in inventory?",
             "Low stock items",
@@ -745,6 +928,7 @@ class ChatbotController extends Controller
             "Who reported damage of SN?",
             "Show damaged items with borrower",
             "Show unserviceable items with borrower",
+            "Show missing items with borrower",
         ];
 
         // Dynamic item-name prompts
@@ -797,22 +981,24 @@ private function intro()
 private function help()
 {
     $reply =
-        "<strong>Here’s what I can help you with:</strong><br><br>" .
-        "✅ <strong>Inventory Lists</strong><br>" .
-        "• List available items<br>" .
-        "• List damaged items<br>" .
-        "• List unserviceable items<br>" .
-        "• Show damaged items with borrower<br>" .
-        "• Show unserviceable items with borrower<br><br>" .
-        "✅ <strong>Counts</strong><br>" .
-        "• How many items are in inventory?<br>" .
-        "• How many laptops?<br>" .
-        "• Low stock items<br><br>" .
-        "✅ <strong>Serial Number Queries</strong><br>" .
-        "• What is the status of SN0001?<br>" .
-        "• Who borrowed SN0001?<br>" .
-        "• When was SN0001 issued?<br>" .
-        "• Who reported damage of SN0001?<br>";
+    "<strong>Here’s what I can help you with:</strong><br><br>" .
+    "✅ <strong>Inventory Lists</strong><br>" .
+    "• List available items<br>" .
+    "• List damaged items<br>" .
+    "• List unserviceable items<br>" .
+    "• List missing items<br>" .
+    "• Show damaged items with borrower<br>" .
+    "• Show unserviceable items with borrower<br>" .
+    "• Show missing items with borrower<br><br>" .
+    "✅ <strong>Counts</strong><br>" .
+    "• How many items are in inventory?<br>" .
+    "• How many laptops?<br>" .
+    "• Low stock items<br><br>" .
+    "✅ <strong>Serial Number Queries</strong><br>" .
+    "• What is the status of SN0001?<br>" .
+    "• Who borrowed SN0001?<br>" .
+    "• When was SN0001 issued?<br>" .
+    "• Who reported damage of SN0001?<br>";
 
     return response()->json(['reply' => $reply]);
 }
@@ -829,13 +1015,102 @@ private function outOfScope()
     ]);
 }
 
+private function listMissing(Request $request)
+{
+    $items = DB::table('items')
+        ->where('status', 'Missing')
+        ->select('item_name', 'serial_no')
+        ->orderBy('item_name')
+        ->orderBy('serial_no')
+        ->get();
+
+    if ($items->isEmpty()) {
+        $this->clearLastListSerials($request);
+        return response()->json(['reply' => 'There are currently no missing items.']);
+    }
+
+    $serials = $items->pluck('serial_no')->filter()->values()->toArray();
+    $this->setLastListSerials($request, $serials);
+
+    if (count($serials) === 1) {
+        $this->setLastSerial($request, $serials[0]);
+    }
+
+    $reply = "<strong>Missing Items:</strong><br><br>";
+    $currentItem = null;
+
+    foreach ($items as $item) {
+        if ($currentItem !== $item->item_name) {
+            $currentItem = $item->item_name;
+            $reply .= "<br><strong>{$currentItem}</strong><br>";
+        }
+        $reply .= "• {$item->serial_no}<br>";
+    }
+
+    return response()->json(['reply' => $reply]);
+}
+
+private function missingWithBorrower()
+{
+    $items = DB::table('items')
+        ->where('status', 'Missing')
+        ->select('item_name', 'serial_no')
+        ->orderBy('item_name')
+        ->orderBy('serial_no')
+        ->get();
+
+    if ($items->isEmpty()) {
+        return response()->json(['reply' => 'There are currently no missing items.']);
+    }
+
+    $reply = "<strong>Missing Items and Last Borrower:</strong><br><br>";
+
+    foreach ($items as $it) {
+        $issued = DB::table('issuedlog as i')
+            ->leftJoin('formrecords as f', 'i.reference_no', '=', 'f.reference_no')
+            ->where('i.serial_no', $it->serial_no)
+            ->orderByDesc('i.issue_id')
+            ->select(
+                'i.issue_id',
+                'i.issued_by',
+                'i.issued_date',
+                'i.return_date',
+                'i.actual_return_date',
+                DB::raw("COALESCE(NULLIF(i.borrower_name,''), NULLIF(f.borrower_name,'')) as borrower_name")
+            )
+            ->first();
+
+        if ($issued) {
+            $borrower = trim((string)($issued->borrower_name ?? '')) ?: 'N/A';
+            $issuedByName = $this->issuedByName($issued->issued_by);
+            $issuedDate = $issued->issued_date ? date('F d, Y', strtotime($issued->issued_date)) : 'N/A';
+            $returnDate = $issued->return_date ? date('F d, Y', strtotime($issued->return_date)) : 'N/A';
+            $actualReturn = $issued->actual_return_date ? date('F d, Y', strtotime($issued->actual_return_date)) : null;
+            $returnLine = $actualReturn ? "Returned: {$actualReturn}" : "Expected Return: {$returnDate}";
+
+            $reply .= "<strong>{$it->item_name}</strong><br>"
+                . "Serial No: {$it->serial_no}<br>"
+                . "Last Borrower: <strong>{$borrower}</strong><br>"
+                . "Issued By: {$issuedByName}<br>"
+                . "Date Issued: {$issuedDate}<br>"
+                . "{$returnLine}<br><br>";
+        } else {
+            $reply .= "<strong>{$it->item_name}</strong><br>"
+                . "Serial No: {$it->serial_no}<br>"
+                . "No issuance record found.<br><br>";
+        }
+    }
+
+    return response()->json(['reply' => $reply]);
+}
+
 private function isOutOfScope(string $msg): bool
 {
     // If message contains inventory keywords, it's NOT out of scope
     $inventoryKeywords = [
         'inventory', 'item', 'items', 'stock', 'available', 'issued', 'borrowed',
         'borrower', 'serial', 'sn', 'barcode', 'qr', 'maintenance', 'repair',
-        'damaged', 'unserviceable', 'approval', 'request', 'property', 'ics', 'par'
+        'damaged', 'unserviceable','missing', 'approval', 'request', 'property', 'ics', 'par'
     ];
 
     foreach ($inventoryKeywords as $kw) {
