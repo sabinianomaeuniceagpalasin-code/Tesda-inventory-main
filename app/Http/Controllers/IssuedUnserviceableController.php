@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
+use App\Models\IssuedLog;
+use App\Models\Item;
 use App\Services\FormArchiveService;
 
 class IssuedUnserviceableController extends Controller
@@ -14,27 +17,6 @@ class IssuedUnserviceableController extends Controller
         $request->validate([
             'reason' => 'required|string|max:1000',
         ]);
-
-        $issuedItem = DB::table('issuedlog as i')
-            ->join('items as it', 'i.serial_no', '=', 'it.serial_no')
-            ->where('i.issue_id', $id)
-            ->select(
-                'i.*',
-                'it.item_id',
-                'it.item_name',
-                'it.serial_no',
-                'it.property_no',
-                'i.reference_no',
-                'i.borrower_name'
-            )
-            ->first();
-
-        if (!$issuedItem) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Issued item not found.'
-            ], 404);
-        }
 
         $userId = Auth::id();
         if (!$userId) {
@@ -47,12 +29,32 @@ class IssuedUnserviceableController extends Controller
         DB::beginTransaction();
 
         try {
-            // 1) Prevent duplicate unserviceable marking if already marked
-            $currentItem = DB::table('items')
-                ->where('serial_no', $issuedItem->serial_no)
+            // Get issued log model directly
+            $issuedLog = IssuedLog::lockForUpdate()->find($id);
+
+            if (!$issuedLog) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Issued item not found.'
+                ], 404);
+            }
+
+            // Prevent duplicate closing
+            if (!empty($issuedLog->actual_return_date)) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'This issued item is already closed/returned.'
+                ], 422);
+            }
+
+            // Get item
+            $item = Item::where('serial_no', $issuedLog->serial_no)
+                ->lockForUpdate()
                 ->first();
 
-            if (!$currentItem) {
+            if (!$item) {
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
@@ -60,7 +62,7 @@ class IssuedUnserviceableController extends Controller
                 ], 404);
             }
 
-            if (($currentItem->status ?? null) === 'Unserviceable') {
+            if (($item->status ?? null) === 'Unserviceable') {
                 DB::rollBack();
                 return response()->json([
                     'status' => 'error',
@@ -68,51 +70,60 @@ class IssuedUnserviceableController extends Controller
                 ], 422);
             }
 
-            // 2) Mark item as Unserviceable
-            DB::table('items')
-                ->where('serial_no', $issuedItem->serial_no)
-                ->update([
-                    'status' => 'Unserviceable',
-                    'updated_at' => now()
-                ]);
+            // Compute usage hours
+            $endTime = now();
+            $issuedDate = Carbon::parse($issuedLog->issued_date);
+            $hoursUsed = max(1, $issuedDate->diffInHours($endTime));
 
-            // 3) Save unserviceable report
+            // Close issuance
+            $issuedLog->actual_return_date = $endTime;
+            $issuedLog->usage_hours = $hoursUsed;
+            $issuedLog->save();
+
+            // Mark item as Unserviceable + update totals
+            $item->status = 'Unserviceable';
+            $item->usage_count = ($item->usage_count ?? 0) + 1;
+            $item->total_usage_hours = ($item->total_usage_hours ?? 0) + $hoursUsed;
+            $item->save();
+
+            // Save unserviceable report
             DB::table('unserviceablereports')->insert([
-                'serial_no' => $issuedItem->serial_no,
+                'serial_no' => $issuedLog->serial_no,
                 'reason' => $request->reason,
-                'borrower_name' => $issuedItem->borrower_name,
+                'borrower_name' => $issuedLog->borrower_name,
                 'reported_by' => $userId,
                 'reported_at' => now(),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
 
-            // 4) Create notification
+            // Create notification
             $notifId = DB::table('notifications')->insertGetId([
                 'type' => 'inventory',
                 'title' => 'Item Marked as Unserviceable',
-                'message' => "Item '{$issuedItem->item_name}' (Serial: {$issuedItem->serial_no}) was marked as unserviceable. Reason: {$request->reason}",
+                'message' => "Item '{$item->item_name}' (Serial: {$item->serial_no}) was marked as unserviceable. Reason: {$request->reason}",
                 'severity' => 'warning',
                 'entity_type' => 'item',
-                'entity_id' => $issuedItem->item_id,
+                'entity_id' => $item->item_id,
                 'action_url' => 'http://127.0.0.1:8000/dashboard?section=issued',
                 'data' => json_encode([
-                    'item_id' => $issuedItem->item_id,
-                    'item_name' => $issuedItem->item_name,
-                    'serial_no' => $issuedItem->serial_no,
-                    'property_no' => $issuedItem->property_no,
-                    'reference_no' => $issuedItem->reference_no,
-                    'borrower_name' => $issuedItem->borrower_name,
+                    'item_id' => $item->item_id,
+                    'item_name' => $item->item_name,
+                    'serial_no' => $item->serial_no,
+                    'property_no' => $item->property_no,
+                    'reference_no' => $issuedLog->reference_no,
+                    'borrower_name' => $issuedLog->borrower_name,
                     'reason' => $request->reason,
                     'reported_by_user_id' => $userId,
                     'reported_at' => now()->toDateTimeString(),
+                    'usage_hours' => $hoursUsed,
                 ]),
                 'created_by_user_id' => $userId,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
 
-            // 5) Send only to Admin users
+            // Send only to Admin users
             $adminUsers = DB::table('users')
                 ->where('role', 'Admin')
                 ->pluck('user_id');
@@ -133,16 +144,17 @@ class IssuedUnserviceableController extends Controller
                 DB::table('notification_recipients')->insert($recipientRows);
             }
 
-            // 6) Archive check
-            if (!empty($issuedItem->reference_no)) {
-                FormArchiveService::tryArchiveByReference($issuedItem->reference_no);
+            // Archive check
+            if (!empty($issuedLog->reference_no)) {
+                FormArchiveService::tryArchiveByReference($issuedLog->reference_no);
             }
 
             DB::commit();
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Item marked as Unserviceable successfully.'
+                'message' => 'Item marked as Unserviceable successfully.',
+                'usage_hours' => $hoursUsed,
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();

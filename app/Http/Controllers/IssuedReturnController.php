@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\IssuedLog;
 use App\Models\Item;
-use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Services\FormArchiveService;
+use Carbon\Carbon;
 
 class IssuedReturnController extends Controller
 {
@@ -27,18 +27,27 @@ class IssuedReturnController extends Controller
                 ], 422);
             }
 
-            // 2) Mark return datetime
-            $issued->actual_return_date = now();
+            $returnedAt = now();
+
+            // 2) Compute usage hours from issued_date to returnedAt
+            $issuedDate = Carbon::parse($issued->issued_date);
+            $hoursUsed = max(1, $issuedDate->diffInHours($returnedAt));
+
+            // 3) Save issued record
+            $issued->actual_return_date = $returnedAt;
+            $issued->usage_hours = $hoursUsed;
             $issued->save();
 
-            // 3) Update item status to Available
-            $item = Item::where('serial_no', $issued->serial_no)->first();
+            // 4) Update item status + usage counters
+            $item = Item::where('serial_no', $issued->serial_no)->lockForUpdate()->first();
             if ($item) {
                 $item->status = 'Available';
+                $item->usage_count = ($item->usage_count ?? 0) + 1;
+                $item->total_usage_hours = ($item->total_usage_hours ?? 0) + $hoursUsed;
                 $item->save();
             }
 
-            // 4) Create notification
+            // 5) Create notification
             $notifId = DB::table('notifications')->insertGetId([
                 'type' => 'inventory',
                 'title' => 'Item Returned',
@@ -51,14 +60,15 @@ class IssuedReturnController extends Controller
                     'serial_no' => $issued->serial_no,
                     'reference_no' => $issued->reference_no,
                     'returned_by_user_id' => Auth::id(),
-                    'returned_at' => now()->toDateTimeString(),
+                    'returned_at' => $returnedAt->toDateTimeString(),
+                    'usage_hours' => $hoursUsed,
                 ]),
                 'created_by_user_id' => Auth::id(),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
 
-            // 5) Send only to Admin users
+            // 6) Send only to Admin users
             $adminUsers = DB::table('users')
                 ->where('role', 'Admin')
                 ->pluck('user_id');
@@ -79,7 +89,7 @@ class IssuedReturnController extends Controller
                 DB::table('notification_recipients')->insert($recipientRows);
             }
 
-            // 6) Archive check using the service
+            // 7) Archive check using the service
             $reference = $issued->reference_no;
             if ($reference) {
                 FormArchiveService::tryArchiveByReference($reference);
@@ -90,7 +100,8 @@ class IssuedReturnController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Item returned successfully.',
-                'reference_no' => $reference
+                'reference_no' => $reference,
+                'usage_hours' => $hoursUsed,
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();

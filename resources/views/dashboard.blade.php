@@ -557,22 +557,22 @@
             </div>
           </div>
 
-          <div class="form-summary">
+         <div class="form-summary">
             <div class="summary-card">
               <p>Items Under Repair</p>
-              <h2>{{ $maintenanceCounts['total'] }}</h2>
+              <h2>{{ $maintenanceCounts['total'] ?? 0 }}</h2>
             </div>
             <div class="summary-card">
               <p>Complete Repairs</p>
-              <h2>Under Develop</h2>
+              <h2>{{ $maintenanceCounts['complete_repairs'] ?? 0 }}</h2>
             </div>
             <div class="summary-card">
               <p>Unserviceable</p>
-              <h2>Under Develop</h2>
+              <h2>{{ $maintenanceCounts['unserviceable'] ?? 0 }}</h2>
             </div>
             <div class="summary-card">
               <p>Total Repair Cost</p>
-              <h2>Under Develop</h2>
+              <h2>₱{{ number_format($maintenanceCounts['total_repair_cost'] ?? 0, 2) }}</h2>
             </div>
           </div>
 
@@ -607,18 +607,19 @@
                 <button class="print-btn" id="PrintMaintenanceBtn">
                   <svg class="print-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                     <path
-                      d="M7 17H17V22H7V17ZM19 20V15H5V20H3C2.44772 20 2 19.5523 2 19V9C2 8.44772 2.44772 8 3 8H21C21.5523 8 22 8.44772 22 9V19C22 19.5523 21.5523 20 21 20H19ZM5 10V12H8V10H5ZM7 2H17C17.5523 2 18 2.44772 18 3V6H6V3C6 2.44772 6.44772 2 7 2Z">
+                      d="M7 17H17V22H7V17ZM19 20V15H5V20H3C2.44772 20 2 19.5523 2 19V9C2 8.44772 2.44772 8 3 8H21C21.5523 8 22 8.44772 22 9V19C22 19.5523 21 20 21 20H19ZM5 10V12H8V10H5ZM7 2H17C17.5523 2 18 2.44772 18 3V6H6V3C6 2.44772 6.44772 2 7 2Z">
                     </path>
                   </svg>
                   Print
-              </div>
+                </button>
+            </div>
             </div>
           </div>
 
           <!-- Maintenance Records Table -->
           <div class="form-table-container mt-4">
             <h3>Maintenance Records</h3>
-            <table class="form-table">
+            <table class="form-table" id="maintenanceTable">
               <thead>
                 <tr>
                   <th>Serial #</th>
@@ -675,7 +676,7 @@
             <h2>Damage Records History</h2>
             <div class="right-buttons">
             <input type="text" id="damageSearchInput" placeholder="Search Item Name...">
-            <button type="button" id="exportDamageBtn">Export to PDF</button>
+          <!--  <button type="button" id="exportDamageBtn">Export to PDF</button> -->
         </div>
           </div>
 

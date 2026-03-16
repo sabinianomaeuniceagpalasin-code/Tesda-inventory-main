@@ -605,28 +605,291 @@ class ChatbotController extends Controller
 }
 
     private function itemStatus(Request $request, string $rawMessage)
-    {
-        $serial = $this->resolveSerialFromMessageOrContext($request, $rawMessage);
+{
+    $serial = $this->resolveSerialFromMessageOrContext($request, $rawMessage);
 
-        if (!$serial) {
-            return response()->json(['reply' => "Please include a serial like SN0001."]);
-        }
-
-        $item = DB::table('items')
-            ->where('serial_no', $serial)
-            ->select('item_name', 'status')
-            ->first();
-
-        if (!$item) {
-            return response()->json(['reply' => "No item found with serial {$serial}."]);
-        }
-
-        return response()->json([
-            'reply' => "<strong>{$item->item_name}</strong><br>
-                        Serial No: {$serial}<br>
-                        Status: {$item->status}"
-        ]);
+    if (!$serial) {
+        return response()->json(['reply' => "Please include a serial like SN0001."]);
     }
+
+    $item = DB::table('items')
+        ->where('serial_no', $serial)
+        ->select(
+            'item_id',
+            'item_name',
+            'description',
+            'specification',
+            'classification',
+            'source_of_fund',
+            'date_acquired',
+            'property_no',
+            'serial_no',
+            'stock',
+            'usage_count',
+            'remarks',
+            'department',
+            'status',
+            'last_maintenance_date',
+            'maintenance_interval_days',
+            'maintenance_threshold_usage',
+            'expected_life_years',
+            'total_usage_hours'
+        )
+        ->first();
+
+    if (!$item) {
+        return response()->json(['reply' => "No item found with serial {$serial}."]);
+    }
+
+    $latestDamage = DB::table('damagereports')
+        ->where('serial_no', $serial)
+        ->orderByDesc('reported_at')
+        ->select(
+            'damage_id',
+            'serial_no',
+            'observation',
+            'borrower_name',
+            'reported_by',
+            'is_ticketed',
+            'ticketed_at',
+            'reported_at'
+        )
+        ->first();
+
+    $damageCount = DB::table('damagereports')
+        ->where('serial_no', $serial)
+        ->count();
+
+    $latestUnserviceable = DB::table('unserviceablereports')
+        ->where('serial_no', $serial)
+        ->orderByDesc('reported_at')
+        ->select(
+            'unserviceable_id',
+            'serial_no',
+            'reason',
+            'borrower_name',
+            'reported_by',
+            'reported_at'
+        )
+        ->first();
+
+    $unserviceableCount = DB::table('unserviceablereports')
+        ->where('serial_no', $serial)
+        ->count();
+
+    $assessment = $this->buildItemAssessment($item, $damageCount, $unserviceableCount);
+    $usageStats = $this->getUsageAnalyticsData($serial);
+    $riskLevel = $this->getItemRiskLevel($assessment, $usageStats);
+
+    $descriptive = $this->buildDescriptiveAnalytics($item, $assessment, $usageStats, $damageCount, $unserviceableCount);
+    $predictive = $this->buildPredictiveAnalytics($item, $assessment, $usageStats, $damageCount, $unserviceableCount);
+    $prescriptive = $this->buildPrescriptiveAnalytics($item, $assessment, $usageStats, $damageCount, $unserviceableCount);
+    $maintenanceRecommendations = $this->getItemSpecificRecommendations($item);
+
+    $reply = "<strong>Item Status Summary</strong><br><br>"
+        . "<strong>Item Name:</strong> {$item->item_name}<br>"
+        . "<strong>Serial No:</strong> {$item->serial_no}<br>"
+        . "<strong>Property No:</strong> " . ($item->property_no ?: 'N/A') . "<br>"
+        . "<strong>Status:</strong> {$item->status}<br>"
+        . "<strong>Department:</strong> " . ($item->department ?: 'N/A') . "<br>"
+        . "<strong>Classification:</strong> " . ($item->classification ?: 'N/A') . "<br>"
+        . "<strong>Risk Level:</strong> {$riskLevel}<br><br>"
+
+        . "<strong>Operational Details</strong><br>"
+        . "<strong>Date Acquired:</strong> " . (!empty($item->date_acquired) ? date('F d, Y', strtotime($item->date_acquired)) : 'N/A') . "<br>"
+        . "<strong>Years in Service:</strong> {$assessment['years_used_text']}<br>"
+        . "<strong>Expected Life:</strong> {$assessment['expected_life_text']}<br>"
+        . "<strong>Total Usage Hours:</strong> {$assessment['usage_hours_text']}<br>"
+
+        . "<strong>Descriptive Analytics</strong><br>"
+        . $descriptive . "<br><br>"
+
+        . "<strong>Predictive Analytics</strong><br>"
+        . $predictive . "<br><br>"
+
+        . "<strong>Prescriptive Analytics</strong><br>"
+        . $prescriptive . "<br><br>"
+
+        . "<strong>Recommended Maintenance Actions</strong><br>"
+        . $maintenanceRecommendations;
+
+    if ($damageCount > 0) {
+        $reply .= "<br><br><strong>Damage Record Summary</strong><br>"
+            . "<strong>Total Damage Reports:</strong> {$damageCount}<br>";
+
+        if ($latestDamage) {
+            $reply .= "<strong>Latest Observation:</strong> " . (trim((string)$latestDamage->observation) !== '' ? e($latestDamage->observation) : 'N/A') . "<br>"
+                . "<strong>Borrower Name:</strong> " . (trim((string)$latestDamage->borrower_name) !== '' ? e($latestDamage->borrower_name) : 'N/A') . "<br>"
+                . "<strong>Reported At:</strong> " . (!empty($latestDamage->reported_at) ? date('F d, Y', strtotime($latestDamage->reported_at)) : 'N/A') . "<br>"
+                . "<strong>Ticketed:</strong> " . ((int)($latestDamage->is_ticketed ?? 0) === 1 ? 'Yes' : 'No');
+
+            if (!empty($latestDamage->ticketed_at)) {
+                $reply .= "<br><strong>Ticketed At:</strong> " . date('F d, Y', strtotime($latestDamage->ticketed_at));
+            }
+        }
+    }
+
+    if ($unserviceableCount > 0) {
+        $reply .= "<br><br><strong>Unserviceable Record Summary</strong><br>"
+            . "<strong>Total Unserviceable Reports:</strong> {$unserviceableCount}<br>";
+
+        if ($latestUnserviceable) {
+            $reply .= "<strong>Latest Reason:</strong> " . (trim((string)$latestUnserviceable->reason) !== '' ? e($latestUnserviceable->reason) : 'N/A') . "<br>"
+                . "<strong>Borrower Name:</strong> " . (trim((string)$latestUnserviceable->borrower_name) !== '' ? e($latestUnserviceable->borrower_name) : 'N/A') . "<br>"
+                . "<strong>Reported At:</strong> " . (!empty($latestUnserviceable->reported_at) ? date('F d, Y', strtotime($latestUnserviceable->reported_at)) : 'N/A');
+        }
+    }
+
+    if (!empty($item->remarks)) {
+        $reply .= "<br><br><strong>Remarks</strong><br>" . e($item->remarks);
+    }
+
+    return response()->json(['reply' => $reply]);
+}
+
+private function buildPredictiveAnalytics($item, array $assessment, array $usageStats, int $damageCount = 0, int $unserviceableCount = 0): string
+{
+    $status = strtolower((string)($item->status ?? ''));
+    $lines = [];
+
+    if ($status === 'available') {
+        $lines[] = "• The item is currently available for use and can remain in service if monitoring continues.";
+    } elseif ($status === 'damaged') {
+        $lines[] = "• The item is currently damaged and has an increased probability of further deterioration if repair is delayed.";
+    } elseif ($status === 'unserviceable') {
+        $lines[] = "• The item is already unserviceable and has a very low probability of returning to normal service without major repair or replacement.";
+    } elseif ($status === 'missing') {
+        $lines[] = "• The item is currently missing and is expected to remain unavailable until traced and resolved.";
+    } else {
+        $lines[] = "• The item currently has a status of {$item->status}.";
+    }
+
+    if (!is_null($assessment['days_until_maintenance_due'])) {
+        if ($assessment['days_until_maintenance_due'] < 0) {
+            $lines[] = "• Preventive maintenance is overdue by " . abs($assessment['days_until_maintenance_due']) . " day(s), which raises the likelihood of operational failure.";
+        } elseif ($assessment['days_until_maintenance_due'] <= 15) {
+            $lines[] = "• Preventive maintenance will become due in {$assessment['days_until_maintenance_due']} day(s), indicating near-term servicing need.";
+        }
+    }
+
+    if (!is_null($assessment['usage_percent'])) {
+        if ($assessment['usage_percent'] >= 100) {
+            $lines[] = "• Usage has already reached or exceeded the maintenance threshold, so the item is highly likely to need servicing immediately.";
+        } elseif ($assessment['usage_percent'] >= 80) {
+            $lines[] = "• Usage has reached " . number_format($assessment['usage_percent'], 2) . "% of the maintenance threshold, so servicing is likely to be needed soon.";
+        }
+    }
+
+    if (!is_null($assessment['life_percent'])) {
+        if ($assessment['life_percent'] >= 100) {
+            $lines[] = "• The item has exceeded its expected life span, increasing the probability of replacement need and unstable performance.";
+        } elseif ($assessment['life_percent'] >= 80) {
+            $lines[] = "• The item is approaching end-of-life condition and may require replacement planning in the near term.";
+        }
+    }
+
+    if ($usageStats['usage_trend'] === 'Increasing') {
+        $lines[] = "• Recent usage shows an increasing trend, which suggests faster wear and earlier maintenance demand.";
+    } elseif ($usageStats['usage_trend'] === 'Decreasing') {
+        $lines[] = "• Recent usage shows a decreasing trend, which may reduce short-term wear pressure.";
+    } else {
+        $lines[] = "• Recent usage is relatively stable, suggesting no abrupt change in operating demand.";
+    }
+
+    if ($usageStats['average_usage_hours'] >= 8) {
+        $lines[] = "• Average usage per issuance is high, which may accelerate component wear.";
+    } elseif ($usageStats['average_usage_hours'] >= 4) {
+        $lines[] = "• Average usage per issuance is moderate and should continue to be monitored.";
+    }
+
+    if ($usageStats['usage_last_30_days'] >= 40) {
+        $lines[] = "• The item has been heavily used in the last 30 days, increasing the chance of near-term maintenance requirement.";
+    }
+
+    if ($damageCount >= 2) {
+        $lines[] = "• Multiple damage records indicate recurring issues and raise the likelihood of repeated failure.";
+    } elseif ($damageCount === 1) {
+        $lines[] = "• One damage record suggests the item should be watched closely for repeat issues.";
+    }
+
+    if ($unserviceableCount >= 1) {
+        $lines[] = "• The item has unserviceable history, indicating elevated long-term reliability risk.";
+    }
+
+    if (empty($lines)) {
+        $lines[] = "• No immediate predictive concerns were detected from the current usage, age, maintenance, and incident data.";
+    }
+
+    return implode('<br>', array_values(array_unique($lines)));
+}
+
+private function buildPrescriptiveAnalytics($item, array $assessment, array $usageStats, int $damageCount = 0, int $unserviceableCount = 0): string
+{
+    $status = strtolower((string)($item->status ?? ''));
+    $actions = [];
+
+    if ($status === 'available') {
+        $actions[] = "• Keep the item in service while continuing routine monitoring and preventive checks.";
+    }
+
+    if ($status === 'damaged') {
+        $actions[] = "• Prioritize inspection and repair scheduling to prevent the item from becoming fully unserviceable.";
+    }
+
+    if ($status === 'unserviceable') {
+        $actions[] = "• Remove the item from active deployment and evaluate whether replacement, disposal, or major repair is more cost-effective.";
+    }
+
+    if ($status === 'missing') {
+        $actions[] = "• Begin tracing procedures immediately and verify the last borrower, issue record, and responsible custodian.";
+    }
+
+    if (!is_null($assessment['days_until_maintenance_due'])) {
+        if ($assessment['days_until_maintenance_due'] < 0) {
+            $actions[] = "• Perform preventive maintenance immediately because the schedule is already overdue.";
+        } elseif ($assessment['days_until_maintenance_due'] <= 15) {
+            $actions[] = "• Schedule preventive maintenance within the next {$assessment['days_until_maintenance_due']} day(s).";
+        }
+    }
+
+    if (!is_null($assessment['usage_percent'])) {
+        if ($assessment['usage_percent'] >= 100) {
+            $actions[] = "• Service the item immediately because usage has exceeded the defined maintenance threshold.";
+        } elseif ($assessment['usage_percent'] >= 80) {
+            $actions[] = "• Closely monitor remaining usage allowance and prepare service scheduling before threshold exceedance.";
+        }
+    }
+
+    if ($usageStats['usage_trend'] === 'Increasing') {
+        $actions[] = "• Increase inspection frequency because recent usage demand is rising.";
+    }
+
+    if ($usageStats['usage_last_30_days'] >= 40) {
+        $actions[] = "• Consider shorter maintenance intervals because recent monthly usage is high.";
+    }
+
+    if (!is_null($assessment['life_percent'])) {
+        if ($assessment['life_percent'] >= 100) {
+            $actions[] = "• Start replacement evaluation immediately because the item has exceeded expected life span.";
+        } elseif ($assessment['life_percent'] >= 80) {
+            $actions[] = "• Prepare budget and procurement planning because the item is nearing end-of-life.";
+        }
+    }
+
+    if ($damageCount >= 2) {
+        $actions[] = "• Review repeated damage incidents to determine whether user handling, environment, or storage practices must be corrected.";
+    }
+
+    if ($unserviceableCount >= 1) {
+        $actions[] = "• Review past unserviceable cases before approving further repair spending.";
+    }
+
+    if (empty($actions)) {
+        $actions[] = "• No urgent action is recommended at this time.";
+    }
+
+    return implode('<br>', array_values(array_unique($actions)));
+}
 
     private function whenIssued(Request $request, string $rawMessage)
     {
@@ -1104,9 +1367,295 @@ private function missingWithBorrower()
     return response()->json(['reply' => $reply]);
 }
 
+private function buildItemAssessment($item, int $damageCount = 0, int $unserviceableCount = 0): array
+{
+    $today = now();
+
+    $yearsUsed = null;
+    $serviceDurationText = 'N/A';
+
+    if (!empty($item->date_acquired)) {
+        $acquired = \Carbon\Carbon::parse($item->date_acquired);
+        $yearsUsed = $acquired->diffInYears($today);
+        $serviceDurationText = $this->formatServiceDuration($item->date_acquired);
+    }
+
+    $daysSinceMaintenance = null;
+    $daysUntilMaintenanceDue = null;
+    if (!empty($item->last_maintenance_date) && !empty($item->maintenance_interval_days)) {
+        $daysSinceMaintenance = \Carbon\Carbon::parse($item->last_maintenance_date)->diffInDays($today);
+        $daysUntilMaintenanceDue = (int)$item->maintenance_interval_days - $daysSinceMaintenance;
+    }
+
+    $usageHours = is_null($item->total_usage_hours) ? null : (float)$item->total_usage_hours;
+    $usageThreshold = is_null($item->maintenance_threshold_usage) ? null : (float)$item->maintenance_threshold_usage;
+    $usagePercent = null;
+
+    if (!is_null($usageHours) && !is_null($usageThreshold) && $usageThreshold > 0) {
+        $usagePercent = round(($usageHours / $usageThreshold) * 100, 2);
+    }
+
+    $lifePercent = null;
+    if (!is_null($yearsUsed) && !empty($item->expected_life_years) && (int)$item->expected_life_years > 0) {
+        $lifePercent = round(($yearsUsed / (int)$item->expected_life_years) * 100, 2);
+    }
+
+    return [
+        'years_used' => $yearsUsed,
+        'years_used_text' => $serviceDurationText,
+        'expected_life' => !empty($item->expected_life_years) ? (int)$item->expected_life_years : null,
+        'expected_life_text' => !empty($item->expected_life_years) ? ((int)$item->expected_life_years . " year(s)") : 'N/A',
+
+        'last_maintenance_text' => !empty($item->last_maintenance_date)
+            ? date('F d, Y', strtotime($item->last_maintenance_date))
+            : 'N/A',
+
+        'maintenance_interval' => !empty($item->maintenance_interval_days)
+            ? (int)$item->maintenance_interval_days
+            : null,
+
+        'maintenance_interval_text' => !empty($item->maintenance_interval_days)
+            ? ((int)$item->maintenance_interval_days . " day(s)")
+            : 'N/A',
+
+        'days_since_maintenance' => $daysSinceMaintenance,
+        'days_until_maintenance_due' => $daysUntilMaintenanceDue,
+
+        'usage_hours' => $usageHours,
+        'usage_hours_text' => is_null($usageHours) ? 'N/A' : number_format($usageHours, 2) . " hour(s)",
+
+        'usage_threshold' => $usageThreshold,
+        'usage_threshold_text' => is_null($usageThreshold) ? 'N/A' : number_format($usageThreshold, 2) . " hour(s)",
+
+        'usage_percent' => $usagePercent,
+        'life_percent' => $lifePercent,
+        'damage_count' => $damageCount,
+        'unserviceable_count' => $unserviceableCount,
+    ];
+}
+
+private function getItemRiskLevel(array $assessment, array $usageStats = []): string
+{
+    $score = 0;
+
+    if ($assessment['damage_count'] >= 2) {
+        $score += 2;
+    } elseif ($assessment['damage_count'] === 1) {
+        $score += 1;
+    }
+
+    if ($assessment['unserviceable_count'] >= 1) {
+        $score += 3;
+    }
+
+    if (!is_null($assessment['days_until_maintenance_due'])) {
+        if ($assessment['days_until_maintenance_due'] < 0) {
+            $score += 2;
+        } elseif ($assessment['days_until_maintenance_due'] <= 15) {
+            $score += 1;
+        }
+    }
+
+    if (!is_null($assessment['usage_percent'])) {
+        if ($assessment['usage_percent'] >= 100) {
+            $score += 2;
+        } elseif ($assessment['usage_percent'] >= 80) {
+            $score += 1;
+        }
+    }
+
+    if (!is_null($assessment['life_percent'])) {
+        if ($assessment['life_percent'] >= 100) {
+            $score += 2;
+        } elseif ($assessment['life_percent'] >= 80) {
+            $score += 1;
+        }
+    }
+
+    if (!empty($usageStats)) {
+        if (($usageStats['usage_trend'] ?? '') === 'Increasing') {
+            $score += 1;
+        }
+
+        if (($usageStats['usage_last_30_days'] ?? 0) >= 40) {
+            $score += 1;
+        }
+
+        if (($usageStats['average_usage_hours'] ?? 0) >= 8) {
+            $score += 1;
+        }
+    }
+
+    if ($score >= 7) return 'High';
+    if ($score >= 4) return 'Moderate';
+    return 'Low';
+}
+
+private function formatServiceDuration(?string $startDate): string
+{
+    if (empty($startDate)) {
+        return 'N/A';
+    }
+
+    try {
+        $start = \Carbon\Carbon::parse($startDate);
+        $now = now();
+
+        if ($start->gt($now)) {
+            return '0 month(s)';
+        }
+
+        $diff = $start->diff($now);
+
+        $parts = [];
+
+        if ($diff->y > 0) {
+            $parts[] = $diff->y . ' year(s)';
+        }
+
+        if ($diff->m > 0) {
+            $parts[] = $diff->m . ' month(s)';
+        }
+
+        if ($diff->y === 0 && $diff->m === 0) {
+            $parts[] = $diff->d . ' day(s)';
+        }
+
+        return implode(' and ', $parts);
+    } catch (\Throwable $e) {
+        return 'N/A';
+    }
+}
+
+private function getItemSpecificRecommendations($item): string
+{
+    $itemName = strtolower(trim((string)($item->item_name ?? '')));
+    $description = strtolower(trim((string)($item->description ?? '')));
+    $specification = strtolower(trim((string)($item->specification ?? '')));
+
+    $text = $itemName . ' ' . $description . ' ' . $specification;
+    $recommendations = [];
+
+    // Printer
+    if (str_contains($text, 'printer')) {
+        $recommendations[] = "• Check ink or toner level every 3 weeks.";
+        $recommendations[] = "• Clean the print head and rollers every month.";
+        $recommendations[] = "• Inspect paper feed alignment and remove dust buildup regularly.";
+        $recommendations[] = "• Replace cartridges immediately if print quality becomes faded or inconsistent.";
+    }
+
+    // Computer / Desktop / PC
+    if (
+        str_contains($text, 'computer') ||
+        str_contains($text, 'desktop') ||
+        str_contains($text, 'pc') ||
+        str_contains($text, 'system unit')
+    ) {
+        $recommendations[] = "• Inspect wirings, power cables, and peripheral connections every 2 weeks.";
+        $recommendations[] = "• Clean internal and external dust buildup every month.";
+        $recommendations[] = "• Check system temperature, fan condition, and ventilation regularly.";
+        $recommendations[] = "• Verify antivirus and software updates are active and current.";
+    }
+
+    // Laptop
+    if (str_contains($text, 'laptop')) {
+        $recommendations[] = "• Inspect charger, battery condition, and ports every 2 weeks.";
+        $recommendations[] = "• Clean keyboard, vents, and screen surface every 2 to 4 weeks.";
+        $recommendations[] = "• Monitor overheating, unusual noise, and battery health regularly.";
+        $recommendations[] = "• Avoid overbending the charger cable and protect the device during transport.";
+    }
+
+    // Projector
+    if (str_contains($text, 'projector')) {
+        $recommendations[] = "• Clean the projector lens and air vents every 2 weeks.";
+        $recommendations[] = "• Check lamp performance and overheating signs before extended use.";
+        $recommendations[] = "• Store in a dust-free area when not in use.";
+        $recommendations[] = "• Inspect HDMI/VGA and power cables for wear or loose connections.";
+    }
+
+    // Monitor
+    if (str_contains($text, 'monitor')) {
+        $recommendations[] = "• Clean the screen surface using proper materials every 2 weeks.";
+        $recommendations[] = "• Check display cables and power connection regularly.";
+        $recommendations[] = "• Inspect for flickering, dead pixels, or overheating signs.";
+    }
+
+    // Keyboard
+    if (str_contains($text, 'keyboard')) {
+        $recommendations[] = "• Clean keys and remove dust buildup every 2 weeks.";
+        $recommendations[] = "• Inspect cable or USB connection regularly.";
+        $recommendations[] = "• Replace immediately if keys become unresponsive or damaged.";
+    }
+
+    // Mouse
+    if (str_contains($text, 'mouse')) {
+        $recommendations[] = "• Clean the mouse surface and sensor every 2 weeks.";
+        $recommendations[] = "• Check USB cable or wireless battery condition regularly.";
+        $recommendations[] = "• Replace if pointer movement becomes erratic or buttons fail.";
+    }
+
+    // AVR / UPS
+    if (
+        str_contains($text, 'avr') ||
+        str_contains($text, 'ups') ||
+        str_contains($text, 'voltage regulator')
+    ) {
+        $recommendations[] = "• Inspect power input/output connections every 2 weeks.";
+        $recommendations[] = "• Check for overheating, unusual smell, or buzzing sound regularly.";
+        $recommendations[] = "• Test backup or voltage regulation function monthly.";
+    }
+
+    // Scanner
+    if (str_contains($text, 'scanner')) {
+        $recommendations[] = "• Clean scanner glass and rollers every 2 weeks.";
+        $recommendations[] = "• Check image quality for lines, blur, or feed errors.";
+        $recommendations[] = "• Inspect USB and power cables for secure connection.";
+    }
+
+    // Camera / CCTV
+    if (
+        str_contains($text, 'camera') ||
+        str_contains($text, 'cctv')
+    ) {
+        $recommendations[] = "• Clean lens surface every 2 weeks.";
+        $recommendations[] = "• Verify power and video/data connections regularly.";
+        $recommendations[] = "• Check image quality, storage function, and mounting stability.";
+    }
+
+    // Electric fan
+    if (
+        str_contains($text, 'fan') ||
+        str_contains($text, 'electric fan')
+    ) {
+        $recommendations[] = "• Clean fan blades and protective grill every 2 weeks.";
+        $recommendations[] = "• Inspect motor noise and power cord condition regularly.";
+        $recommendations[] = "• Tighten loose screws and check stability before use.";
+    }
+
+    // Air conditioner
+    if (
+        str_contains($text, 'aircon') ||
+        str_contains($text, 'air conditioner') ||
+        str_contains($text, 'ac unit')
+    ) {
+        $recommendations[] = "• Clean air filters every month.";
+        $recommendations[] = "• Inspect drainage, wiring, and cooling performance regularly.";
+        $recommendations[] = "• Schedule professional servicing every 3 to 6 months.";
+    }
+
+    // Generic fallback
+    if (empty($recommendations)) {
+        $recommendations[] = "• Perform routine inspection every month.";
+        $recommendations[] = "• Check physical condition, wiring or connections, and cleanliness regularly.";
+        $recommendations[] = "• Record any unusual performance, wear, or defects immediately.";
+        $recommendations[] = "• Schedule preventive maintenance based on actual usage and condition history.";
+    }
+
+    return implode('<br>', array_values(array_unique($recommendations)));
+}
+
 private function isOutOfScope(string $msg): bool
 {
-    // If message contains inventory keywords, it's NOT out of scope
     $inventoryKeywords = [
         'inventory', 'item', 'items', 'stock', 'available', 'issued', 'borrowed',
         'borrower', 'serial', 'sn', 'barcode', 'qr', 'maintenance', 'repair',
@@ -1116,8 +1665,6 @@ private function isOutOfScope(string $msg): bool
     foreach ($inventoryKeywords as $kw) {
         if (str_contains($msg, $kw)) return false;
     }
-
-    // If message looks like a general chit-chat / random topic → out of scope
     $outOfScopeHints = [
         'weather', 'joke', 'love', 'crush', 'girlfriend', 'boyfriend',
         'song', 'lyrics', 'movie', 'anime', 'game', 'facebook', 'tiktok',
@@ -1127,11 +1674,166 @@ private function isOutOfScope(string $msg): bool
     foreach ($outOfScopeHints as $kw) {
         if (str_contains($msg, $kw)) return true;
     }
-
-    // If it has no inventory keywords AND it's not a very short message,
-    // treat it as out of scope.
-    // (Short messages like "help", "hi" are handled earlier.)
     return strlen(trim($msg)) >= 8;
+}
+
+private function getUsageAnalyticsData(string $serial): array
+{
+    $completedIssuances = DB::table('issuedlog')
+        ->where('serial_no', $serial)
+        ->whereNotNull('usage_hours')
+        ->count();
+
+    $totalLoggedUsageHours = (float) (
+        DB::table('issuedlog')
+            ->where('serial_no', $serial)
+            ->whereNotNull('usage_hours')
+            ->sum('usage_hours') ?? 0
+    );
+
+    $averageUsageHours = $completedIssuances > 0
+        ? round($totalLoggedUsageHours / $completedIssuances, 2)
+        : 0;
+
+    $latestUsage = DB::table('issuedlog')
+        ->where('serial_no', $serial)
+        ->whereNotNull('usage_hours')
+        ->orderByDesc('actual_return_date')
+        ->select('issued_date', 'actual_return_date', 'borrower_name', 'usage_hours')
+        ->first();
+
+    $monthStart = now()->copy()->startOfMonth();
+    $threeMonthsAgo = now()->copy()->subMonths(3)->startOfDay();
+    $sixMonthsAgo = now()->copy()->subMonths(6)->startOfDay();
+    $thirtyDaysAgo = now()->copy()->subDays(30)->startOfDay();
+
+    $usageThisMonth = (float) (
+        DB::table('issuedlog')
+            ->where('serial_no', $serial)
+            ->whereNotNull('usage_hours')
+            ->where('actual_return_date', '>=', $monthStart)
+            ->sum('usage_hours') ?? 0
+    );
+
+    $usageLast3Months = (float) (
+        DB::table('issuedlog')
+            ->where('serial_no', $serial)
+            ->whereNotNull('usage_hours')
+            ->where('actual_return_date', '>=', $threeMonthsAgo)
+            ->sum('usage_hours') ?? 0
+    );
+
+    $usageLast6Months = (float) (
+        DB::table('issuedlog')
+            ->where('serial_no', $serial)
+            ->whereNotNull('usage_hours')
+            ->where('actual_return_date', '>=', $sixMonthsAgo)
+            ->sum('usage_hours') ?? 0
+    );
+
+    $usageLast30Days = (float) (
+        DB::table('issuedlog')
+            ->where('serial_no', $serial)
+            ->whereNotNull('usage_hours')
+            ->where('actual_return_date', '>=', $thirtyDaysAgo)
+            ->sum('usage_hours') ?? 0
+    );
+
+    $recentBorrower = DB::table('issuedlog')
+        ->where('serial_no', $serial)
+        ->whereNotNull('usage_hours')
+        ->whereNotNull('borrower_name')
+        ->select('borrower_name', DB::raw('COUNT(*) as total'))
+        ->groupBy('borrower_name')
+        ->orderByDesc('total')
+        ->first();
+
+    $recentUsageRows = DB::table('issuedlog')
+        ->where('serial_no', $serial)
+        ->whereNotNull('usage_hours')
+        ->orderByDesc('actual_return_date')
+        ->limit(6)
+        ->pluck('usage_hours')
+        ->map(fn($v) => (float) $v)
+        ->values()
+        ->toArray();
+
+    $usageTrend = 'Stable';
+
+    if (count($recentUsageRows) >= 4) {
+        $half = (int) floor(count($recentUsageRows) / 2);
+        $recentAvg = array_sum(array_slice($recentUsageRows, 0, $half)) / max($half, 1);
+        $olderAvg = array_sum(array_slice($recentUsageRows, $half)) / max(count($recentUsageRows) - $half, 1);
+
+        if ($recentAvg > $olderAvg * 1.15) {
+            $usageTrend = 'Increasing';
+        } elseif ($recentAvg < $olderAvg * 0.85) {
+            $usageTrend = 'Decreasing';
+        }
+    }
+
+    return [
+        'completed_issuances' => $completedIssuances,
+        'total_logged_usage_hours' => $totalLoggedUsageHours,
+        'average_usage_hours' => $averageUsageHours,
+        'latest_usage' => $latestUsage,
+        'usage_this_month' => round($usageThisMonth, 2),
+        'usage_last_3_months' => round($usageLast3Months, 2),
+        'usage_last_6_months' => round($usageLast6Months, 2),
+        'usage_last_30_days' => round($usageLast30Days, 2),
+        'top_borrower' => $recentBorrower->borrower_name ?? null,
+        'top_borrower_count' => (int)($recentBorrower->total ?? 0),
+        'usage_trend' => $usageTrend,
+    ];
+}
+
+private function buildDescriptiveAnalytics($item, array $assessment, array $usageStats, int $damageCount = 0, int $unserviceableCount = 0): string
+{
+    $lines = [];
+
+    $lines[] = "• Completed issuances: " . number_format($usageStats['completed_issuances']) . ".";
+    $lines[] = "• Total logged usage hours: " . number_format($usageStats['total_logged_usage_hours'], 2) . " hour(s).";
+    $lines[] = "• Average usage per issuance: " . number_format($usageStats['average_usage_hours'], 2) . " hour(s).";
+    $lines[] = "• Usage in the last 30 days: " . number_format($usageStats['usage_last_30_days'], 2) . " hour(s).";
+    $lines[] = "• Usage this month: " . number_format($usageStats['usage_this_month'], 2) . " hour(s).";
+    $lines[] = "• Usage in the last 3 months: " . number_format($usageStats['usage_last_3_months'], 2) . " hour(s).";
+    $lines[] = "• Usage trend based on recent completed issuances: {$usageStats['usage_trend']}.";
+
+    if (!empty($usageStats['latest_usage'])) {
+        $latest = $usageStats['latest_usage'];
+        $latestDate = !empty($latest->actual_return_date)
+            ? date('F d, Y', strtotime($latest->actual_return_date))
+            : (!empty($latest->issued_date) ? date('F d, Y', strtotime($latest->issued_date)) : 'N/A');
+
+        $latestBorrower = trim((string)($latest->borrower_name ?? '')) ?: 'N/A';
+        $latestHours = is_null($latest->usage_hours) ? 'N/A' : number_format((float)$latest->usage_hours, 2) . " hour(s)";
+
+        $lines[] = "• Most recent recorded usage: {$latestDate}, borrower: {$latestBorrower}, usage: {$latestHours}.";
+    } else {
+        $lines[] = "• No completed usage history has been recorded yet.";
+    }
+
+    if (!empty($usageStats['top_borrower'])) {
+        $lines[] = "• Most frequent borrower: {$usageStats['top_borrower']} ({$usageStats['top_borrower_count']} issuance record(s)).";
+    }
+
+    if (!is_null($assessment['usage_percent'])) {
+        $lines[] = "• The item has consumed " . number_format($assessment['usage_percent'], 2) . "% of its usage threshold.";
+    }
+
+    if (!is_null($assessment['life_percent'])) {
+        $lines[] = "• The item has consumed " . number_format($assessment['life_percent'], 2) . "% of its expected life span.";
+    }
+
+    if ($damageCount > 0) {
+        $lines[] = "• Damage history: {$damageCount} damage report(s).";
+    }
+
+    if ($unserviceableCount > 0) {
+        $lines[] = "• Unserviceable history: {$unserviceableCount} report(s).";
+    }
+
+    return implode('<br>', $lines);
 }
 
     /* =========================

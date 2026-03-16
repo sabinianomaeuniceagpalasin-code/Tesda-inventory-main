@@ -511,21 +511,21 @@ body {
 
 .btn-approve {
     background-color: #4caf50;
-    color: white;
+    color: green;
 }
 
 .btn-approve:hover {
-    background-color: #43a047;
+    background-color: white;
     transform: scale(1.08);
 }
 
 .btn-reject {
     background-color: #e53935;
-    color: white;
+    color: red;
 }
 
 .btn-reject:hover {
-    background-color: #d32f2f;
+    background-color: white;
     transform: scale(1.08);
 }
 

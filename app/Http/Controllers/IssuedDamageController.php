@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 use App\Models\Item;
 use App\Models\IssuedLog;
@@ -36,7 +37,7 @@ class IssuedDamageController extends Controller
             }
 
             // Find item
-            $item = Item::where('serial_no', $serialNo)->first();
+            $item = Item::where('serial_no', $serialNo)->lockForUpdate()->first();
             if (!$item) {
                 DB::rollBack();
                 return response()->json([
@@ -45,23 +46,37 @@ class IssuedDamageController extends Controller
                 ], 404);
             }
 
-            // Get latest issued log for borrower/reference
+            // Get latest active issued log
             $issued = IssuedLog::where('serial_no', $serialNo)
+                ->whereNull('actual_return_date')
                 ->orderByDesc('issue_id')
+                ->lockForUpdate()
                 ->first();
 
             if (!$issued) {
                 DB::rollBack();
                 return response()->json([
                     'success' => false,
-                    'message' => "No issued record found for serial: {$serialNo}",
+                    'message' => "No active issued record found for serial: {$serialNo}",
                 ], 422);
             }
 
             $borrowerName = $issued->borrower_name ?? 'N/A';
 
-            // Mark item as damaged
+            // Compute usage hours only once
+            $endTime = now();
+            $issuedDate = Carbon::parse($issued->issued_date);
+            $hoursUsed = max(1, $issuedDate->diffInHours($endTime));
+
+            // Close the issuance
+            $issued->actual_return_date = $endTime;
+            $issued->usage_hours = $hoursUsed;
+            $issued->save();
+
+            // Mark item as damaged + update totals
             $item->status = 'Damaged';
+            $item->usage_count = ($item->usage_count ?? 0) + 1;
+            $item->total_usage_hours = ($item->total_usage_hours ?? 0) + $hoursUsed;
             $item->save();
 
             // Insert damage report
@@ -90,6 +105,7 @@ class IssuedDamageController extends Controller
                     'observation' => $obs,
                     'reported_by_user_id' => $userId,
                     'reported_at' => now()->toDateTimeString(),
+                    'usage_hours' => $hoursUsed,
                 ]),
                 'created_by_user_id' => $userId,
                 'created_at' => now(),
@@ -128,6 +144,7 @@ class IssuedDamageController extends Controller
                 'success' => true,
                 'message' => 'Damage reported successfully.',
                 'damage_id' => $damage->damage_id ?? null,
+                'usage_hours' => $hoursUsed,
             ]);
 
         } catch (\Throwable $e) {

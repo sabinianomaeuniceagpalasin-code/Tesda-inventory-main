@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use App\Models\Notification;
 use App\Models\DamageReport;
 use App\Models\Item;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class DashboardController extends Controller
 {
@@ -711,28 +712,47 @@ class DashboardController extends Controller
 
     public function getMaintenanceRecords()
 {
-    $maintenanceRecords = DB::table('maintenance')
-        ->join('items', 'maintenance.serial_no', '=', 'items.serial_no')
+    $records = DB::table('maintenance as m')
+        ->leftJoin('items as i', 'm.serial_no', '=', 'i.serial_no')
         ->select(
-            'maintenance.*',
-            'items.item_name',
-            'items.property_no',
-            'items.status as item_status'
+            'm.maintenance_id',
+            'm.serial_no',
+            'i.item_name',
+            'm.observation',
+            'm.repair_cost',
+            'm.date_reported',
+            'm.expected_completion',
+            'm.remarks',
+            'm.damage_id'
         )
-        ->orderBy('maintenance.date_reported', 'desc')
+        ->orderByDesc('m.date_reported')
         ->get();
 
-    $maintenanceCounts = [
-        'total' => $maintenanceRecords->count(),
-        'for_repair' => $maintenanceRecords->where('item_status', 'For Repair')->count(),
-        'available' => $maintenanceRecords->where('item_status', 'Available')->count(),
-        'upcoming' => $maintenanceRecords->filter(function ($record) {
-            return !empty($record->expected_completion)
-                && \Carbon\Carbon::parse($record->expected_completion)->isFuture();
-        })->count(),
+    $counts = [
+        // count only items currently under repair
+        'total' => DB::table('items')
+            ->where('status', 'For Repair')
+            ->count(),
+
+        // completed repair based on maintenance remarks
+        'complete_repairs' => DB::table('maintenance')
+            ->whereRaw('LOWER(TRIM(remarks)) = ?', ['item is now available'])
+            ->count(),
+
+        // all items currently unserviceable
+        'unserviceable' => DB::table('items')
+            ->where('status', 'Unserviceable')
+            ->count(),
+
+        // total repair cost from maintenance table
+        'total_repair_cost' => (float) DB::table('maintenance')
+            ->sum('repair_cost'),
     ];
 
-    return ['records' => $maintenanceRecords, 'counts' => $maintenanceCounts];
+    return [
+        'records' => $records,
+        'counts' => $counts,
+    ];
 }
 
 public function getUnderMaintenanceItemsTable()
@@ -924,6 +944,55 @@ public function getUnderMaintenanceItemsTable()
 
         return response()->json(['message' => 'Item successfully reported to maintenance!']);
     }
+    public function exportMaintenancePdf(Request $request)
+{
+    $query = DB::table('maintenance as mr')
+        ->leftJoin('items as i', 'mr.serial_no', '=', 'i.serial_no')
+        ->select(
+            'mr.maintenance_id',
+            'mr.serial_no',
+            'i.item_name',
+            'mr.observation',
+            'mr.date_reported',
+            'mr.repair_cost',
+            'mr.expected_completion',
+            'mr.remarks'
+        )
+        ->orderByDesc('mr.date_reported');
+
+    if ($request->filled('search')) {
+        $search = trim($request->search);
+
+        $query->where(function ($q) use ($search) {
+            $q->where('mr.serial_no', 'like', "%{$search}%")
+              ->orWhere('i.item_name', 'like', "%{$search}%")
+              ->orWhere('mr.observation', 'like', "%{$search}%")
+              ->orWhere('mr.remarks', 'like', "%{$search}%");
+        });
+    }
+
+    $records = $query->get();
+
+    $maintenanceCounts = [
+        'total' => DB::table('maintenance')->count(),
+        'complete_repairs' => DB::table('maintenance')
+            ->whereNotNull('expected_completion')
+            ->whereDate('expected_completion', '<=', now())
+            ->count(),
+        'unserviceable' => DB::table('items')
+            ->where('status', 'Unserviceable')
+            ->count(),
+        'total_repair_cost' => DB::table('maintenance')->sum('repair_cost'),
+    ];
+
+    $pdf = Pdf::loadView('exports.maintenance-pdf', [
+        'records' => $records,
+        'maintenanceCounts' => $maintenanceCounts,
+        'generatedAt' => now()->format('F d, Y h:i A'),
+    ])->setPaper('a4', 'landscape');
+
+    return $pdf->download('maintenance-report.pdf');
+}
 
     private function createLowStockNotifications()
 {

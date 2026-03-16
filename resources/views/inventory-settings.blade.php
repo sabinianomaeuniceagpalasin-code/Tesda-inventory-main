@@ -24,7 +24,7 @@
             </a>
             <h2 class="mb-0">Inventory Settings</h2>
             <div class="ms-auto d-flex gap-3">
-                <a href="dashboard.html" class="text-dark"><i class="bi bi-house-fill fs-5"></i></a>
+                <a href="{{ route('dashboard') }}" class="text-dark"><i class="bi bi-house-fill fs-5"></i></a>
                 <a href="notifications.html" class="text-dark"><i class="bi bi-bell-fill fs-5"></i></a>
                 <a href="profile.html" class="text-dark"><i class="bi bi-person-circle fs-5"></i></a>
             </div>
@@ -352,14 +352,14 @@
 
                                                     <form action="{{ route('user.approve', $user->user_id) }}" method="POST" class="approve-user-form">
                                                         @csrf
-                                                        <button type="button" class="btn action-btn btn-approve approve-user">
+                                                        <button type="button" class="btn action-btn btn-approve approve-user" title="approve">
                                                             <i>✔</i>
                                                         </button>
                                                     </form>
 
                                                     <form action="{{ route('user.reject', $user->user_id) }}" method="POST" class="reject-user-form">
                                                         @csrf
-                                                        <button type="button" class="btn action-btn btn-reject reject-user">
+                                                        <button type="button" class="btn action-btn btn-reject reject-user" title="reject">
                                                             <i>✖</i>
                                                         </button>
                                                     </form>

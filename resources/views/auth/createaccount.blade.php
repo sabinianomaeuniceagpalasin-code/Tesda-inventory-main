@@ -47,7 +47,7 @@
         <small class="error"></small>
       </div>
 
-      <div class="section-title"><span>Login Details</span></div>
+      <div class="section-title"><span>Sign up Details</span></div>
 
       <div class="form-group">
         <label>Email Address:</label>

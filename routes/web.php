@@ -195,6 +195,9 @@ Route::post('/notifications/read-all', [NotificationController::class, 'markAllA
         Route::post('/inventory/item/mark-damaged-upon-arrival', [DashboardController::class, 'markInventoryDamageUponArrival'])
             ->name('inventory.damage.uponArrival');
 
+
+        Route::get('/dashboard/maintenance/export/pdf', [DashboardController::class, 'exportMaintenancePdf'])
+                ->name('maintenance.export.pdf');
         // Optional admin-only analytics in its own group below
     });
 
