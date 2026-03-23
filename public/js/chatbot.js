@@ -137,12 +137,19 @@
       })
       .then((data) => {
         removeTypingIndicator();
-        appendBotMessage(data.reply, { typewriter: true });
+        appendBotMessage(data, { typewriter: true });
       })
       .catch(() => {
-        removeTypingIndicator();
-        appendBotMessage("Sorry, something went wrong.", { typewriter: true });
-      });
+      removeTypingIndicator();
+      appendBotMessage({
+        reply: "<div>Sorry, something went wrong while processing your request.</div>",
+        ui: {
+          title: "System Error",
+          variant: "danger",
+          chips: ["Error"]
+        }
+      }, { typewriter: true });
+    });
   }
 
   sendBtn.addEventListener("click", (e) => {
@@ -272,9 +279,9 @@
       }, SUGGEST_UI.debounceMs);
     });
 
-  input.addEventListener("focus", () => {
-    e.stopPropagation();
-  fetchSuggestions(input.value.trim()); // ✅ show on focus
+  input.addEventListener("focus", (e) => {
+  e.stopPropagation();
+  fetchSuggestions(input.value.trim());
 });
 
   // Click suggestion => store in textbox only
@@ -408,39 +415,34 @@ suggestionsBox?.addEventListener("click", (e) => {
     scrollToBottom();
   }
 
-  function appendBotMessage(text, opts = { typewriter: true }) {
-    const row = document.createElement("div");
-    row.className = "chat-row chat-bot-row";
+  function appendBotMessage(payload, opts = { typewriter: true }) {
+  const row = document.createElement("div");
+  row.className = "chat-row chat-bot-row";
 
-    const avatar = document.createElement("img");
-    avatar.src = "/images/chatbot.jpg";
-    avatar.className = "chat-avatar";
-    avatar.alt = "Chatbot";
+  const avatar = document.createElement("img");
+  avatar.src = "/images/chatbot.jpg";
+  avatar.className = "chat-avatar";
+  avatar.alt = "Chatbot";
 
-    const bubble = document.createElement("div");
-    bubble.className = "chat-bubble bot-bubble";
+  const bubble = document.createElement("div");
+  bubble.className = "chat-bubble bot-bubble bot-bubble-rich";
 
-    row.appendChild(avatar);
-    row.appendChild(bubble);
-    messagesDiv.appendChild(row);
-    scrollToBottom();
+  row.appendChild(avatar);
+  row.appendChild(bubble);
+  messagesDiv.appendChild(row);
+  scrollToBottom();
 
-    const shouldType =
-      TYPEWRITER.enabled && opts?.typewriter !== false && typeof text === "string";
+  let html = "";
 
-    if (!shouldType) {
-      bubble.innerHTML = text;
-      scrollToBottom();
-      return;
-    }
-
-    // Typewriter effect (supports HTML)
-    typewriterIntoElement(bubble, text).catch(() => {
-      // fallback if something fails
-      bubble.innerHTML = text;
-      scrollToBottom();
-    });
+  if (typeof payload === "string") {
+    html = buildBotCard({ reply: payload });
+  } else {
+    html = buildBotCard(payload);
   }
+
+  bubble.innerHTML = html;
+  scrollToBottom();
+}
 
   function showTypingIndicator() {
     const row = document.createElement("div");
@@ -448,7 +450,7 @@ suggestionsBox?.addEventListener("click", (e) => {
     row.id = "typing-indicator";
 
     const avatar = document.createElement("img");
-    avatar.src = "/images/chatbot.png";
+    avatar.src = "/images/chatbot.jpg";
     avatar.className = "chat-avatar";
     avatar.alt = "Chatbot";
 
@@ -479,3 +481,41 @@ suggestionsBox?.addEventListener("click", (e) => {
     });
 
 })();
+
+function buildBotCard(data) {
+  const ui = data?.ui || {};
+  const title = ui.title || "TESDA ChatBot";
+  const subtitle = ui.subtitle || "";
+  const variant = ui.variant || "info";
+  const chips = Array.isArray(ui.chips) ? ui.chips : [];
+  const time = ui.time || "";
+  const content = data?.reply || "No response available.";
+
+  const chipsHtml = chips.length
+    ? `<div class="cb-card-chips">
+        ${chips.map(ch => `<span class="cb-chip">${escapeHtml(ch)}</span>`).join("")}
+       </div>`
+    : "";
+
+  const subtitleHtml = subtitle
+    ? `<div class="cb-card-subtitle">${escapeHtml(subtitle)}</div>`
+    : "";
+
+  const timeHtml = time
+    ? `<div class="cb-card-time">${escapeHtml(time)}</div>`
+    : "";
+
+  return `
+    <div class="cb-card cb-${escapeHtml(variant)}">
+      <div class="cb-card-header">
+        <div>
+          <div class="cb-card-title">${escapeHtml(title)}</div>
+          ${subtitleHtml}
+        </div>
+        ${timeHtml}
+      </div>
+      ${chipsHtml}
+      <div class="cb-card-content">${content}</div>
+    </div>
+  `;
+}

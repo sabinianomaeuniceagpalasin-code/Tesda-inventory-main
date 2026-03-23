@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", function () {
-    const lockAfterSeconds = 1000;
+    const lockAfterSeconds = 120;
     let isLocked = false;
     let idleTimeout = null;
 

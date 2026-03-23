@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\JsonResponse;
 
 class ChatbotController extends Controller
 {
@@ -294,25 +295,40 @@ class ChatbotController extends Controller
      | HANDLERS
      ========================= */
     private function lowStock()
-    {
-        $items = DB::table('propertyinventory')
-            ->select('item_name', DB::raw('SUM(quantity) as total'))
-            ->where('status', 'Available')
-            ->groupBy('item_name')
-            ->having('total', '<=', 5)
-            ->get();
+{
+    $items = DB::table('propertyinventory')
+        ->select('item_name', DB::raw('SUM(quantity) as total'))
+        ->where('status', 'Available')
+        ->groupBy('item_name')
+        ->having('total', '<=', 5)
+        ->get();
 
-        if ($items->isEmpty()) {
-            return response()->json(['reply' => 'Good news! There are no items currently low on stock.']);
-        }
-
-        $reply = "<strong>Low Stock Items:</strong><br><br>";
-        foreach ($items as $item) {
-            $reply .= "{$item->item_name}: {$item->total} left<br>";
-        }
-
-        return response()->json(['reply' => $reply]);
+    if ($items->isEmpty()) {
+        return $this->botResponse(
+            'Low Stock Check',
+            $this->section('Result', 'Good news. There are currently <strong>no low-stock items</strong> in the inventory.'),
+            'success',
+            ['Stock', 'Available']
+        );
     }
+
+    $rows = [];
+    foreach ($items as $item) {
+        $rows[] = "{$item->item_name} <span class='cb-inline-badge warning'>{$item->total} left</span>";
+    }
+
+    $html =
+        $this->section('Items Requiring Attention', $this->bulletList($rows))
+        .
+        $this->section('Recommendation', 'Please consider restocking these items soon to avoid shortages.');
+
+    return $this->botResponse(
+        'Low Stock Alert',
+        $html,
+        'warning',
+        ['Low Stock', 'Attention Needed']
+    );
+}
 
     private function listAvailable()
     {
@@ -433,29 +449,41 @@ class ChatbotController extends Controller
 
     if ($items->isEmpty()) {
         $this->clearLastListSerials($request);
-        return response()->json(['reply' => 'There are currently no damaged items.']);
+
+        return $this->botResponse(
+            'Damaged Items',
+            $this->section('Result', 'There are currently <strong>no damaged items</strong> in the inventory.'),
+            'success',
+            ['Damaged', 'Inventory']
+        );
     }
 
     $serials = $items->pluck('serial_no')->filter()->values()->toArray();
     $this->setLastListSerials($request, $serials);
 
-    // keep this only if you still want single-item fallback
     if (count($serials) === 1) {
         $this->setLastSerial($request, $serials[0]);
     }
 
-    $reply = "<strong>Damaged Items:</strong><br><br>";
-    $currentItem = null;
-
+    $grouped = [];
     foreach ($items as $item) {
-        if ($currentItem !== $item->item_name) {
-            $currentItem = $item->item_name;
-            $reply .= "<br><strong>{$currentItem}</strong><br>";
-        }
-        $reply .= "• {$item->serial_no}<br>";
+        $grouped[$item->item_name][] = $item->serial_no;
     }
 
-    return response()->json(['reply' => $reply]);
+    $html = '';
+    foreach ($grouped as $itemName => $serialList) {
+        $html .= $this->section(
+            $itemName,
+            $this->bulletList($serialList)
+        );
+    }
+
+    return $this->botResponse(
+        'Damaged Items',
+        $html,
+        'warning',
+        ['Damaged', 'Follow-up Ready']
+    );
 }
 
     private function damagedWithBorrower()
@@ -554,15 +582,30 @@ class ChatbotController extends Controller
     }
 
     private function totalItems()
-    {
-        $total = DB::table('propertyinventory')->sum('quantity');
+{
+    $total = DB::table('propertyinventory')->sum('quantity');
 
-        return response()->json([
-            'reply' => $total
-                ? "There are a total of {$total} items in the inventory."
-                : "There are currently no items in the inventory."
-        ]);
+    if (!$total) {
+        return $this->botResponse(
+            'Inventory Summary',
+            $this->section('Total Items', 'There are currently <strong>no items</strong> recorded in the inventory.'),
+            'warning',
+            ['Inventory']
+        );
     }
+
+    $html = $this->section(
+        'Total Inventory Count',
+        "<div class='cb-big-number'>{$total}</div><div class='cb-muted'>Total recorded items in inventory</div>"
+    );
+
+    return $this->botResponse(
+        'Inventory Summary',
+        $html,
+        'success',
+        ['Inventory', 'Summary']
+    );
+}
 
     private function itemCount(string $msg)
 {
@@ -744,7 +787,13 @@ class ChatbotController extends Controller
         $reply .= "<br><br><strong>Remarks</strong><br>" . e($item->remarks);
     }
 
-    return response()->json(['reply' => $reply]);
+    return $this->botResponse(
+    'Item Status Report',
+    "<div class='cb-status-report'>{$reply}</div>",
+    'info',
+    [$item->status, $riskLevel, $item->serial_no],
+    'Detailed inventory analytics'
+);
 }
 
 private function buildPredictiveAnalytics($item, array $assessment, array $usageStats, int $damageCount = 0, int $unserviceableCount = 0): string
@@ -1227,43 +1276,82 @@ private function buildPrescriptiveAnalytics($item, array $assessment, array $usa
 
     private function greet()
 {
-    return response()->json([
-        'reply' => "Hello! I’m the TESDA Inventory Chatbot. Type <strong>Help</strong> to see what I can do."
-    ]);
+    $html =
+        $this->section('Welcome', "
+            Hello! I’m the <strong>TESDA Inventory Chatbot</strong>.<br>
+            I can help you check item status, stock levels, issued items, damaged items, missing items, and maintenance records.
+        ")
+        .
+        $this->section('Quick Examples', $this->bulletList([
+            'List available items',
+            'How many laptops?',
+            'What is the status of SN0001?',
+            'Who borrowed SN0001?',
+        ]));
+
+    return $this->botResponse(
+        'TESDA Inventory Assistant',
+        $html,
+        'primary',
+        ['Inventory', 'Status', 'Issuance']
+    );
 }
 
 private function intro()
 {
-    return response()->json([
-        'reply' =>
-            "I’m the <strong>TESDA Inventory Chatbot</strong>. " .
-            "I can help you check item availability, stock counts, item status by serial number (SN), and item issuance history."
-    ]);
+    $html =
+        $this->section('About Me', "
+            I’m the <strong>TESDA Inventory Chatbot</strong>, built to assist users in checking inventory records, item status, borrowing history, stock counts, and maintenance-related information.
+        ")
+        .
+        $this->section('What I Can Do', $this->bulletList([
+            'Check item availability',
+            'Show stock counts',
+            'Track serial numbers',
+            'Show borrower and issuance details',
+            'Display damaged, missing, or unserviceable items',
+        ]));
+
+    return $this->botResponse(
+        'System Introduction',
+        $html,
+        'info',
+        ['TESDA', 'Inventory']
+    );
 }
 
 private function help()
 {
-    $reply =
-    "<strong>Here’s what I can help you with:</strong><br><br>" .
-    "✅ <strong>Inventory Lists</strong><br>" .
-    "• List available items<br>" .
-    "• List damaged items<br>" .
-    "• List unserviceable items<br>" .
-    "• List missing items<br>" .
-    "• Show damaged items with borrower<br>" .
-    "• Show unserviceable items with borrower<br>" .
-    "• Show missing items with borrower<br><br>" .
-    "✅ <strong>Counts</strong><br>" .
-    "• How many items are in inventory?<br>" .
-    "• How many laptops?<br>" .
-    "• Low stock items<br><br>" .
-    "✅ <strong>Serial Number Queries</strong><br>" .
-    "• What is the status of SN0001?<br>" .
-    "• Who borrowed SN0001?<br>" .
-    "• When was SN0001 issued?<br>" .
-    "• Who reported damage of SN0001?<br>";
+    $html =
+        $this->section('Inventory Lists', $this->bulletList([
+            'List available items',
+            'List damaged items',
+            'List unserviceable items',
+            'List missing items',
+            'Show damaged items with borrower',
+            'Show unserviceable items with borrower',
+            'Show missing items with borrower',
+        ]))
+        .
+        $this->section('Counts and Stock', $this->bulletList([
+            'How many items are in inventory?',
+            'How many laptops?',
+            'Low stock items',
+        ]))
+        .
+        $this->section('Serial Number Queries', $this->bulletList([
+            'What is the status of SN0001?',
+            'Who borrowed SN0001?',
+            'When was SN0001 issued?',
+            'Who reported damage of SN0001?',
+        ]));
 
-    return response()->json(['reply' => $reply]);
+    return $this->botResponse(
+        'Available Commands',
+        $html,
+        'primary',
+        ['Help', 'Commands', 'Guide']
+    );
 }
 
 private function outOfScope()
@@ -1525,6 +1613,60 @@ private function formatServiceDuration(?string $startDate): string
     } catch (\Throwable $e) {
         return 'N/A';
     }
+}
+
+private function botResponse(
+    string $title,
+    string $html,
+    string $variant = 'info',
+    array $chips = [],
+    ?string $subtitle = null
+): JsonResponse {
+    return response()->json([
+        'reply' => $html, // keep for backward compatibility
+        'ui' => [
+            'title' => $title,
+            'subtitle' => $subtitle,
+            'variant' => $variant, // primary, success, warning, danger, info
+            'chips' => $chips,
+            'time' => now()->format('M d, Y h:i A'),
+        ]
+    ]);
+}
+
+private function section(string $title, string $content): string
+{
+    return "
+        <div class='cb-section'>
+            <div class='cb-section-title'>{$title}</div>
+            <div class='cb-section-body'>{$content}</div>
+        </div>
+    ";
+}
+
+private function bulletList(array $items): string
+{
+    $html = "<ul class='cb-list'>";
+    foreach ($items as $item) {
+        $html .= "<li>{$item}</li>";
+    }
+    $html .= "</ul>";
+    return $html;
+}
+
+private function infoGrid(array $pairs): string
+{
+    $html = "<div class='cb-grid'>";
+    foreach ($pairs as $label => $value) {
+        $html .= "
+            <div class='cb-grid-row'>
+                <span class='cb-grid-label'>{$label}</span>
+                <span class='cb-grid-value'>{$value}</span>
+            </div>
+        ";
+    }
+    $html .= "</div>";
+    return $html;
 }
 
 private function getItemSpecificRecommendations($item): string
@@ -1854,7 +1996,16 @@ private function buildDescriptiveAnalytics($item, array $assessment, array $usag
             $payload = [
                 'model' => 'gpt-4o-mini',
                 'messages' => [
-                    ['role' => 'system', 'content' => 'You are a TESDA inventory chatbot. If the question is not answerable, say: "Please contact the TESDA admin."'],
+                    ['role' => 'system', 'content' => '
+                            You are a TESDA inventory chatbot.
+                            Reply in clean, professional HTML suitable for a chat card UI.
+                            Rules:
+                            - Use short sections with headings when helpful.
+                            - Use <strong>, <br>, <ul>, and <li> only.
+                            - Keep answers concise, clear, and professional.
+                            - Stay focused on TESDA inventory, property, issuance, stock, maintenance, serial tracking, QR/barcode, and item records.
+                            - If the question is outside scope or cannot be answered, say: "Please contact the TESDA admin."
+                            '],
                     ['role' => 'user', 'content' => $request->message],
                 ],
                 'max_tokens' => 150,

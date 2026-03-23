@@ -1100,7 +1100,10 @@
 
     <!-- HEADER -->
     <div class="chat-header">
-      <div class="chat-title">TESDA ChatBot</div>
+      <div class="chat-title">
+          TESDA Inventory Assistant
+          <div style="font-size:11px;font-weight:400;opacity:.85;">Property and inventory support</div>
+        </div>
       <button id="chat-close" class="chat-close">&times;</button>
     </div>
 
