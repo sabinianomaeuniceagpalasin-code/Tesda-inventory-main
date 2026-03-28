@@ -28,14 +28,16 @@ body {
 .left {
   flex: 1;
   display: flex;
+  flex-direction: column; 
   justify-content: center;
   align-items: center;
   padding: 40px;
+  gap: 10px;
 }
 
 .left img {
   width: 100%;
-  max-width: 250px;
+  max-width: 300px;
 }
 
 /* RIGHT SIDE (Login Form) */

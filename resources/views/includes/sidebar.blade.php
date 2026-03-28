@@ -1,6 +1,6 @@
 <aside class="sidebar">
   <div class="logo">
-    <img src="{{ asset('images/Tesda logo 1.png') }}" alt="TESDA Logo">
+    <img src="{{ asset('images/log1.png') }}" alt="TESDA Logo">
   </div>
 
   <nav class="menu">

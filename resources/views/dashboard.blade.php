@@ -28,7 +28,7 @@
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="logo">
-        <img src="{{ asset('images/Tesda logo 1.png') }}" alt="TESDA Logo">
+        <img src="{{ asset('images/log1.png') }}" alt="TESDA Logo">
       </div>
 
       <!-- NAVIGATION MENU -->
@@ -513,6 +513,7 @@
                         <td>{{ $item->serial_no }}</td>
                         <td>{{ $item->issued_to }}</td>
                         <td>{{ $item->issued_by }}</td>
+                        <td>{{ \Carbon\Carbon::parse($item->issued_date)->format('F d, Y') }}</td>
                         <td>{{ \Carbon\Carbon::parse($item->issued_date)->format('F d, Y') }}</td>
                         <td>{{ \Carbon\Carbon::parse($item->return_date)->format('F d, Y') }}</td>
                         <td>{{ $item->item }}</td>
