@@ -2,13 +2,21 @@
 //
 // Features:
 // 1) Report Damage from Issued table (.damaged-btn-issued)
+//    — Now includes an optional image upload field inside the SweetAlert modal
+//    — Sends as multipart/form-data (FormData) instead of JSON so the file is included
 // 2) Create Maintenance Ticket from Damage table (.maintenance-btn-issued)
 // 3) Reload page and return to Damage Report section after creating maintenance ticket
 
 (() => {
+  // ── CSRF helper ──────────────────────────────────────────────────────────────
   const csrf = () =>
     document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
 
+  // ============================================================================
+  //  safeLoadTable
+  //  Fetches an HTML fragment from `url` and injects it into `tbodySelector`.
+  //  Expects the endpoint to return plain <tr>…</tr> rows, NOT a full HTML doc.
+  // ============================================================================
   async function safeLoadTable(tbodySelector, url) {
     const tbody = document.querySelector(tbodySelector);
     if (!tbody) return;
@@ -34,6 +42,7 @@
         return;
       }
 
+      // Guard: never inject a full HTML document into a tbody
       if (/<html|<body/i.test(html)) {
         console.error("Blocked full HTML document injection for:", url, html);
         tbody.innerHTML = `<tr><td colspan="99" style="text-align:center; padding:16px;">
@@ -53,22 +62,43 @@
     }
   }
 
+  // Expose reload helpers globally so other scripts can call them if needed
   window.reloadDamageTable = () =>
     safeLoadTable("#damageTable tbody", "/dashboard/damage/table-html");
 
   window.reloadMaintenanceTable = () =>
     safeLoadTable("#maintenanceTable tbody", "/dashboard/maintenance/table-html");
 
-  async function reportDamage(serialNo, observation) {
+  // ============================================================================
+  //  reportDamage
+  //  Sends the damage report to /damage-reports/store.
+  //
+  //  ✅ CHANGED: Now accepts a `file` parameter (File object or null).
+  //     Uses FormData instead of JSON so the image can be attached.
+  //     Do NOT set Content-Type manually — the browser sets it automatically
+  //     with the correct multipart boundary when using FormData.
+  // ============================================================================
+  async function reportDamage(serialNo, observation, file = null) {
+    // ── Build FormData so we can attach the optional image ───────────────────
+    const formData = new FormData();
+    formData.append("serial_no",   serialNo);
+    formData.append("observation", observation);
+
+    // ✅ Only append the image key when the user actually selected a file
+    if (file) {
+      formData.append("image", file);
+    }
+
     const res = await fetch("/damage-reports/store", {
       method: "POST",
       headers: {
+        // ✅ X-CSRF-TOKEN header is still needed for Laravel's CSRF middleware
+        // ✅ Do NOT set Content-Type — FormData sets it automatically (multipart/form-data)
         "X-CSRF-TOKEN": csrf(),
-        "Content-Type": "application/json",
         Accept: "application/json",
       },
       credentials: "same-origin",
-      body: JSON.stringify({ serial_no: serialNo, observation }),
+      body: formData, // ✅ FormData, not JSON.stringify()
     });
 
     const data = await res.json().catch(() => ({}));
@@ -90,11 +120,17 @@
       timer: 2000,
       showConfirmButton: false,
     }).then(() => {
+      // ✅ Navigate back to the Damage Report section after reload
       localStorage.setItem("activeSection", "damaged");
       window.location.reload();
     });
   }
 
+  // ============================================================================
+  //  createTicketFromDamage
+  //  Sends a POST to /damage/move/{damageId} to convert a damage report into
+  //  a maintenance ticket. No file upload needed here.
+  // ============================================================================
   async function createTicketFromDamage(damageId) {
     const res = await fetch(`/damage/move/${encodeURIComponent(damageId)}`, {
       method: "POST",
@@ -107,6 +143,7 @@
 
     const data = await res.json().catch(() => ({}));
 
+    // 409 = ticket already exists for this damage report
     if (res.status === 409) {
       Swal.fire("Already Ticketed", data.message || "Ticket already exists.", "info");
       return;
@@ -129,11 +166,17 @@
       timer: 1200,
       showConfirmButton: false,
     }).then(() => {
+      // ✅ Return to the Damage section after the ticket is created
       localStorage.setItem("activeSection", "damaged");
       window.location.reload();
     });
   }
 
+  // ============================================================================
+  //  getSerialFromIssuedButton
+  //  Reads the serial number from the button's data-id attribute,
+  //  falling back to the first <td> in the row if data-id is missing.
+  // ============================================================================
   function getSerialFromIssuedButton(btn) {
     let serial = btn.dataset.id;
     if (!serial) {
@@ -143,7 +186,15 @@
     return serial || null;
   }
 
+  // ============================================================================
+  //  Global click handler (event delegation)
+  //  Handles two button types:
+  //    .damaged-btn-issued      — opens SweetAlert to report damage (with image)
+  //    .maintenance-btn-issued  — creates a maintenance ticket from a damage report
+  // ============================================================================
   document.addEventListener("click", async (e) => {
+
+    // ── 1) DAMAGE REPORT BUTTON (.damaged-btn-issued) ─────────────────────────
     const damageBtn = e.target.closest(".damaged-btn-issued");
     if (damageBtn) {
       const serialNo = getSerialFromIssuedButton(damageBtn);
@@ -153,33 +204,98 @@
         return;
       }
 
+      // ✅ SweetAlert modal now includes:
+      //    - A textarea for the observation (required)
+      //    - A file input for attaching a damage photo (optional)
+      //    - An <img> preview that shows the selected image before submitting
       const result = await Swal.fire({
         title: "Report Damage",
         html: `
           <p style="margin:0 0 10px 0;">Serial #: <b>${serialNo}</b></p>
-          <textarea id="damageObservation" class="swal2-textarea"
-            placeholder="Enter cause / observation (required)"></textarea>
+
+          <textarea
+            id="damageObservation"
+            class="swal2-textarea"
+            placeholder="Enter cause / observation (required)"
+            style="margin-bottom:12px;"
+          ></textarea>
+
+          <!-- ✅ Optional image upload field -->
+          <label
+            for="damageImageInput"
+            style="display:block; text-align:left; font-size:13px; margin-bottom:4px; color:#555;"
+          >
+            Attach Photo <span style="color:#aaa;">(optional, max 5MB)</span>
+          </label>
+          <input
+            type="file"
+            id="damageImageInput"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            style="display:block; width:100%; margin-bottom:10px;"
+          />
+
+          <!-- ✅ Live preview — hidden until a file is chosen -->
+          <img
+            id="damageImagePreview"
+            src=""
+            alt="Preview"
+            style="display:none; max-width:100%; max-height:160px; border-radius:6px; object-fit:cover; margin-top:6px;"
+          />
         `,
         icon: "warning",
         showCancelButton: true,
         confirmButtonText: "Submit",
         cancelButtonText: "Cancel",
+
+        // ✅ Wire up the image preview after the modal's HTML is inserted into the DOM
+        didOpen: () => {
+          const fileInput = document.getElementById("damageImageInput");
+          const preview   = document.getElementById("damageImagePreview");
+
+          fileInput?.addEventListener("change", () => {
+            const file = fileInput.files[0];
+
+            if (file) {
+              // ✅ createObjectURL gives an instant local preview without uploading
+              preview.src           = URL.createObjectURL(file);
+              preview.style.display = "block";
+            } else {
+              preview.src           = "";
+              preview.style.display = "none";
+            }
+          });
+        },
+
         preConfirm: () => {
-          const obs = document.getElementById("damageObservation")?.value?.trim();
+          const obs  = document.getElementById("damageObservation")?.value?.trim();
+          const file = document.getElementById("damageImageInput")?.files[0] || null;
+
+          // Observation is required
           if (!obs) {
             Swal.showValidationMessage("Observation is required.");
             return false;
           }
-          return obs;
+
+          // ✅ Enforce 5MB client-side so we don't waste bandwidth on oversized files
+          if (file && file.size > 5 * 1024 * 1024) {
+            Swal.showValidationMessage("Image must be 5MB or smaller.");
+            return false;
+          }
+
+          // ✅ Return both values so the .then() block can pass them to reportDamage()
+          return { obs, file };
         },
       });
 
       if (result.isConfirmed) {
-        await reportDamage(serialNo, result.value);
+        const { obs, file } = result.value;
+        await reportDamage(serialNo, obs, file); // ✅ pass file (may be null)
       }
+
       return;
     }
 
+    // ── 2) MAINTENANCE TICKET BUTTON (.maintenance-btn-issued) ───────────────
     const ticketBtn = e.target.closest(".maintenance-btn-issued");
     if (ticketBtn) {
       const damageId = ticketBtn.dataset.damageId;
@@ -200,6 +316,7 @@
 
       if (!confirm.isConfirmed) return;
 
+      // Disable button while the request is in-flight to prevent double-clicks
       ticketBtn.disabled = true;
 
       try {

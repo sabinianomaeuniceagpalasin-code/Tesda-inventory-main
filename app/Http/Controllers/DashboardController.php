@@ -79,6 +79,7 @@ class DashboardController extends Controller
                 'i.specification',
                 'i.source_of_fund',
                 'i.classification',
+                'i.department',
                 DB::raw('DATE(i.date_acquired) as date_acquired'),
                 'i.status',
                 'i.property_no',
@@ -299,6 +300,7 @@ class DashboardController extends Controller
             'i.specification',
             'i.source_of_fund',
             'i.classification',
+            'i.department',
             DB::raw('DATE(i.date_acquired) as date_acquired'),
             'i.status',
             'i.property_no',
@@ -336,6 +338,7 @@ class DashboardController extends Controller
         $dateAcquired   = $item->date_acquired ? Carbon::parse($item->date_acquired)->format('F d, Y') : '-';
         $sourceOfFund   = $item->source_of_fund ?? '-';
         $classification = $item->classification ?? '-';
+        $department     = $item->department ?? '-';
         $description    = $item->description ?? '-';
         $itemName       = $item->item_name ?? '-';
         $serialNo       = $item->serial_no ?? '-';
@@ -372,6 +375,7 @@ class DashboardController extends Controller
                 <td>{$description}</td>
                 <td>{$sourceOfFund}</td>
                 <td>{$classification}</td>
+                <td>{$department}</td>
                 <td>{$dateAcquired}</td>
                 <td><span class='{$statusClass}'>{$statusText}</span></td>
                 {$actionsHtml}
@@ -380,7 +384,7 @@ class DashboardController extends Controller
     }
 
     if ($html === '') {
-        $colspan = $canManageInventory ? 8 : 7;
+        $colspan = $canManageInventory ? 9 : 8;
         $html = "<tr><td colspan='{$colspan}' style='text-align:center; padding:20px;'>No items found.</td></tr>";
     }
 
@@ -543,6 +547,7 @@ class DashboardController extends Controller
                 'd.serial_no',
                 'd.observation',
                 'd.reported_at',
+                'd.image_path',   // ✅ include image_path for display
                 'i.item_name'
             )
             ->orderByDesc('d.reported_at')
@@ -561,6 +566,12 @@ class DashboardController extends Controller
 
     // ---- the rest of your methods below are unchanged ----
 
+    /**
+     * ✅ Store a damage report with optional image upload.
+     * Accepts multipart/form-data so that a file can be attached.
+     * The image is stored under storage/app/public/damage_images
+     * and the relative path is saved to damagereports.image_path.
+     */
     public function storeDamageReport(Request $request)
     {
         $serialNo = $request->input('serial_no');
@@ -570,21 +581,30 @@ class DashboardController extends Controller
             return response()->json(['success' => false, 'message' => 'Item not found.']);
         }
 
+        // ✅ Handle optional image upload
+        $imagePath = null;
+        if ($request->hasFile('image') && $request->file('image')->isValid()) {
+            // Store in storage/app/public/damage_images — run `php artisan storage:link` if not done yet
+            $imagePath = $request->file('image')->store('damage_images', 'public');
+        }
+
         $item->status = 'Damaged';
         $item->save();
 
         $damage = DamageReport::create([
-            'serial_no' => $item->serial_no,
+            'serial_no'   => $item->serial_no,
             'reported_at' => now(),
+            'image_path'  => $imagePath, // ✅ persist image path (null if no file sent)
         ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Item marked as damaged and report created!',
             'damage' => [
-                'serial_No' => $item->serial_no,
-                'item_name' => $item->item_name,
-                'reported_at' => $damage->reported_at->format('F d, Y')
+                'serial_No'  => $item->serial_no,
+                'item_name'  => $item->item_name,
+                'reported_at' => $damage->reported_at->format('F d, Y'),
+                'image_url'  => $imagePath ? asset('storage/' . $imagePath) : null, // ✅ return public URL
             ]
         ]);
     }
@@ -816,8 +836,9 @@ public function getUnderMaintenanceItemsTable()
         return response()->json([
             'success' => true,
             'damage' => [
-                'item_name' => $damage->item->item_name,
+                'item_name'  => $damage->item->item_name,
                 'reported_at' => Carbon::parse($damage->reported_at)->format('Y-m-d'),
+                'image_url'  => $damage->image_path ? asset('storage/' . $damage->image_path) : null, // ✅ expose image URL
             ],
         ]);
     }
@@ -1382,11 +1403,18 @@ public function maintenanceTableHtml()
     return response()->json(['html' => $html]);
 }
 
+/**
+ * ✅ Mark an inventory item as damaged upon arrival with optional image upload.
+ * Only allows items created within the last 3 days.
+ * Stores the image under storage/app/public/damage_images and saves the
+ * relative path to damagereports.image_path.
+ */
 public function markInventoryDamageUponArrival(Request $request)
 {
     $request->validate([
         'serial_no' => 'required|string|exists:items,serial_no',
         'reason'    => 'required|string|max:255',
+        'image'     => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // ✅ max 5MB
     ]);
 
     $serialNo = trim($request->serial_no);
@@ -1445,6 +1473,12 @@ public function markInventoryDamageUponArrival(Request $request)
 
     $finalObservation = $reason . ' - Upon Arrival';
 
+    // ✅ Handle optional image upload — store in storage/app/public/damage_images
+    $imagePath = null;
+    if ($request->hasFile('image') && $request->file('image')->isValid()) {
+        $imagePath = $request->file('image')->store('damage_images', 'public');
+    }
+
     DB::beginTransaction();
 
     try {
@@ -1453,13 +1487,14 @@ public function markInventoryDamageUponArrival(Request $request)
         $item->updated_at = now();
         $item->save();
 
-        // 2) create damage report with reported_by
+        // 2) create damage report with reported_by and image_path
         $damageId = DB::table('damagereports')->insertGetId([
             'serial_no'     => $item->serial_no,
             'observation'   => $finalObservation,
             'borrower_name' => null,
             'reported_by'   => $loggedInUser->user_id,
             'reported_at'   => now(),
+            'image_path'    => $imagePath, // ✅ save image path (null if none uploaded)
             'created_at'    => now(),
             'updated_at'    => now(),
         ]);
@@ -1478,6 +1513,7 @@ public function markInventoryDamageUponArrival(Request $request)
                 'item_name'   => $item->item_name,
                 'observation' => $finalObservation,
                 'reported_by' => $loggedInUser->user_id,
+                'image_url'   => $imagePath ? asset('storage/' . $imagePath) : null, // ✅ include image URL in notification data
                 'source'      => 'inventory_modal_upon_arrival',
             ]),
             'created_by_user_id' => $loggedInUser->user_id,
@@ -1515,10 +1551,16 @@ public function markInventoryDamageUponArrival(Request $request)
                 'serial_no'   => $item->serial_no,
                 'item_name'   => $item->item_name,
                 'observation' => $finalObservation,
+                'image_url'   => $imagePath ? asset('storage/' . $imagePath) : null, // ✅ return public URL to frontend
             ]
         ]);
     } catch (\Exception $e) {
         DB::rollBack();
+
+        // ✅ Clean up uploaded image if the transaction failed
+        if ($imagePath && \Storage::disk('public')->exists($imagePath)) {
+            \Storage::disk('public')->delete($imagePath);
+        }
 
         return response()->json([
             'success' => false,
@@ -1536,21 +1578,32 @@ public function damageTableHtml()
         ->where(function($q){
             $q->whereNull('d.is_ticketed')->orWhere('d.is_ticketed', 0);
         })
-        ->select('d.damage_id', 'd.serial_no', 'd.observation', 'd.reported_at', 'i.item_name')
+        ->select('d.damage_id', 'd.serial_no', 'd.observation', 'd.reported_at', 'd.image_path', 'i.item_name') // ✅ include image_path
         ->orderByDesc('d.reported_at')
         ->get();
 
     $html = '';
     foreach ($damageReports as $report) {
         $date = $report->reported_at ? Carbon::parse($report->reported_at)->format('F d, Y') : '-';
-        $obs = $report->observation ?? '-';
+        $obs  = $report->observation ?? '-';
         $name = $report->item_name ?? '-';
+
+        // ✅ Build image thumbnail if an image was attached to the report
+        $imageHtml = '-';
+        if (!empty($report->image_path)) {
+            $imageUrl  = asset('storage/' . $report->image_path);
+            $imageHtml = "<a href='{$imageUrl}' target='_blank'>
+                            <img src='{$imageUrl}' alt='Damage Image'
+                                 style='width:50px;height:50px;object-fit:cover;border-radius:4px;cursor:pointer;'>
+                          </a>";
+        }
 
         $html .= "
           <tr>
             <td>{$report->serial_no}</td>
             <td>{$name}</td>
             <td>{$obs}</td>
+            <td>{$imageHtml}</td>
             <td>{$date}</td>
             <td>
               <div class='button-container'>
@@ -1567,7 +1620,7 @@ public function damageTableHtml()
     }
 
     if ($html === '') {
-        $html = "<tr><td colspan='5' style='text-align:center; padding:20px;'>No damage reports found.</td></tr>";
+        $html = "<tr><td colspan='6' style='text-align:center; padding:20px;'>No damage reports found.</td></tr>";
     }
 
     return response($html, 200)->header('Content-Type', 'text/html');

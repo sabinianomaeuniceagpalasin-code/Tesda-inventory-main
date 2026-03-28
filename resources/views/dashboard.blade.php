@@ -258,6 +258,7 @@
                 <th>Description</th>
                 <th>Sources of Fund</th>
                 <th>Classification</th>
+                <th>Department</th>
                 <th>Date Acquired</th>
                 <th>Status</th>
                 @if($isAdmin || $isPropertyCustodian)
@@ -272,6 +273,7 @@
                     <td>{{ $item->item_name }}</td>
                     <td>{{ $item->description ?? '-' }}</td>
                     <td>{{ $item->source_of_fund }}</td>
+                    <td>{{ $item->department }}</td>
                     <td>{{ $item->classification }}</td>
                     <td>{{ \Carbon\Carbon::parse($item->date_acquired)->format('F d, Y') }}</td>
                     <td>
@@ -499,6 +501,7 @@
                       <th>Issued to</th>
                       <th>Issued by</th>
                       <th>Date Issued</th>
+                      <th>Borrowed Date</th>
                       <th>Expected Return Date</th>
                       <th>Item</th>
                       <th>Action</th>
@@ -675,15 +678,14 @@
           <div class="form-header">
             <h2>Damage Records History</h2>
             <div class="right-buttons">
-            <input type="text" id="damageSearchInput" placeholder="Search Item Name...">
-          <!--  <button type="button" id="exportDamageBtn">Export to PDF</button> -->
-        </div>
+              <input type="text" id="damageSearchInput" placeholder="Search Item Name...">
+            <!--  <button type="button" id="exportDamageBtn">Export to PDF</button> -->
+            </div>
           </div>
 
           <div class="damaged-layout">
 
             <div class="issued-left">
-
               <div class="form-summary">
                 <div class="summary-card">
                   <h4>Total Reports</h4>
@@ -700,12 +702,14 @@
                   <h4>Damage Report List</h4>
                 </div>
 
+                {{-- ✅ Added "Attached Picture" column to match backend damageTableHtml() and getDamageReports() --}}
                 <table class="issued-table" id="damageTable">
                   <thead>
                     <tr>
                       <th>Serial #</th>
                       <th>Item</th>
                       <th>Observation</th>
+                      <th>Attached Picture</th>{{-- ✅ NEW column — matches backend image_path field --}}
                       <th>Date Reported</th>
                       <th>Actions</th>
                     </tr>
@@ -717,6 +721,22 @@
                         <td>{{ $report->serial_no }}</td>
                         <td>{{ $report->item_name ?? '-' }}</td>
                         <td>{{ $report->observation ?? '-' }}</td>
+
+                        {{-- ✅ Show clickable thumbnail if image_path exists, otherwise dash --}}
+                        <td>
+                          @if(!empty($report->image_path))
+                            <a href="{{ asset('storage/' . $report->image_path) }}" target="_blank">
+                              <img
+                                src="{{ asset('storage/' . $report->image_path) }}"
+                                alt="Damage Image"
+                                style="width:50px; height:50px; object-fit:cover; border-radius:4px; cursor:pointer;"
+                              >
+                            </a>
+                          @else
+                            -
+                          @endif
+                        </td>
+
                         <td>{{ \Carbon\Carbon::parse($report->reported_at)->format('F d, Y') }}</td>
                         <td>
                           <div class="button-container">
@@ -726,13 +746,13 @@
                               title="Maintenance">
                               <i class="fas fa-exclamation-triangle"></i>
                             </button>
-
                           </div>
                         </td>
                       </tr>
                     @empty
                       <tr>
-                        <td colspan="7" style="text-align:center; padding:20px;">
+                        {{-- ✅ colspan updated from 7 to 6 to match the actual 6 columns --}}
+                        <td colspan="6" style="text-align:center; padding:20px;">
                           No damage reports found.
                         </td>
                       </tr>
@@ -1311,6 +1331,7 @@
                         <div id="modal-lifespan" class="detail-value text-muted">Not set</div>
                     </div>
                 </div>
+
                 @if($isAdmin || $isPropertyCustodian)
                 <div class="status-marking">
                     <p class="section-title">Quick Status Update</p>
