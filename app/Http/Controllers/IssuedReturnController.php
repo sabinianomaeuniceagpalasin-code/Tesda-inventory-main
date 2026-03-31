@@ -16,11 +16,12 @@ class IssuedReturnController extends Controller
         DB::beginTransaction();
 
         try {
-            // 1) Get issued record
-            $issued = IssuedLog::findOrFail($id);
+            // 1) Get issued record with row-level lock to prevent race conditions
+            $issued = IssuedLog::lockForUpdate()->findOrFail($id);
 
-            // Prevent double return
-            if (!empty($issued->actual_return_date)) {
+            // Prevent double return (strict null check)
+            if ($issued->actual_return_date !== null) {
+                DB::rollBack();
                 return response()->json([
                     'success' => false,
                     'error' => 'This item has already been returned.'
@@ -49,23 +50,23 @@ class IssuedReturnController extends Controller
 
             // 5) Create notification
             $notifId = DB::table('notifications')->insertGetId([
-                'type' => 'inventory',
-                'title' => 'Item Returned',
-                'message' => 'Serial No. ' . $issued->serial_no . ' has been returned.',
-                'severity' => 'info',
-                'entity_type' => 'item',
-                'entity_id' => $item->item_id ?? null,
-                'action_url' => 'http://127.0.0.1:8000/dashboard?section=issued',
-                'data' => json_encode([
-                    'serial_no' => $issued->serial_no,
-                    'reference_no' => $issued->reference_no,
+                'type'              => 'inventory',
+                'title'             => 'Item Returned',
+                'message'           => 'Serial No. ' . $issued->serial_no . ' has been returned.',
+                'severity'          => 'info',
+                'entity_type'       => 'item',
+                'entity_id'         => $item->item_id ?? null,
+                'action_url'        => 'http://127.0.0.1:8000/dashboard?section=issued',
+                'data'              => json_encode([
+                    'serial_no'           => $issued->serial_no,
+                    'reference_no'        => $issued->reference_no,
                     'returned_by_user_id' => Auth::id(),
-                    'returned_at' => $returnedAt->toDateTimeString(),
-                    'usage_hours' => $hoursUsed,
+                    'returned_at'         => $returnedAt->toDateTimeString(),
+                    'usage_hours'         => $hoursUsed,
                 ]),
                 'created_by_user_id' => Auth::id(),
-                'created_at' => now(),
-                'updated_at' => now(),
+                'created_at'         => now(),
+                'updated_at'         => now(),
             ]);
 
             // 6) Send only to Admin users
@@ -76,12 +77,12 @@ class IssuedReturnController extends Controller
             $recipientRows = [];
             foreach ($adminUsers as $adminUserId) {
                 $recipientRows[] = [
-                    'notif_id' => $notifId,
-                    'recipient_user_id' => $adminUserId,
-                    'read_at' => null,
-                    'deleted_at' => null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                    'notif_id'           => $notifId,
+                    'recipient_user_id'  => $adminUserId,
+                    'read_at'            => null,
+                    'deleted_at'         => null,
+                    'created_at'         => now(),
+                    'updated_at'         => now(),
                 ];
             }
 
@@ -98,17 +99,18 @@ class IssuedReturnController extends Controller
             DB::commit();
 
             return response()->json([
-                'success' => true,
-                'message' => 'Item returned successfully.',
+                'success'      => true,
+                'message'      => 'Item returned successfully.',
                 'reference_no' => $reference,
-                'usage_hours' => $hoursUsed,
+                'usage_hours'  => $hoursUsed,
             ]);
+
         } catch (\Throwable $e) {
             DB::rollBack();
 
             return response()->json([
                 'success' => false,
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
