@@ -941,6 +941,26 @@
               <select id="item-department">
                 <option value="" selected disabled>Select department</option>
                 <option value="ICS">ICS</option>
+                <option value="HR">HR</option>
+                <option value="REGISTRAR">REGISTRAR</option>
+                <option value="EIM">EIM</option>
+                <option value="CSS">CSS</option>
+                <option value="BIOMED">BIOMED</option>
+                <option value="EPAS">EPAS</option>
+                <option value="FINANCE">FINANCE</option>
+                <option value="BES">BES</option>
+                <option value="OFFICE OF THE ADMINISTRATOR">OFFICE OF THE ADMINISTRATOR</option>
+                <option value="ENGLISH TRAINING">ENGLISH TRAINING</option>
+                <option value="EIM">EIM</option>
+                <option value="DOM. WORK">DOM. WORK</option>
+                <option value="ADMIN">ADMIN</option>
+                <option value="COMMAND CENTER">COMMAND CENTER</option>
+                <option value="CONFERENCE ROOM">CONFERENCE ROOM</option>
+                <option value="FV">FV</option>
+                <option value="TRAINER'S LOUNGE">TRAINER'S LOUNGE</option>
+                <option value="ENTRANCE HALLWAY">ENTRANCE HALLWAY</option>
+                <option value="MECHATRONICS">MECHATRONICS</option>
+                <option value="DRV">DRV</option>
                 <option value="ENGINEERING">ENGINEERING</option>
               </select>
 
