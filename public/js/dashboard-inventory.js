@@ -316,6 +316,171 @@ document.addEventListener("click", function (e) {
     }
 });
 
+// =========================
+// USAGE HISTORY PAGINATION
+// =========================
+const USAGE_ROWS_PER_PAGE = 10;
+let usageAllRows = [];
+let usageCurrentPage = 1;
+
+/**
+ * Renders the current page slice of usageAllRows into the
+ * #usage-history-body table body and updates the pagination controls.
+ */
+function renderUsagePage() {
+    const tbody = document.getElementById("usage-history-body");
+    if (!tbody) return;
+
+    const totalRows  = usageAllRows.length;
+    const totalPages = Math.max(1, Math.ceil(totalRows / USAGE_ROWS_PER_PAGE));
+
+    // Clamp current page within valid range
+    usageCurrentPage = Math.min(Math.max(1, usageCurrentPage), totalPages);
+
+    const start = (usageCurrentPage - 1) * USAGE_ROWS_PER_PAGE;
+    const slice = usageAllRows.slice(start, start + USAGE_ROWS_PER_PAGE);
+
+    if (slice.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:20px;">No usage history found.</td></tr>`;
+    } else {
+        tbody.innerHTML = slice.map(function (row) {
+            // Colour-code the return status badge
+            const statusClass =
+                row.return_status === "Returned" ? "text-green"  :
+                row.return_status === "Overdue"  ? "text-red"    : "text-blue";
+
+            return `
+                <tr>
+                    <td>${row.issued_date ?? "-"} → ${row.return_date ?? "-"}</td>
+                    <td>${row.issued_to ?? "-"}</td>
+                    <td>${row.purpose ?? "-"}</td>
+                    <td>${row.issued_by ?? "-"}</td>
+                    <td><span class="${statusClass}">${row.return_status ?? "-"}</span></td>
+                    <td>${row.condition_after_use ?? "-"}</td>
+                    <td>${row.remarks ?? "-"}</td>
+                </tr>
+            `;
+        }).join("");
+    }
+
+    // Update "Showing X–Y of Z entries" label
+    const entriesCount = document.querySelector(".entries-count");
+    if (entriesCount) {
+        const showing = totalRows === 0 ? 0 : start + 1;
+        const showEnd = Math.min(start + USAGE_ROWS_PER_PAGE, totalRows);
+        entriesCount.textContent = `Showing ${showing}–${showEnd} of ${totalRows} entries`;
+    }
+
+    renderUsagePagination(totalPages);
+}
+
+/**
+ * Rebuilds the pagination button row.
+ */
+function renderUsagePagination(totalPages) {
+    const controls = document.querySelector(".pagination-controls");
+    if (!controls) return;
+
+    let html = `
+        <button class="pag-btn"
+            onclick="changeUsagePage(${usageCurrentPage - 1})"
+            ${usageCurrentPage === 1 ? "disabled" : ""}>
+            &#8249;
+        </button>
+    `;
+
+    for (let i = 1; i <= totalPages; i++) {
+        html += `
+            <button class="pag-num ${i === usageCurrentPage ? "active" : ""}"
+                onclick="changeUsagePage(${i})">
+                ${i}
+            </button>
+        `;
+    }
+
+    html += `
+        <button class="pag-btn"
+            onclick="changeUsagePage(${usageCurrentPage + 1})"
+            ${usageCurrentPage === totalPages ? "disabled" : ""}>
+            &#8250;
+        </button>
+    `;
+
+    controls.innerHTML = html;
+}
+
+/**
+ * Called by pagination buttons to jump to a specific page.
+ */
+window.changeUsagePage = function (page) {
+    usageCurrentPage = page;
+    renderUsagePage();
+};
+
+/**
+ * Fetches the usage / issuance history for the item currently open
+ * in the inventory detail modal, then renders it into the history modal.
+ * Reads the serial number from #modal-serial (set by showItemDetails).
+ */
+window.loadHistoryData = function () {
+    const serialNo = window.currentModalSerialNo || null;
+    const tbody    = document.getElementById("usage-history-body");
+
+    if (!serialNo || serialNo === "---") {
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:20px;color:red;">No item selected.</td></tr>`;
+        }
+        return;
+    }
+
+    // Show loading state while the request is in flight
+    if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:20px;">Loading...</td></tr>`;
+    }
+
+    fetch(`/item/usage-history/${encodeURIComponent(serialNo)}`, {
+        headers: {
+            "X-Requested-With": "XMLHttpRequest",
+            "Accept": "application/json",
+        }
+    })
+    .then(function (res) {
+        if (!res.ok) throw new Error("Server returned " + res.status);
+        return res.json();
+    })
+    .then(function (data) {
+        if (!data.success) {
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:red;padding:20px;">Failed to load history.</td></tr>`;
+            }
+            return;
+        }
+
+        // Update the item info header inside the history modal
+        const nameEl = document.getElementById("history-item-name");
+        const propEl = document.getElementById("history-property-no");
+        if (nameEl) nameEl.innerText = data.item_name   || "---";
+        if (propEl) propEl.innerText = data.property_no || "---";
+
+        // Store rows and render the first page
+        usageAllRows     = data.history || [];
+        usageCurrentPage = 1;
+        renderUsagePage();
+    })
+    .catch(function (err) {
+        console.error("Usage history fetch error:", err);
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:red;padding:20px;">An error occurred while loading history.</td></tr>`;
+        }
+    });
+};
+
+/**
+ * Opens the usage history modal for the item that is currently open
+ * in the inventory detail modal.
+ * Reads item name and serial from the detail modal DOM elements so
+ * the two modals always stay in sync.
+ */
 window.showUsageHistory = function () {
     const historyModal = document.getElementById("usageHistoryModal");
 
@@ -327,6 +492,7 @@ window.showUsageHistory = function () {
         ? document.getElementById("modal-serial").innerText
         : "---";
 
+    // Pre-fill the history modal header with what we already know
     if (document.getElementById("history-item-name")) {
         document.getElementById("history-item-name").innerText = itemName;
     }
@@ -338,10 +504,26 @@ window.showUsageHistory = function () {
     if (historyModal) {
         historyModal.style.setProperty("display", "flex", "important");
 
+        // Fetch and render the history rows
         if (typeof loadHistoryData === "function") {
             loadHistoryData();
         }
     }
+};
+
+/**
+ * Closes the usage history modal and resets pagination state.
+ */
+window.closeUsageHistory = function () {
+    const modal = document.getElementById("usageHistoryModal");
+    if (modal) modal.style.display = "none";
+
+    // Reset state so stale rows are not shown on next open
+    usageAllRows     = [];
+    usageCurrentPage = 1;
+
+    const tbody = document.getElementById("usage-history-body");
+    if (tbody) tbody.innerHTML = "";
 };
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -364,8 +546,8 @@ document.addEventListener("DOMContentLoaded", function () {
         const dialog = modalEl.querySelector(".modal-dialog");
         if (!dialog) return;
 
-        const clickedInsideDialog = dialog.contains(e.target);
-        const clickedInventoryRow = e.target.closest("#inventoryTable tbody tr.inventory-row");
+        const clickedInsideDialog    = dialog.contains(e.target);
+        const clickedInventoryRow    = e.target.closest("#inventoryTable tbody tr.inventory-row");
         const clickedInventoryButton = e.target.closest("#inventoryTable button");
 
         if (!clickedInsideDialog && !clickedInventoryRow && !clickedInventoryButton) {

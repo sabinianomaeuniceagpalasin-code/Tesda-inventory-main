@@ -49,7 +49,7 @@ class DashboardController extends Controller
 
         $damageData = $this->getDamageReports();
         $damageReports = $damageData['damageReports'];
-        $damageCounts  = $damageData['damageCounts'];
+        $damageCounts = $damageData['damageCounts'];
 
         $items = Item::orderBy('item_name')->get();
 
@@ -170,7 +170,8 @@ class DashboardController extends Controller
             ->filter(fn($item) => $item->next_maintenance_date && Carbon::parse($item->next_maintenance_date)->isPast());
 
         $upcomingMaintenance = $maintenanceForecast
-            ->filter(fn($item) =>
+            ->filter(
+                fn($item) =>
                 $item->next_maintenance_date &&
                 Carbon::parse($item->next_maintenance_date)->between(now(), now()->addDays(7))
             );
@@ -191,26 +192,27 @@ class DashboardController extends Controller
             ->get();
 
         $highRiskItems = $maintenanceForecast
-            ->filter(fn($item) =>
+            ->filter(
+                fn($item) =>
                 ($item->maintenance_threshold_usage > 0 && $item->total_usage_hours >= $item->maintenance_threshold_usage)
                 || ($item->next_maintenance_date && Carbon::parse($item->next_maintenance_date)->isPast())
             );
 
-            $returnedItems = DB::table('issuedlog')
-                ->whereNotNull('actual_return_date')
-                ->count();
+        $returnedItems = DB::table('issuedlog')
+            ->whereNotNull('actual_return_date')
+            ->count();
 
-                $overdueItems = DB::table('issuedlog as i')
-                    ->joinSub($latest, 'latest', function ($join) {
-                        $join->on('i.issue_id', '=', 'latest.issue_id');
-                    })
-                    ->join('items as it', 'i.serial_no', '=', 'it.serial_no')
-                    ->whereNull('i.actual_return_date')
-                    ->whereNotNull('i.return_date')
-                    ->where('i.return_date', '<', now())
-                    ->where('it.status', 'Issued')
-                    ->whereNotIn('it.status', ['Damaged', 'Unserviceable'])
-                    ->count();
+        $overdueItems = DB::table('issuedlog as i')
+            ->joinSub($latest, 'latest', function ($join) {
+                $join->on('i.issue_id', '=', 'latest.issue_id');
+            })
+            ->join('items as it', 'i.serial_no', '=', 'it.serial_no')
+            ->whereNull('i.actual_return_date')
+            ->whereNotNull('i.return_date')
+            ->where('i.return_date', '<', now())
+            ->where('it.status', 'Issued')
+            ->whereNotIn('it.status', ['Damaged', 'Unserviceable'])
+            ->count();
 
         return view('dashboard', compact(
             'totalItems',
@@ -242,7 +244,7 @@ class DashboardController extends Controller
             'items',
             'returnedItems',
             'overdueItems',
-        
+
         ));
     }
 
@@ -285,70 +287,70 @@ class DashboardController extends Controller
     }
 
     public function getInventoryTable(Request $request)
-{
-    $status = $request->query('status', 'All');
+    {
+        $status = $request->query('status', 'All');
 
-    $user = auth()->user();
-    $canManageInventory = $user && in_array($user->role, ['Admin', 'Property Custodian']);
+        $user = auth()->user();
+        $canManageInventory = $user && in_array($user->role, ['Admin', 'Property Custodian']);
 
-    $query = DB::table('items as i')
-        ->leftJoin('propertyinventory as pi', 'i.property_no', '=', 'pi.property_no')
-        ->select(
-            'i.serial_no',
-            'i.item_name',
-            'i.description',
-            'i.specification',
-            'i.source_of_fund',
-            'i.classification',
-            'i.department',
-            DB::raw('DATE(i.date_acquired) as date_acquired'),
-            'i.status',
-            'i.property_no',
-            'i.expected_life_years',
-            'i.created_at',
-            'pi.unit_cost'
-        )
-        ->orderByDesc('i.item_id');
+        $query = DB::table('items as i')
+            ->leftJoin('propertyinventory as pi', 'i.property_no', '=', 'pi.property_no')
+            ->select(
+                'i.serial_no',
+                'i.item_name',
+                'i.description',
+                'i.specification',
+                'i.source_of_fund',
+                'i.classification',
+                'i.department',
+                DB::raw('DATE(i.date_acquired) as date_acquired'),
+                'i.status',
+                'i.property_no',
+                'i.expected_life_years',
+                'i.created_at',
+                'pi.unit_cost'
+            )
+            ->orderByDesc('i.item_id');
 
-    if ($status !== 'All') {
-        if ($status === 'Missing') {
-            $query->whereIn('i.status', ['Lost', 'Missing']);
-        } else {
-            $query->where('i.status', $status);
-        }
-    }
-
-    $inventory = $query->get();
-
-    $html = '';
-
-    foreach ($inventory as $item) {
-        if ($item->status === 'Available') {
-            $statusClass = 'text-green';
-        } elseif ($item->status === 'For Repair' || $item->status === 'Maintenance') {
-            $statusClass = 'text-brown';
-        } elseif ($item->status === 'Issued') {
-            $statusClass = 'text-blue';
-        } elseif (in_array($item->status, ['Unserviceable', 'Damaged', 'Lost', 'Missing'])) {
-            $statusClass = 'text-red';
-        } else {
-            $statusClass = '';
+        if ($status !== 'All') {
+            if ($status === 'Missing') {
+                $query->whereIn('i.status', ['Lost', 'Missing']);
+            } else {
+                $query->where('i.status', $status);
+            }
         }
 
-        $dateAcquired   = $item->date_acquired ? Carbon::parse($item->date_acquired)->format('F d, Y') : '-';
-        $sourceOfFund   = $item->source_of_fund ?? '-';
-        $classification = $item->classification ?? '-';
-        $department     = $item->department ?? '-';
-        $description    = $item->description ?? '-';
-        $itemName       = $item->item_name ?? '-';
-        $serialNo       = $item->serial_no ?? '-';
-        $statusText     = $item->status ?? '-';
+        $inventory = $query->get();
 
-        $itemJson = htmlspecialchars(json_encode($item), ENT_QUOTES, 'UTF-8');
+        $html = '';
 
-        $actionsHtml = '';
-        if ($canManageInventory) {
-            $actionsHtml = "
+        foreach ($inventory as $item) {
+            if ($item->status === 'Available') {
+                $statusClass = 'text-green';
+            } elseif ($item->status === 'For Repair' || $item->status === 'Maintenance') {
+                $statusClass = 'text-brown';
+            } elseif ($item->status === 'Issued') {
+                $statusClass = 'text-blue';
+            } elseif (in_array($item->status, ['Unserviceable', 'Damaged', 'Lost', 'Missing'])) {
+                $statusClass = 'text-red';
+            } else {
+                $statusClass = '';
+            }
+
+            $dateAcquired = $item->date_acquired ? Carbon::parse($item->date_acquired)->format('F d, Y') : '-';
+            $sourceOfFund = $item->source_of_fund ?? '-';
+            $classification = $item->classification ?? '-';
+            $department = $item->department ?? '-';
+            $description = $item->description ?? '-';
+            $itemName = $item->item_name ?? '-';
+            $serialNo = $item->serial_no ?? '-';
+            $statusText = $item->status ?? '-';
+
+            $itemJson = htmlspecialchars(json_encode($item), ENT_QUOTES, 'UTF-8');
+
+            $actionsHtml = '';
+            if ($canManageInventory) {
+                $actionsHtml = "
                 <td class='action-buttons'>
                     <button
                         type='button'
@@ -366,9 +368,9 @@ class DashboardController extends Controller
                     </button>
                 </td>
             ";
-        }
+            }
 
-        $html .= "
+            $html .= "
             <tr class='inventory-row' data-item='{$itemJson}' style='cursor:pointer;'>
                 <td>{$serialNo}</td>
                 <td>{$itemName}</td>
@@ -381,68 +383,73 @@ class DashboardController extends Controller
                 {$actionsHtml}
             </tr>
         ";
-    }
+        }
 
-    if ($html === '') {
-        $colspan = $canManageInventory ? 9 : 8;
-        $html = "<tr><td colspan='{$colspan}' style='text-align:center; padding:20px;'>No items found.</td></tr>";
-    }
+        if ($html === '') {
+            $colspan = $canManageInventory ? 9 : 8;
+            $html = "<tr><td colspan='{$colspan}' style='text-align:center; padding:20px;'>No items found.</td></tr>";
+        }
 
-    return response()->json(['html' => $html]);
-}
+        return response()->json(['html' => $html]);
+    }
 
     public function getListOfAllItemsTable()
-{
-    $inventory = DB::table('items')
-        ->select('item_name', 'serial_no', 'status')
-        ->orderBy('item_name', 'asc')
-        ->get();
+    {
+        $inventory = DB::table('items')
+            ->select('item_name', 'serial_no', 'status')
+            ->orderBy('item_name', 'asc')
+            ->get();
 
-    $html = '';
+        $html = '';
 
-    foreach ($inventory as $item) {
-        if ($item->status === 'Available') $statusClass = 'text-green';
-        elseif ($item->status === 'For Repair') $statusClass = 'text-brown';
-        elseif ($item->status === 'Issued') $statusClass = 'text-blue';
-        elseif ($item->status === 'Damaged' || $item->status === 'Lost' || $item->status === 'Missing' || $item->status === 'Unserviceable') $statusClass = 'text-red';
-        else $statusClass = '';
+        foreach ($inventory as $item) {
+            if ($item->status === 'Available')
+                $statusClass = 'text-green';
+            elseif ($item->status === 'For Repair')
+                $statusClass = 'text-brown';
+            elseif ($item->status === 'Issued')
+                $statusClass = 'text-blue';
+            elseif ($item->status === 'Damaged' || $item->status === 'Lost' || $item->status === 'Missing' || $item->status === 'Unserviceable')
+                $statusClass = 'text-red';
+            else
+                $statusClass = '';
 
-        $html .= "
+            $html .= "
             <tr>
                 <td>{$item->serial_no}</td>
                 <td>{$item->item_name}</td>
                 <td><span class='{$statusClass}'>{$item->status}</span></td>
             </tr>
         ";
+        }
+
+        return response()->json(['html' => $html]);
     }
 
-    return response()->json(['html' => $html]);
-}
-
     public function getListofAllAvailableItemsTable()
-{
-    $inventory = DB::table('items')
-        ->select('item_name', 'serial_no')
-        ->where('status', 'Available')
-        ->orderBy('item_name', 'asc')
-        ->get();
+    {
+        $inventory = DB::table('items')
+            ->select('item_name', 'serial_no')
+            ->where('status', 'Available')
+            ->orderBy('item_name', 'asc')
+            ->get();
 
-    $html = '';
-    foreach ($inventory as $item) {
-        $html .= "
+        $html = '';
+        foreach ($inventory as $item) {
+            $html .= "
             <tr>
                 <td>{$item->serial_no}</td>
                 <td>{$item->item_name}</td>
             </tr>
         ";
-    }
+        }
 
-    if ($html === '') {
-        $html = "<tr><td colspan='2' style='text-align:center; padding:20px;'>No available items found.</td></tr>";
-    }
+        if ($html === '') {
+            $html = "<tr><td colspan='2' style='text-align:center; padding:20px;'>No available items found.</td></tr>";
+        }
 
-    return response()->json(['html' => $html]);
-}
+        return response()->json(['html' => $html]);
+    }
 
     public function getListofIssuedItemsTable()
     {
@@ -592,19 +599,19 @@ class DashboardController extends Controller
         $item->save();
 
         $damage = DamageReport::create([
-            'serial_no'   => $item->serial_no,
+            'serial_no' => $item->serial_no,
             'reported_at' => now(),
-            'image_path'  => $imagePath, // ✅ persist image path (null if no file sent)
+            'image_path' => $imagePath, // ✅ persist image path (null if no file sent)
         ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Item marked as damaged and report created!',
             'damage' => [
-                'serial_No'  => $item->serial_no,
-                'item_name'  => $item->item_name,
+                'serial_No' => $item->serial_no,
+                'item_name' => $item->item_name,
                 'reported_at' => $damage->reported_at->format('F d, Y'),
-                'image_url'  => $imagePath ? asset('storage/' . $imagePath) : null, // ✅ return public URL
+                'image_url' => $imagePath ? asset('storage/' . $imagePath) : null, // ✅ return public URL
             ]
         ]);
     }
@@ -666,7 +673,7 @@ class DashboardController extends Controller
                 'maintenance.repair_cost',
                 'maintenance.date_reported',
                 'maintenance.expected_completion',
-                'maintenance.remarks',   
+                'maintenance.remarks',
                 'items.item_name'
             )
             ->where('maintenance.maintenance_id', $id)
@@ -731,80 +738,80 @@ class DashboardController extends Controller
     }
 
     public function getMaintenanceRecords()
-{
-    $records = DB::table('maintenance as m')
-        ->leftJoin('items as i', 'm.serial_no', '=', 'i.serial_no')
-        ->select(
-            'm.maintenance_id',
-            'm.serial_no',
-            'i.item_name',
-            'm.observation',
-            'm.repair_cost',
-            'm.date_reported',
-            'm.expected_completion',
-            'm.remarks',
-            'm.damage_id'
-        )
-        ->orderByDesc('m.date_reported')
-        ->get();
+    {
+        $records = DB::table('maintenance as m')
+            ->leftJoin('items as i', 'm.serial_no', '=', 'i.serial_no')
+            ->select(
+                'm.maintenance_id',
+                'm.serial_no',
+                'i.item_name',
+                'm.observation',
+                'm.repair_cost',
+                'm.date_reported',
+                'm.expected_completion',
+                'm.remarks',
+                'm.damage_id'
+            )
+            ->orderByDesc('m.date_reported')
+            ->get();
 
-    $counts = [
-        // count only items currently under repair
-        'total' => DB::table('items')
-            ->where('status', 'For Repair')
-            ->count(),
+        $counts = [
+            // count only items currently under repair
+            'total' => DB::table('items')
+                ->where('status', 'For Repair')
+                ->count(),
 
-        // completed repair based on maintenance remarks
-        'complete_repairs' => DB::table('maintenance')
-            ->whereRaw('LOWER(TRIM(remarks)) = ?', ['item is now available'])
-            ->count(),
+            // completed repair based on maintenance remarks
+            'complete_repairs' => DB::table('maintenance')
+                ->whereRaw('LOWER(TRIM(remarks)) = ?', ['item is now available'])
+                ->count(),
 
-        // all items currently unserviceable
-        'unserviceable' => DB::table('items')
-            ->where('status', 'Unserviceable')
-            ->count(),
+            // all items currently unserviceable
+            'unserviceable' => DB::table('items')
+                ->where('status', 'Unserviceable')
+                ->count(),
 
-        // total repair cost from maintenance table
-        'total_repair_cost' => (float) DB::table('maintenance')
-            ->sum('repair_cost'),
-    ];
+            // total repair cost from maintenance table
+            'total_repair_cost' => (float) DB::table('maintenance')
+                ->sum('repair_cost'),
+        ];
 
-    return [
-        'records' => $records,
-        'counts' => $counts,
-    ];
-}
+        return [
+            'records' => $records,
+            'counts' => $counts,
+        ];
+    }
 
-public function getUnderMaintenanceItemsTable()
-{
-    $items = DB::table('items as i')
-        ->leftJoin('damagereports as d', function ($join) {
-            $join->on('i.serial_no', '=', 'd.serial_no')
-                 ->whereRaw('d.damage_id = (
+    public function getUnderMaintenanceItemsTable()
+    {
+        $items = DB::table('items as i')
+            ->leftJoin('damagereports as d', function ($join) {
+                $join->on('i.serial_no', '=', 'd.serial_no')
+                    ->whereRaw('d.damage_id = (
                      SELECT MAX(d2.damage_id)
                      FROM damagereports as d2
                      WHERE d2.serial_no = i.serial_no
                  )');
-        })
-        ->select(
-            'i.serial_no',
-            'i.item_name',
-            'i.status',
-            'd.observation',
-            'd.borrower_name'
-        )
-        ->whereIn('i.status', ['Maintenance', 'For Repair'])
-        ->orderBy('i.item_name', 'asc')
-        ->get();
+            })
+            ->select(
+                'i.serial_no',
+                'i.item_name',
+                'i.status',
+                'd.observation',
+                'd.borrower_name'
+            )
+            ->whereIn('i.status', ['Maintenance', 'For Repair'])
+            ->orderBy('i.item_name', 'asc')
+            ->get();
 
-    $html = '';
+        $html = '';
 
-    foreach ($items as $item) {
-        $statusClass = $item->status === 'For Repair' ? 'text-brown' : 'text-blue';
-        $observation = $item->observation ?? '-';
-        $borrowerName = $item->borrower_name ?? '-';
+        foreach ($items as $item) {
+            $statusClass = $item->status === 'For Repair' ? 'text-brown' : 'text-blue';
+            $observation = $item->observation ?? '-';
+            $borrowerName = $item->borrower_name ?? '-';
 
-        $html .= "
+            $html .= "
             <tr>
                 <td>{$item->serial_no}</td>
                 <td>{$item->item_name}</td>
@@ -813,14 +820,14 @@ public function getUnderMaintenanceItemsTable()
                 <td><span class='{$statusClass}'>{$item->status}</span></td>
             </tr>
         ";
-    }
+        }
 
-    if ($html === '') {
-        $html = "<tr><td colspan='5' style='text-align:center; padding:20px;'>No under maintenance items found.</td></tr>";
-    }
+        if ($html === '') {
+            $html = "<tr><td colspan='5' style='text-align:center; padding:20px;'>No under maintenance items found.</td></tr>";
+        }
 
-    return response()->json(['html' => $html]);
-}
+        return response()->json(['html' => $html]);
+    }
 
     public function getLatestDamageReport($serialNo)
     {
@@ -836,40 +843,40 @@ public function getUnderMaintenanceItemsTable()
         return response()->json([
             'success' => true,
             'damage' => [
-                'item_name'  => $damage->item->item_name,
+                'item_name' => $damage->item->item_name,
                 'reported_at' => Carbon::parse($damage->reported_at)->format('Y-m-d'),
-                'image_url'  => $damage->image_path ? asset('storage/' . $damage->image_path) : null, // ✅ expose image URL
+                'image_url' => $damage->image_path ? asset('storage/' . $damage->image_path) : null, // ✅ expose image URL
             ],
         ]);
     }
 
     public function getUnserviceableItemsTable()
-{
-    $items = DB::table('unserviceablereports as ur')
-        ->leftJoin('items as i', 'ur.serial_no', '=', 'i.serial_no')
-        ->leftJoin('users as u', 'ur.reported_by', '=', 'u.user_id')
-        ->select(
-            'ur.serial_no',
-            'i.item_name',
-            'ur.reason',
-            DB::raw("COALESCE(ur.borrower_name, 'N/A') as borrower_name"),
-            DB::raw("COALESCE(CONCAT(u.first_name, ' ', u.last_name), 'Unknown') as reported_by"),
-            'ur.reported_at'
-        )
-        ->orderByDesc('ur.reported_at')
-        ->get();
+    {
+        $items = DB::table('unserviceablereports as ur')
+            ->leftJoin('items as i', 'ur.serial_no', '=', 'i.serial_no')
+            ->leftJoin('users as u', 'ur.reported_by', '=', 'u.user_id')
+            ->select(
+                'ur.serial_no',
+                'i.item_name',
+                'ur.reason',
+                DB::raw("COALESCE(ur.borrower_name, 'N/A') as borrower_name"),
+                DB::raw("COALESCE(CONCAT(u.first_name, ' ', u.last_name), 'Unknown') as reported_by"),
+                'ur.reported_at'
+            )
+            ->orderByDesc('ur.reported_at')
+            ->get();
 
-    $html = '';
+        $html = '';
 
-    foreach ($items as $item) {
-        $reason = $item->reason ?? '-';
-        $borrowerName = $item->borrower_name ?? '-';
-        $reportedBy = $item->reported_by ?? '-';
-        $reported = $item->reported_at
-            ? Carbon::parse($item->reported_at)->format('F d, Y')
-            : '-';
+        foreach ($items as $item) {
+            $reason = $item->reason ?? '-';
+            $borrowerName = $item->borrower_name ?? '-';
+            $reportedBy = $item->reported_by ?? '-';
+            $reported = $item->reported_at
+                ? Carbon::parse($item->reported_at)->format('F d, Y')
+                : '-';
 
-        $html .= "
+            $html .= "
         
             <tr>
                 <td>{$item->serial_no}</td>
@@ -880,49 +887,49 @@ public function getUnderMaintenanceItemsTable()
                 <td>{$reported}</td>
             </tr>
         ";
-    }
+        }
 
-    if ($html === '') {
-        $html = "<tr><td colspan='6' style='text-align:center; padding:20px;'>No unserviceable items found.</td></tr>";
-    }
+        if ($html === '') {
+            $html = "<tr><td colspan='6' style='text-align:center; padding:20px;'>No unserviceable items found.</td></tr>";
+        }
 
-    return response()->json(['html' => $html]);
-}
+        return response()->json(['html' => $html]);
+    }
 
 
 
     public function getMissingItemsTable()
-{
-    $missingItems = DB::table('missing as m')
-        ->leftJoin('items as i', 'm.serial_number', '=', 'i.serial_no')
-        ->leftJoin('issuedlog as il', function ($join) {
-            $join->on('m.serial_number', '=', 'il.serial_no')
-                 ->whereRaw('il.issue_id = (
+    {
+        $missingItems = DB::table('missing as m')
+            ->leftJoin('items as i', 'm.serial_number', '=', 'i.serial_no')
+            ->leftJoin('issuedlog as il', function ($join) {
+                $join->on('m.serial_number', '=', 'il.serial_no')
+                    ->whereRaw('il.issue_id = (
                      SELECT MAX(issue_id)
                      FROM issuedlog
                      WHERE serial_no = m.serial_number
                  )');
-        })
-        ->select(
-            'm.serial_number',
-            'm.item_name',
-            'i.classification',
-            'm.borrower_name',
-            'il.issued_date',
-            'm.reported_at'
-        )
-        ->orderByDesc('m.reported_at')
-        ->get();
+            })
+            ->select(
+                'm.serial_number',
+                'm.item_name',
+                'i.classification',
+                'm.borrower_name',
+                'il.issued_date',
+                'm.reported_at'
+            )
+            ->orderByDesc('m.reported_at')
+            ->get();
 
-    $html = '';
+        $html = '';
 
-    foreach ($missingItems as $item) {
-        $classification = $item->classification ?? '-';
-        $borrowerName   = $item->borrower_name ?? '-';
-        $issuedDate     = $item->issued_date ? Carbon::parse($item->issued_date)->format('F d, Y') : '-';
-        $reportedAt     = $item->reported_at ? Carbon::parse($item->reported_at)->format('F d, Y') : '-';
+        foreach ($missingItems as $item) {
+            $classification = $item->classification ?? '-';
+            $borrowerName = $item->borrower_name ?? '-';
+            $issuedDate = $item->issued_date ? Carbon::parse($item->issued_date)->format('F d, Y') : '-';
+            $reportedAt = $item->reported_at ? Carbon::parse($item->reported_at)->format('F d, Y') : '-';
 
-        $html .= "
+            $html .= "
             <tr>
                 <td>{$item->serial_number}</td>
                 <td>{$item->item_name}</td>
@@ -932,14 +939,14 @@ public function getUnderMaintenanceItemsTable()
                 <td>{$reportedAt}</td>
             </tr>
         ";
-    }
+        }
 
-    if ($html === '') {
-        $html = "<tr><td colspan='6' style='text-align:center; padding:20px;'>No missing items found.</td></tr>";
-    }
+        if ($html === '') {
+            $html = "<tr><td colspan='6' style='text-align:center; padding:20px;'>No missing items found.</td></tr>";
+        }
 
-    return response()->json(['html' => $html]);
-}
+        return response()->json(['html' => $html]);
+    }
 
     public function report($serial_no)
     {
@@ -966,197 +973,197 @@ public function getUnderMaintenanceItemsTable()
         return response()->json(['message' => 'Item successfully reported to maintenance!']);
     }
     public function exportMaintenancePdf(Request $request)
-{
-    $query = DB::table('maintenance as mr')
-        ->leftJoin('items as i', 'mr.serial_no', '=', 'i.serial_no')
-        ->select(
-            'mr.maintenance_id',
-            'mr.serial_no',
-            'i.item_name',
-            'mr.observation',
-            'mr.date_reported',
-            'mr.repair_cost',
-            'mr.expected_completion',
-            'mr.remarks'
-        )
-        ->orderByDesc('mr.date_reported');
+    {
+        $query = DB::table('maintenance as mr')
+            ->leftJoin('items as i', 'mr.serial_no', '=', 'i.serial_no')
+            ->select(
+                'mr.maintenance_id',
+                'mr.serial_no',
+                'i.item_name',
+                'mr.observation',
+                'mr.date_reported',
+                'mr.repair_cost',
+                'mr.expected_completion',
+                'mr.remarks'
+            )
+            ->orderByDesc('mr.date_reported');
 
-    if ($request->filled('search')) {
-        $search = trim($request->search);
+        if ($request->filled('search')) {
+            $search = trim($request->search);
 
-        $query->where(function ($q) use ($search) {
-            $q->where('mr.serial_no', 'like', "%{$search}%")
-              ->orWhere('i.item_name', 'like', "%{$search}%")
-              ->orWhere('mr.observation', 'like', "%{$search}%")
-              ->orWhere('mr.remarks', 'like', "%{$search}%");
-        });
+            $query->where(function ($q) use ($search) {
+                $q->where('mr.serial_no', 'like', "%{$search}%")
+                    ->orWhere('i.item_name', 'like', "%{$search}%")
+                    ->orWhere('mr.observation', 'like', "%{$search}%")
+                    ->orWhere('mr.remarks', 'like', "%{$search}%");
+            });
+        }
+
+        $records = $query->get();
+
+        $maintenanceCounts = [
+            'total' => DB::table('maintenance')->count(),
+            'complete_repairs' => DB::table('maintenance')
+                ->whereNotNull('expected_completion')
+                ->whereDate('expected_completion', '<=', now())
+                ->count(),
+            'unserviceable' => DB::table('items')
+                ->where('status', 'Unserviceable')
+                ->count(),
+            'total_repair_cost' => DB::table('maintenance')->sum('repair_cost'),
+        ];
+
+        $pdf = Pdf::loadView('exports.maintenance-pdf', [
+            'records' => $records,
+            'maintenanceCounts' => $maintenanceCounts,
+            'generatedAt' => now()->format('F d, Y h:i A'),
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->download('maintenance-report.pdf');
     }
-
-    $records = $query->get();
-
-    $maintenanceCounts = [
-        'total' => DB::table('maintenance')->count(),
-        'complete_repairs' => DB::table('maintenance')
-            ->whereNotNull('expected_completion')
-            ->whereDate('expected_completion', '<=', now())
-            ->count(),
-        'unserviceable' => DB::table('items')
-            ->where('status', 'Unserviceable')
-            ->count(),
-        'total_repair_cost' => DB::table('maintenance')->sum('repair_cost'),
-    ];
-
-    $pdf = Pdf::loadView('exports.maintenance-pdf', [
-        'records' => $records,
-        'maintenanceCounts' => $maintenanceCounts,
-        'generatedAt' => now()->format('F d, Y h:i A'),
-    ])->setPaper('a4', 'landscape');
-
-    return $pdf->download('maintenance-report.pdf');
-}
 
     private function createLowStockNotifications()
-{
-    $lowStockThreshold = 10;
+    {
+        $lowStockThreshold = 10;
 
-    // Mark/delete old low stock notifications if stock is no longer low
-    $normalStockPropertyNos = DB::table('propertyinventory')
-        ->where('quantity', '>=', $lowStockThreshold)
-        ->pluck('property_no');
+        // Mark/delete old low stock notifications if stock is no longer low
+        $normalStockPropertyNos = DB::table('propertyinventory')
+            ->where('quantity', '>=', $lowStockThreshold)
+            ->pluck('property_no');
 
-    if ($normalStockPropertyNos->isNotEmpty()) {
-        DB::table('notification_recipients as nr')
-            ->join('notifications as n', 'n.notif_id', '=', 'nr.notif_id')
-            ->where('n.entity_type', 'low_stock')
-            ->whereIn('n.entity_id', $normalStockPropertyNos)
-            ->whereNull('nr.deleted_at')
-            ->update([
-                'nr.deleted_at' => now(),
-                'nr.updated_at' => now(),
-            ]);
-    }
-
-    // Get low stock grouped items
-    $lowStockItems = DB::table('propertyinventory')
-        ->where('quantity', '<', $lowStockThreshold)
-        ->select('property_no', 'item_name', 'quantity', 'classification')
-        ->get();
-
-    if ($lowStockItems->isEmpty()) {
-        return;
-    }
-
-    // Get recipients: Admin + Property Custodian
-    $recipients = DB::table('users')
-        ->whereIn('role', ['Admin', 'Property Custodian'])
-        ->pluck('user_id');
-
-    if ($recipients->isEmpty()) {
-        return;
-    }
-
-    foreach ($lowStockItems as $item) {
-        // Prevent duplicate active notification for same property_no
-        $existingNotif = DB::table('notifications as n')
-            ->join('notification_recipients as nr', 'n.notif_id', '=', 'nr.notif_id')
-            ->where('n.entity_type', 'low_stock')
-            ->where('n.entity_id', $item->property_no)
-            ->whereNull('nr.read_at')
-            ->whereNull('nr.deleted_at')
-            ->select('n.notif_id')
-            ->first();
-
-        if ($existingNotif) {
-            continue;
+        if ($normalStockPropertyNos->isNotEmpty()) {
+            DB::table('notification_recipients as nr')
+                ->join('notifications as n', 'n.notif_id', '=', 'nr.notif_id')
+                ->where('n.entity_type', 'low_stock')
+                ->whereIn('n.entity_id', $normalStockPropertyNos)
+                ->whereNull('nr.deleted_at')
+                ->update([
+                    'nr.deleted_at' => now(),
+                    'nr.updated_at' => now(),
+                ]);
         }
 
-        // Create notification
-        $notifId = DB::table('notifications')->insertGetId([
-            'type' => 'stock_alert',
-            'title' => 'Low Stock Alert',
-            'message' => "{$item->item_name} is running low. Remaining stock: {$item->quantity}.",
-            'severity' => 'warning',
-            'entity_type' => 'low_stock',
-            'entity_id' => $item->property_no,
-            'action_url' => route('dashboard', ['section' => 'inventory']),
-            'data' => json_encode([
-                'property_no' => $item->property_no,
-                'item_name' => $item->item_name,
-                'classification' => $item->classification,
-                'quantity' => $item->quantity,
-                'threshold' => $lowStockThreshold,
-            ]),
-            'created_by_user_id' => auth()->user()->user_id ?? null,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        // Get low stock grouped items
+        $lowStockItems = DB::table('propertyinventory')
+            ->where('quantity', '<', $lowStockThreshold)
+            ->select('property_no', 'item_name', 'quantity', 'classification')
+            ->get();
 
-        // Assign to all Admin and Property Custodian users
-        $recipientRows = [];
-        foreach ($recipients as $userId) {
-            $recipientRows[] = [
-                'notif_id' => $notifId,
-                'recipient_user_id' => $userId,
-                'read_at' => null,
-                'deleted_at' => null,
+        if ($lowStockItems->isEmpty()) {
+            return;
+        }
+
+        // Get recipients: Admin + Property Custodian
+        $recipients = DB::table('users')
+            ->whereIn('role', ['Admin', 'Property Custodian'])
+            ->pluck('user_id');
+
+        if ($recipients->isEmpty()) {
+            return;
+        }
+
+        foreach ($lowStockItems as $item) {
+            // Prevent duplicate active notification for same property_no
+            $existingNotif = DB::table('notifications as n')
+                ->join('notification_recipients as nr', 'n.notif_id', '=', 'nr.notif_id')
+                ->where('n.entity_type', 'low_stock')
+                ->where('n.entity_id', $item->property_no)
+                ->whereNull('nr.read_at')
+                ->whereNull('nr.deleted_at')
+                ->select('n.notif_id')
+                ->first();
+
+            if ($existingNotif) {
+                continue;
+            }
+
+            // Create notification
+            $notifId = DB::table('notifications')->insertGetId([
+                'type' => 'stock_alert',
+                'title' => 'Low Stock Alert',
+                'message' => "{$item->item_name} is running low. Remaining stock: {$item->quantity}.",
+                'severity' => 'warning',
+                'entity_type' => 'low_stock',
+                'entity_id' => $item->property_no,
+                'action_url' => route('dashboard', ['section' => 'inventory']),
+                'data' => json_encode([
+                    'property_no' => $item->property_no,
+                    'item_name' => $item->item_name,
+                    'classification' => $item->classification,
+                    'quantity' => $item->quantity,
+                    'threshold' => $lowStockThreshold,
+                ]),
+                'created_by_user_id' => auth()->user()->user_id ?? null,
                 'created_at' => now(),
                 'updated_at' => now(),
-            ];
-        }
+            ]);
 
-        DB::table('notification_recipients')->insert($recipientRows);
+            // Assign to all Admin and Property Custodian users
+            $recipientRows = [];
+            foreach ($recipients as $userId) {
+                $recipientRows[] = [
+                    'notif_id' => $notifId,
+                    'recipient_user_id' => $userId,
+                    'read_at' => null,
+                    'deleted_at' => null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
+
+            DB::table('notification_recipients')->insert($recipientRows);
+        }
     }
-}
 
     public function moveDamageToMaintenance(Request $request, $damage_id)
-{
-    // validate incoming fields (optional fields can be null)
-    $request->validate([
-        'repair_cost' => 'nullable|numeric|min:0',
-        'expected_completion' => 'nullable|date',
-        'remarks' => 'nullable|string|max:500',
-    ]);
+    {
+        // validate incoming fields (optional fields can be null)
+        $request->validate([
+            'repair_cost' => 'nullable|numeric|min:0',
+            'expected_completion' => 'nullable|date',
+            'remarks' => 'nullable|string|max:500',
+        ]);
 
-    // ✅ Get damage report using damage_id
-    $damage = DB::table('damagereports')->where('damage_id', $damage_id)->first();
+        // ✅ Get damage report using damage_id
+        $damage = DB::table('damagereports')->where('damage_id', $damage_id)->first();
 
-    if (!$damage) {
+        if (!$damage) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Damage report not found.'
+            ], 404);
+        }
+
+        // ✅ Prevent duplicate ticket for same damage report
+        $existing = DB::table('maintenance')->where('damage_id', $damage_id)->first();
+        if ($existing) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This damage report already has a maintenance ticket.'
+            ], 409);
+        }
+
+        // ✅ Create ticket in maintenance table
+        DB::table('maintenance')->insert([
+            'serial_no' => $damage->serial_no,
+            'observation' => $damage->observation,         // or "Damage: {$damage->observation}"
+            'repair_cost' => $request->repair_cost ?? null,
+            'date_reported' => $damage->reported_at ?? now(),
+            'expected_completion' => $request->expected_completion ?? null,
+            'remarks' => $request->remarks ?? null,
+            'damage_id' => $damage_id,
+        ]);
+
+        // (Optional) Update item status
+        DB::table('items')
+            ->where('serial_no', $damage->serial_no)
+            ->update(['status' => 'For Repair']);
+
         return response()->json([
-            'success' => false,
-            'message' => 'Damage report not found.'
-        ], 404);
+            'success' => true,
+            'message' => 'Maintenance ticket created successfully.'
+        ]);
     }
-
-    // ✅ Prevent duplicate ticket for same damage report
-    $existing = DB::table('maintenance')->where('damage_id', $damage_id)->first();
-    if ($existing) {
-        return response()->json([
-            'success' => false,
-            'message' => 'This damage report already has a maintenance ticket.'
-        ], 409);
-    }
-
-    // ✅ Create ticket in maintenance table
-    DB::table('maintenance')->insert([
-        'serial_no' => $damage->serial_no,
-        'observation' => $damage->observation,         // or "Damage: {$damage->observation}"
-        'repair_cost' => $request->repair_cost ?? null,
-        'date_reported' => $damage->reported_at ?? now(),
-        'expected_completion' => $request->expected_completion ?? null,
-        'remarks' => $request->remarks ?? null,
-        'damage_id' => $damage_id,
-    ]);
-
-    // (Optional) Update item status
-    DB::table('items')
-        ->where('serial_no', $damage->serial_no)
-        ->update(['status' => 'For Repair']);
-
-    return response()->json([
-        'success' => true,
-        'message' => 'Maintenance ticket created successfully.'
-    ]);
-}
 
     public function makeAvailable($serial)
     {
@@ -1234,38 +1241,38 @@ public function getUnderMaintenanceItemsTable()
     }
 
     public function issuedTableHtml()
-{
-    $issuedItemsList = $this->getListofIssuedItemsTable()->getData(true)['html'] ?? '';
-    // BUT your getListofIssuedItemsTable returns JSON, not html string directly.
-    // Better: replicate query here:
+    {
+        $issuedItemsList = $this->getListofIssuedItemsTable()->getData(true)['html'] ?? '';
+        // BUT your getListofIssuedItemsTable returns JSON, not html string directly.
+        // Better: replicate query here:
 
-    $latest = DB::table('issuedlog')
-        ->selectRaw('MAX(issue_id) as issue_id')
-        ->groupBy('serial_no');
+        $latest = DB::table('issuedlog')
+            ->selectRaw('MAX(issue_id) as issue_id')
+            ->groupBy('serial_no');
 
-    $items = DB::table('issuedlog as i')
-        ->joinSub($latest, 'latest', function ($join) {
-            $join->on('i.issue_id', '=', 'latest.issue_id');
-        })
-        ->join('items as it', 'i.serial_no', '=', 'it.serial_no')
-        ->leftJoin('users as u', 'i.issued_by', '=', 'u.user_id')
-        ->where('it.status', '=', 'Issued')
-        ->select(
-            'i.issue_id',
-            'i.serial_no',
-            'i.issued_date',
-            'i.return_date',
-            'it.item_name as item',
-            DB::raw("COALESCE(i.borrower_name, 'N/A') as issued_to"),
-            DB::raw("COALESCE(CONCAT(u.first_name, ' ', u.last_name, ' (', UPPER(u.role), ')'), 'N/A') as issued_by")
-        )
-        ->orderByDesc('i.issued_date')
-        ->get();
+        $items = DB::table('issuedlog as i')
+            ->joinSub($latest, 'latest', function ($join) {
+                $join->on('i.issue_id', '=', 'latest.issue_id');
+            })
+            ->join('items as it', 'i.serial_no', '=', 'it.serial_no')
+            ->leftJoin('users as u', 'i.issued_by', '=', 'u.user_id')
+            ->where('it.status', '=', 'Issued')
+            ->select(
+                'i.issue_id',
+                'i.serial_no',
+                'i.issued_date',
+                'i.return_date',
+                'it.item_name as item',
+                DB::raw("COALESCE(i.borrower_name, 'N/A') as issued_to"),
+                DB::raw("COALESCE(CONCAT(u.first_name, ' ', u.last_name, ' (', UPPER(u.role), ')'), 'N/A') as issued_by")
+            )
+            ->orderByDesc('i.issued_date')
+            ->get();
 
-    $html = '';
-    foreach ($items as $item) {
-        $returnDate = $item->return_date ? Carbon::parse($item->return_date)->format('F d, Y') : '-';
-        $html .= "
+        $html = '';
+        foreach ($items as $item) {
+            $returnDate = $item->return_date ? Carbon::parse($item->return_date)->format('F d, Y') : '-';
+            $html .= "
             <tr>
               <td>{$item->serial_no}</td>
               <td>{$item->issued_to}</td>
@@ -1286,33 +1293,33 @@ public function getUnderMaintenanceItemsTable()
               </td>
             </tr>
         ";
+        }
+
+        return response($html, 200)->header('Content-Type', 'text/html');
     }
 
-    return response($html, 200)->header('Content-Type', 'text/html');
-}
+    public function getLowStockItems()
+    {
+        $minimumQty = 10;
 
-public function getLowStockItems()
-{
-    $minimumQty = 10;
+        $items = DB::table('propertyinventory as pi')
+            ->select(
+                'pi.property_no',
+                'pi.item_name',
+                'pi.classification',
+                'pi.quantity',
+                DB::raw("$minimumQty as minimum_quantity"),
+                DB::raw("GREATEST($minimumQty - pi.quantity, 0) as needed_quantity")
+            )
+            ->where('pi.quantity', '<', $minimumQty)
+            ->orderBy('pi.quantity', 'asc')
+            ->orderBy('pi.item_name', 'asc')
+            ->get();
 
-    $items = DB::table('propertyinventory as pi')
-        ->select(
-            'pi.property_no',
-            'pi.item_name',
-            'pi.classification',
-            'pi.quantity',
-            DB::raw("$minimumQty as minimum_quantity"),
-            DB::raw("GREATEST($minimumQty - pi.quantity, 0) as needed_quantity")
-        )
-        ->where('pi.quantity', '<', $minimumQty)
-        ->orderBy('pi.quantity', 'asc')
-        ->orderBy('pi.item_name', 'asc')
-        ->get();
+        $html = '';
 
-    $html = '';
-
-    foreach ($items as $item) {
-        $html .= "
+        foreach ($items as $item) {
+            $html .= "
             <tr>
                 <td>{$item->property_no}</td>
                 <td>{$item->item_name}</td>
@@ -1322,52 +1329,52 @@ public function getLowStockItems()
                 <td>{$item->needed_quantity}</td>
             </tr>
         ";
+        }
+
+        if ($html === '') {
+            $html = "<tr><td colspan='6' style='text-align:center; padding:20px;'>No low stock items found.</td></tr>";
+        }
+
+        return response()->json(['html' => $html]);
     }
 
-    if ($html === '') {
-        $html = "<tr><td colspan='6' style='text-align:center; padding:20px;'>No low stock items found.</td></tr>";
-    }
+    public function maintenanceTableHtml()
+    {
+        $records = DB::table('maintenance')
+            ->leftJoin('items', 'maintenance.serial_no', '=', 'items.serial_no')
+            ->select(
+                'maintenance.maintenance_id',
+                'maintenance.serial_no',
+                'items.item_name',
+                'maintenance.observation',
+                'maintenance.date_reported',
+                'maintenance.repair_cost',
+                'maintenance.expected_completion',
+                'maintenance.remarks'
+            )
+            ->orderBy('maintenance.date_reported', 'desc')
+            ->get();
 
-    return response()->json(['html' => $html]);
-}
+        $html = '';
 
-public function maintenanceTableHtml()
-{
-    $records = DB::table('maintenance')
-        ->leftJoin('items', 'maintenance.serial_no', '=', 'items.serial_no')
-        ->select(
-            'maintenance.maintenance_id',
-            'maintenance.serial_no',
-            'items.item_name',
-            'maintenance.observation',
-            'maintenance.date_reported',
-            'maintenance.repair_cost',
-            'maintenance.expected_completion',
-            'maintenance.remarks'
-        )
-        ->orderBy('maintenance.date_reported', 'desc')
-        ->get();
+        foreach ($records as $record) {
+            $dateReported = $record->date_reported
+                ? \Carbon\Carbon::parse($record->date_reported)->format('F d, Y')
+                : '-';
 
-    $html = '';
+            $expectedCompletion = $record->expected_completion
+                ? \Carbon\Carbon::parse($record->expected_completion)->format('F d, Y')
+                : '-';
 
-    foreach ($records as $record) {
-        $dateReported = $record->date_reported
-            ? \Carbon\Carbon::parse($record->date_reported)->format('F d, Y')
-            : '-';
+            $repairCost = $record->repair_cost !== null
+                ? '₱' . number_format($record->repair_cost, 2)
+                : '-';
 
-        $expectedCompletion = $record->expected_completion
-            ? \Carbon\Carbon::parse($record->expected_completion)->format('F d, Y')
-            : '-';
+            $itemName = $record->item_name ?? '-';
+            $issueType = $record->issue_type ?? '-';
+            $remarks = $record->remarks ?? '-';
 
-        $repairCost = $record->repair_cost !== null
-            ? '₱' . number_format($record->repair_cost, 2)
-            : '-';
-
-        $itemName = $record->item_name ?? '-';
-        $issueType = $record->issue_type ?? '-';
-        $remarks = $record->remarks ?? '-';
-
-        $html .= "
+            $html .= "
             <tr>
                 <td class='serial-cell' data-serial='{$record->serial_no}'>
                     {$record->serial_no}
@@ -1394,211 +1401,211 @@ public function maintenanceTableHtml()
                 </td>
             </tr>
         ";
+        }
+
+        if ($html === '') {
+            $html = "<tr><td colspan='8' style='text-align:center;'>No maintenance records found.</td></tr>";
+        }
+
+        return response()->json(['html' => $html]);
     }
 
-    if ($html === '') {
-        $html = "<tr><td colspan='8' style='text-align:center;'>No maintenance records found.</td></tr>";
-    }
-
-    return response()->json(['html' => $html]);
-}
-
-/**
- * ✅ Mark an inventory item as damaged upon arrival with optional image upload.
- * Only allows items created within the last 3 days.
- * Stores the image under storage/app/public/damage_images and saves the
- * relative path to damagereports.image_path.
- */
-public function markInventoryDamageUponArrival(Request $request)
-{
-    $request->validate([
-        'serial_no' => 'required|string|exists:items,serial_no',
-        'reason'    => 'required|string|max:255',
-        'image'     => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // ✅ max 5MB
-    ]);
-
-    $serialNo = trim($request->serial_no);
-    $reason   = trim($request->reason);
-
-    $item = Item::where('serial_no', $serialNo)->first();
-
-    if (!$item) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Item not found.'
-        ], 404);
-    }
-
-    $loggedInUser = auth()->user();
-
-    if (!$loggedInUser) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Unauthorized.'
-        ], 401);
-    }
-
-    if (empty($item->created_at)) {
-        return response()->json([
-            'success' => false,
-            'message' => 'This item has no creation date. Unable to mark as damaged upon arrival.'
-        ], 422);
-    }
-
-    $createdAt = Carbon::parse($item->created_at)->startOfDay();
-    $today = now()->startOfDay();
-    $daysSinceCreated = $createdAt->diffInDays($today, false);
-
-    // allow only items created within 3 days
-    if ($daysSinceCreated > 3) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Only items created within 3 days can be marked as damaged upon arrival.'
-        ], 422);
-    }
-
-    if ($daysSinceCreated < 0) {
-        return response()->json([
-            'success' => false,
-            'message' => 'This item has an invalid creation date in the future.'
-        ], 422);
-    }
-
-    if ($item->status === 'Damaged') {
-        return response()->json([
-            'success' => false,
-            'message' => 'This item is already marked as damaged.'
-        ], 422);
-    }
-
-    $finalObservation = $reason . ' - Upon Arrival';
-
-    // ✅ Handle optional image upload — store in storage/app/public/damage_images
-    $imagePath = null;
-    if ($request->hasFile('image') && $request->file('image')->isValid()) {
-        $imagePath = $request->file('image')->store('damage_images', 'public');
-    }
-
-    DB::beginTransaction();
-
-    try {
-        // 1) update item status
-        $item->status = 'Damaged';
-        $item->updated_at = now();
-        $item->save();
-
-        // 2) create damage report with reported_by and image_path
-        $damageId = DB::table('damagereports')->insertGetId([
-            'serial_no'     => $item->serial_no,
-            'observation'   => $finalObservation,
-            'borrower_name' => null,
-            'reported_by'   => $loggedInUser->user_id,
-            'reported_at'   => now(),
-            'image_path'    => $imagePath, // ✅ save image path (null if none uploaded)
-            'created_at'    => now(),
-            'updated_at'    => now(),
+    /**
+     * ✅ Mark an inventory item as damaged upon arrival with optional image upload.
+     * Only allows items created within the last 3 days.
+     * Stores the image under storage/app/public/damage_images and saves the
+     * relative path to damagereports.image_path.
+     */
+    public function markInventoryDamageUponArrival(Request $request)
+    {
+        $request->validate([
+            'serial_no' => 'required|string|exists:items,serial_no',
+            'reason' => 'required|string|max:255',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // ✅ max 5MB
         ]);
 
-        // 3) create admin notification
-        $notifId = DB::table('notifications')->insertGetId([
-            'type'               => 'damage_upon_arrival',
-            'title'              => 'Damage Upon Arrival Reported',
-            'message'            => "{$item->item_name} ({$item->serial_no}) was marked as damaged upon arrival. Reason: {$finalObservation}",
-            'severity'           => 'warning',
-            'entity_type'        => 'damage_report',
-            'entity_id'          => $damageId,
-            'action_url'         => route('dashboard', ['section' => 'inventory']),
-            'data'               => json_encode([
-                'serial_no'   => $item->serial_no,
-                'item_name'   => $item->item_name,
+        $serialNo = trim($request->serial_no);
+        $reason = trim($request->reason);
+
+        $item = Item::where('serial_no', $serialNo)->first();
+
+        if (!$item) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Item not found.'
+            ], 404);
+        }
+
+        $loggedInUser = auth()->user();
+
+        if (!$loggedInUser) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized.'
+            ], 401);
+        }
+
+        if (empty($item->created_at)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This item has no creation date. Unable to mark as damaged upon arrival.'
+            ], 422);
+        }
+
+        $createdAt = Carbon::parse($item->created_at)->startOfDay();
+        $today = now()->startOfDay();
+        $daysSinceCreated = $createdAt->diffInDays($today, false);
+
+        // allow only items created within 3 days
+        if ($daysSinceCreated > 3) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only items created within 3 days can be marked as damaged upon arrival.'
+            ], 422);
+        }
+
+        if ($daysSinceCreated < 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This item has an invalid creation date in the future.'
+            ], 422);
+        }
+
+        if ($item->status === 'Damaged') {
+            return response()->json([
+                'success' => false,
+                'message' => 'This item is already marked as damaged.'
+            ], 422);
+        }
+
+        $finalObservation = $reason . ' - Upon Arrival';
+
+        // ✅ Handle optional image upload — store in storage/app/public/damage_images
+        $imagePath = null;
+        if ($request->hasFile('image') && $request->file('image')->isValid()) {
+            $imagePath = $request->file('image')->store('damage_images', 'public');
+        }
+
+        DB::beginTransaction();
+
+        try {
+            // 1) update item status
+            $item->status = 'Damaged';
+            $item->updated_at = now();
+            $item->save();
+
+            // 2) create damage report with reported_by and image_path
+            $damageId = DB::table('damagereports')->insertGetId([
+                'serial_no' => $item->serial_no,
                 'observation' => $finalObservation,
+                'borrower_name' => null,
                 'reported_by' => $loggedInUser->user_id,
-                'image_url'   => $imagePath ? asset('storage/' . $imagePath) : null, // ✅ include image URL in notification data
-                'source'      => 'inventory_modal_upon_arrival',
-            ]),
-            'created_by_user_id' => $loggedInUser->user_id,
-            'created_at'         => now(),
-            'updated_at'         => now(),
-        ]);
+                'reported_at' => now(),
+                'image_path' => $imagePath, // ✅ save image path (null if none uploaded)
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
 
-        // 4) send notification to all Admin users
-        $adminIds = DB::table('users')
-            ->where('role', 'Admin')
-            ->pluck('user_id');
+            // 3) create admin notification
+            $notifId = DB::table('notifications')->insertGetId([
+                'type' => 'damage_upon_arrival',
+                'title' => 'Damage Upon Arrival Reported',
+                'message' => "{$item->item_name} ({$item->serial_no}) was marked as damaged upon arrival. Reason: {$finalObservation}",
+                'severity' => 'warning',
+                'entity_type' => 'damage_report',
+                'entity_id' => $damageId,
+                'action_url' => route('dashboard', ['section' => 'inventory']),
+                'data' => json_encode([
+                    'serial_no' => $item->serial_no,
+                    'item_name' => $item->item_name,
+                    'observation' => $finalObservation,
+                    'reported_by' => $loggedInUser->user_id,
+                    'image_url' => $imagePath ? asset('storage/' . $imagePath) : null, // ✅ include image URL in notification data
+                    'source' => 'inventory_modal_upon_arrival',
+                ]),
+                'created_by_user_id' => $loggedInUser->user_id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
 
-        $recipientRows = [];
-        foreach ($adminIds as $adminId) {
-            $recipientRows[] = [
-                'notif_id'           => $notifId,
-                'recipient_user_id'  => $adminId,
-                'read_at'            => null,
-                'deleted_at'         => null,
-                'created_at'         => now(),
-                'updated_at'         => now(),
-            ];
+            // 4) send notification to all Admin users
+            $adminIds = DB::table('users')
+                ->where('role', 'Admin')
+                ->pluck('user_id');
+
+            $recipientRows = [];
+            foreach ($adminIds as $adminId) {
+                $recipientRows[] = [
+                    'notif_id' => $notifId,
+                    'recipient_user_id' => $adminId,
+                    'read_at' => null,
+                    'deleted_at' => null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
+
+            if (!empty($recipientRows)) {
+                DB::table('notification_recipients')->insert($recipientRows);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Item marked as damaged upon arrival successfully.',
+                'data' => [
+                    'serial_no' => $item->serial_no,
+                    'item_name' => $item->item_name,
+                    'observation' => $finalObservation,
+                    'image_url' => $imagePath ? asset('storage/' . $imagePath) : null, // ✅ return public URL to frontend
+                ]
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            // ✅ Clean up uploaded image if the transaction failed
+            if ($imagePath && \Storage::disk('public')->exists($imagePath)) {
+                \Storage::disk('public')->delete($imagePath);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to mark item as damaged: ' . $e->getMessage()
+            ], 500);
         }
-
-        if (!empty($recipientRows)) {
-            DB::table('notification_recipients')->insert($recipientRows);
-        }
-
-        DB::commit();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Item marked as damaged upon arrival successfully.',
-            'data' => [
-                'serial_no'   => $item->serial_no,
-                'item_name'   => $item->item_name,
-                'observation' => $finalObservation,
-                'image_url'   => $imagePath ? asset('storage/' . $imagePath) : null, // ✅ return public URL to frontend
-            ]
-        ]);
-    } catch (\Exception $e) {
-        DB::rollBack();
-
-        // ✅ Clean up uploaded image if the transaction failed
-        if ($imagePath && \Storage::disk('public')->exists($imagePath)) {
-            \Storage::disk('public')->delete($imagePath);
-        }
-
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to mark item as damaged: ' . $e->getMessage()
-        ], 500);
     }
-}
 
-public function damageTableHtml()
-{
-    // ✅ IMPORTANT: show only not yet ticketed AND item still Damaged
-    $damageReports = DB::table('damagereports as d')
-        ->join('items as i', 'i.serial_no', '=', 'd.serial_no')
-        ->where('i.status', 'Damaged')
-        ->where(function($q){
-            $q->whereNull('d.is_ticketed')->orWhere('d.is_ticketed', 0);
-        })
-        ->select('d.damage_id', 'd.serial_no', 'd.observation', 'd.reported_at', 'd.image_path', 'i.item_name') // ✅ include image_path
-        ->orderByDesc('d.reported_at')
-        ->get();
+    public function damageTableHtml()
+    {
+        // ✅ IMPORTANT: show only not yet ticketed AND item still Damaged
+        $damageReports = DB::table('damagereports as d')
+            ->join('items as i', 'i.serial_no', '=', 'd.serial_no')
+            ->where('i.status', 'Damaged')
+            ->where(function ($q) {
+                $q->whereNull('d.is_ticketed')->orWhere('d.is_ticketed', 0);
+            })
+            ->select('d.damage_id', 'd.serial_no', 'd.observation', 'd.reported_at', 'd.image_path', 'i.item_name') // ✅ include image_path
+            ->orderByDesc('d.reported_at')
+            ->get();
 
-    $html = '';
-    foreach ($damageReports as $report) {
-        $date = $report->reported_at ? Carbon::parse($report->reported_at)->format('F d, Y') : '-';
-        $obs  = $report->observation ?? '-';
-        $name = $report->item_name ?? '-';
+        $html = '';
+        foreach ($damageReports as $report) {
+            $date = $report->reported_at ? Carbon::parse($report->reported_at)->format('F d, Y') : '-';
+            $obs = $report->observation ?? '-';
+            $name = $report->item_name ?? '-';
 
-        // ✅ Build image thumbnail if an image was attached to the report
-        $imageHtml = '-';
-        if (!empty($report->image_path)) {
-            $imageUrl  = asset('storage/' . $report->image_path);
-            $imageHtml = "<a href='{$imageUrl}' target='_blank'>
+            // ✅ Build image thumbnail if an image was attached to the report
+            $imageHtml = '-';
+            if (!empty($report->image_path)) {
+                $imageUrl = asset('storage/' . $report->image_path);
+                $imageHtml = "<a href='{$imageUrl}' target='_blank'>
                             <img src='{$imageUrl}' alt='Damage Image'
                                  style='width:50px;height:50px;object-fit:cover;border-radius:4px;cursor:pointer;'>
                           </a>";
-        }
+            }
 
-        $html .= "
+            $html .= "
           <tr>
             <td>{$report->serial_no}</td>
             <td>{$name}</td>
@@ -1617,12 +1624,66 @@ public function damageTableHtml()
             </td>
           </tr>
         ";
-    }
+        }
 
-    if ($html === '') {
-        $html = "<tr><td colspan='6' style='text-align:center; padding:20px;'>No damage reports found.</td></tr>";
-    }
+        if ($html === '') {
+            $html = "<tr><td colspan='6' style='text-align:center; padding:20px;'>No damage reports found.</td></tr>";
+        }
 
-    return response($html, 200)->header('Content-Type', 'text/html');
-}
+        return response($html, 200)->header('Content-Type', 'text/html');
+    }
+    public function getItemUsageHistory($serial_no)
+    {
+        $history = DB::table('issuedlog as i')
+            ->leftJoin('users as u', 'i.issued_by', '=', 'u.user_id')
+            ->where('i.serial_no', $serial_no)
+            ->select(
+                'i.issue_id',
+                'i.issued_date',
+                'i.return_date',
+                'i.actual_return_date',
+                DB::raw("COALESCE(i.borrower_name, 'N/A') as issued_to"),
+                DB::raw("COALESCE(CONCAT(u.first_name, ' ', u.last_name), 'N/A') as issued_by"),
+                'i.purpose',
+                'i.condition_after_use',
+                'i.remarks'
+            )
+            ->orderByDesc('i.issued_date')
+            ->get()
+            ->map(function ($row) {
+                $row->issued_date = $row->issued_date
+                    ? \Carbon\Carbon::parse($row->issued_date)->format('F d, Y')
+                    : '-';
+                $row->return_date = $row->return_date
+                    ? \Carbon\Carbon::parse($row->return_date)->format('F d, Y')
+                    : '-';
+                $row->actual_return_date = $row->actual_return_date
+                    ? \Carbon\Carbon::parse($row->actual_return_date)->format('F d, Y')
+                    : '-';
+
+                // derive return status
+                if ($row->actual_return_date !== '-') {
+                    $row->return_status = 'Returned';
+                } elseif ($row->return_date !== '-') {
+                    $row->return_status = 'Overdue';
+                } else {
+                    $row->return_status = 'Active';
+                }
+
+                return $row;
+            });
+
+        $item = DB::table('items')
+            ->where('serial_no', $serial_no)
+            ->select('item_name', 'property_no')
+            ->first();
+
+        return response()->json([
+            'success' => true,
+            'item_name' => $item->item_name ?? 'Unknown',
+            'property_no' => $item->property_no ?? 'N/A',
+            'history' => $history,
+            'total' => $history->count(),
+        ]);
+    }
 }

@@ -1952,7 +1952,7 @@ private function buildDescriptiveAnalytics($item, array $assessment, array $usag
 
         $lines[] = "• Most recent recorded usage: {$latestDate}, borrower: {$latestBorrower}, usage: {$latestHours}.";
     } else {
-        $lines[] = "• No completed usage history has been recorded yet.";
+        $lines[] = "• No completed  has been recorded yet.";
     }
 
     if (!empty($usageStats['top_borrower'])) {

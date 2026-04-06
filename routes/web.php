@@ -69,6 +69,7 @@ Route::middleware(['auth'])->group(function () {
 
     //Missing
     Route::post('/items/missing', [ItemMissingController::class, 'markMissing'])->name('items.missing');
+    Route::get('/item/usage-history/{serial_no}', [DashboardController::class, 'getItemUsageHistory']);
 
     //EDIT ITEMS INVENTORY
     Route::post('/inventory/update-specifications', [InventoryController::class, 'updateSpecifications'])
