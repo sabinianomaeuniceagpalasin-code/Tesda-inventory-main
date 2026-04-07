@@ -10,11 +10,15 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+  /* background: linear-gradient(135deg, #e3f2fd, #bbdefb); */
+  background-image: url('../images/bg1.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .container {
-  background: #fff;
+  /* background: #fff; */
   width: 1200px;
   max-width: 95%;
   display: flex;
@@ -22,6 +26,10 @@ body {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   height: 600px;
+  background-image: url('../images/bg1.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 /* LEFT SIDE (TESDA logo) */

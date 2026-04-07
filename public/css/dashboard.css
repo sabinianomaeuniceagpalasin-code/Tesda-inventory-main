@@ -177,11 +177,15 @@ body {
 }
 
 .status-card {
-    background: #fff;
+    /* background: #fff; */
     padding: 20px;
     border-radius: 12px;
     text-align: center;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    background-image: url('../images/bg3.png');
+    background-size: cover;
+    background-position: top 30px center;
+    background-repeat: no-repeat;
 }
 
 .status-card h2 {
@@ -646,6 +650,13 @@ td {
     justify-content: space-between;
     gap: 20px;
     margin: 20px 0;
+    border: 2px solid #004aad;
+    border-radius: 15px;
+    padding: 20px;
+    background-image: url('../images/bg4.png'); 
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
 }
 
 .summary-box {
@@ -1102,6 +1113,13 @@ td {
     flex-wrap: wrap;
     margin-top: 20px;
     margin-bottom: 20px;
+    border: 2px solid #004aad;
+    border-radius: 15px;
+    padding: 20px;
+    background-image: url('../images/bg5.png'); 
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
 }
 
 .summary-card {
@@ -1112,6 +1130,10 @@ td {
     padding: 15px;
     box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
     text-align: center;
+    background-image: url('../images/bg6.png');
+    background-size: cover;
+    background-position: top 30px center;
+    background-repeat: no-repeat;
 }
 
 .summary-card h2 {
