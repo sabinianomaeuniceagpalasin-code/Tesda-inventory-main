@@ -650,7 +650,7 @@ td {
     justify-content: space-between;
     gap: 20px;
     margin: 20px 0;
-    border: 2px solid #004aad;
+    border: 1px solid black;
     border-radius: 15px;
     padding: 20px;
     background-image: url('../images/bg4.png'); 
@@ -911,14 +911,26 @@ td {
     grid-template-columns: repeat(3, 1fr);
     gap: 15px;
     margin-bottom: 20px;
+    border: 1px solid black;
+    border-radius: 15px;
+    padding: 50px;
+    background-image: url('../images/bg5.png'); 
+    background-size: cover;
+    background-position: top -50px center;
+    background-repeat: no-repeat;
 }
 
 .analytic-card {
-    background: linear-gradient(180deg, #e8e8e8, #cfcfcf);
-    border-radius: 10px;
+    background: white;
+    text-align: center;     
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
     text-align: center;
-    padding: 18px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    background-image: url('../images/bg6.png');
+    background-size: cover;
+    background-position: top 10px center;
+    background-repeat: no-repeat;
 }
 
 .analytic-card h4 {
@@ -929,6 +941,7 @@ td {
 .analytic-card p {
     font-size: 1.5rem;
     font-weight: bold;
+    color: #004aad;
 }
 
 .issued-table-section {
@@ -1113,12 +1126,12 @@ td {
     flex-wrap: wrap;
     margin-top: 20px;
     margin-bottom: 20px;
-    border: 2px solid #004aad;
+    border: 1px solid black;
     border-radius: 15px;
-    padding: 20px;
+    padding: 50px;
     background-image: url('../images/bg5.png'); 
     background-size: cover;
-    background-position: center;
+    background-position: top -50px center;
     background-repeat: no-repeat;
 }
 
@@ -1127,12 +1140,12 @@ td {
     min-width: 140px;
     background: #fff;
     border-radius: 15px;
-    padding: 15px;
+    padding: 30px;
     box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
     text-align: center;
     background-image: url('../images/bg6.png');
     background-size: cover;
-    background-position: top 30px center;
+    background-position: top 10px center;
     background-repeat: no-repeat;
 }
 
@@ -2008,6 +2021,13 @@ td {
     display: flex;
     gap: 15px;
     margin-bottom: 20px;
+    border: 1px solid black;
+    border-radius: 15px;
+    padding: 50px;
+    background-image: url('../images/bg5.png'); 
+    background-size: cover;
+    background-position: top -50px center;
+    background-repeat: no-repeat;
 }
 
 #damaged .summary-card {
@@ -2016,6 +2036,18 @@ td {
     border-radius: 10px;
     flex: 1;
     text-align: center;
+    color: #004aad;
+}
+
+#damaged .summary-card h4 {
+    color: #333; /* o kahit anong color para sa h4 */
+    font-size: 14px;
+}
+
+#damaged .summary-card p {
+    color: #004aad; /* o kahit anong color para sa p */
+    font-size: 24px;
+    font-weight: 700;
 }
 
 #damaged .form-table-container {
