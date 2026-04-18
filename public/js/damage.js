@@ -1,12 +1,3 @@
-// public/js/damage.js
-//
-// Features:
-// 1) Report Damage from Issued table (.damaged-btn-issued)
-//    — Now includes an optional image upload field inside the SweetAlert modal
-//    — Sends as multipart/form-data (FormData) instead of JSON so the file is included
-// 2) Create Maintenance Ticket from Damage table (.maintenance-btn-issued)
-// 3) Reload page and return to Damage Report section after creating maintenance ticket
-
 (() => {
     // ── CSRF helper ──────────────────────────────────────────────────────────────
     const csrf = () =>
@@ -14,11 +5,6 @@
             .querySelector('meta[name="csrf-token"]')
             ?.getAttribute("content") || "";
 
-    // ============================================================================
-    //  safeLoadTable
-    //  Fetches an HTML fragment from `url` and injects it into `tbodySelector`.
-    //  Expects the endpoint to return plain <tr>…</tr> rows, NOT a full HTML doc.
-    // ============================================================================
     async function safeLoadTable(tbodySelector, url) {
         const tbody = document.querySelector(tbodySelector);
         if (!tbody) return;
@@ -86,39 +72,51 @@
             "/dashboard/maintenance/table-html",
         );
 
-    // ============================================================================
-    //  reportDamage
-    //  Sends the damage report to /damage-reports/store.
-    //
-    //  ✅ CHANGED: Now accepts a `file` parameter (File object or null).
-    //     Uses FormData instead of JSON so the image can be attached.
-    //     Do NOT set Content-Type manually — the browser sets it automatically
-    //     with the correct multipart boundary when using FormData.
-    // ============================================================================
     async function reportDamage(serialNo, observation, file = null) {
-        // ── Build FormData so we can attach the optional image ───────────────────
         const formData = new FormData();
         formData.append("serial_no", serialNo);
         formData.append("observation", observation);
 
-        // ✅ Only append the image key when the user actually selected a file
         if (file) {
             formData.append("image", file);
         }
 
+        // console.log("Serial being sent:", serialNo);
+        // console.log("FormData serial_no:", formData.get("serial_no"));
+
+        // console.log("Sending to /damage-reports/store:", {
+        //     serial_no: serialNo,
+        //     observation: observation,
+        //     has_file: !!file,
+        // });
+
         const res = await fetch("/damage-reports/store", {
             method: "POST",
             headers: {
-                // ✅ X-CSRF-TOKEN header is still needed for Laravel's CSRF middleware
-                // ✅ Do NOT set Content-Type — FormData sets it automatically (multipart/form-data)
                 "X-CSRF-TOKEN": csrf(),
                 Accept: "application/json",
             },
             credentials: "same-origin",
-            body: formData, // ✅ FormData, not JSON.stringify()
+            body: formData,
         });
 
-        const data = await res.json().catch(() => ({}));
+        // console.log("Response status:", res.status);
+        // console.log("Response URL:", res.url);
+
+        const rawText = await res.text();
+        // console.log("Raw response:", rawText);
+
+        let data = {};
+        try {
+            data = JSON.parse(rawText);
+        } catch (e) {
+            Swal.fire(
+                "Error",
+                "Unexpected server response. Check console.",
+                "error",
+            );
+            return;
+        }
 
         if (res.status === 401 || res.status === 403) {
             Swal.fire(
@@ -145,17 +143,11 @@
             timer: 2000,
             showConfirmButton: false,
         }).then(() => {
-            // ✅ Navigate back to the Damage Report section after reload
             localStorage.setItem("activeSection", "damaged");
             window.location.reload();
         });
     }
 
-    // ============================================================================
-    //  createTicketFromDamage
-    //  Sends a POST to /damage/move/{damageId} to convert a damage report into
-    //  a maintenance ticket. No file upload needed here.
-    // ============================================================================
     async function createTicketFromDamage(damageId) {
         const res = await fetch(
             `/damage/move/${encodeURIComponent(damageId)}`,
@@ -171,7 +163,6 @@
 
         const data = await res.json().catch(() => ({}));
 
-        // 409 = ticket already exists for this damage report
         if (res.status === 409) {
             Swal.fire(
                 "Already Ticketed",

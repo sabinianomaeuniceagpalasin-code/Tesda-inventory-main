@@ -143,10 +143,10 @@ Route::middleware(['auth'])->group(function () {
     // =========================
     Route::post('/damage/move/{damage_id}', [DashboardController::class, 'moveDamageToMaintenance'])->name('damage.move');
 
+    Route::post('/damage-reports/store', [IssuedDamageController::class, 'store']);
+
     Route::post('/damage-reports/{damageId}/ticket', [MaintenanceController::class, 'createTicketFromDamage'])
         ->name('damage.ticket');
-
-    Route::post('/damage-reports/store', [IssuedDamageController::class, 'store']);
 
     // JSON endpoint (OK to keep) — just don't use it for table reload
     Route::get('/damage-reports/{serialNo}', [IssuedDamageController::class, 'showBySerial']);
