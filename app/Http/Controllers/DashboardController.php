@@ -1634,56 +1634,64 @@ class DashboardController extends Controller
     }
     public function getItemUsageHistory($serial_no)
     {
-        $history = DB::table('issuedlog as i')
-            ->leftJoin('users as u', 'i.issued_by', '=', 'u.user_id')
-            ->where('i.serial_no', $serial_no)
-            ->select(
-                'i.issue_id',
-                'i.issued_date',
-                'i.return_date',
-                'i.actual_return_date',
-                DB::raw("COALESCE(i.borrower_name, 'N/A') as issued_to"),
-                DB::raw("COALESCE(CONCAT(u.first_name, ' ', u.last_name), 'N/A') as issued_by"),
-                'i.purpose',
-                'i.condition_after_use',
-                'i.remarks'
-            )
-            ->orderByDesc('i.issued_date')
-            ->get()
-            ->map(function ($row) {
-                $row->issued_date = $row->issued_date
-                    ? \Carbon\Carbon::parse($row->issued_date)->format('F d, Y')
-                    : '-';
-                $row->return_date = $row->return_date
-                    ? \Carbon\Carbon::parse($row->return_date)->format('F d, Y')
-                    : '-';
-                $row->actual_return_date = $row->actual_return_date
-                    ? \Carbon\Carbon::parse($row->actual_return_date)->format('F d, Y')
-                    : '-';
+        try {
+            $history = DB::table('issuedlog as i')
+                ->leftJoin('users as u', 'i.issued_by', '=', 'u.user_id')
+                ->where('i.serial_no', $serial_no)
+                ->select(
+                    'i.issue_id',
+                    'i.issued_date',
+                    'i.return_date',
+                    'i.actual_return_date',
+                    DB::raw("COALESCE(i.borrower_name, 'N/A') as issued_to"),
+                    DB::raw("COALESCE(CONCAT(u.first_name, ' ', u.last_name), 'N/A') as issued_by"),
+                    // 'i.purpose',
+                    // 'i.condition_after_use',
+                    // 'i.remarks'
+                )
+                ->orderByDesc('i.issued_date')
+                ->get()
+                ->map(function ($row) {
+                    $row->issued_date = $row->issued_date
+                        ? \Carbon\Carbon::parse($row->issued_date)->format('F d, Y')
+                        : '-';
+                    $row->return_date = $row->return_date
+                        ? \Carbon\Carbon::parse($row->return_date)->format('F d, Y')
+                        : '-';
+                    $row->actual_return_date = $row->actual_return_date
+                        ? \Carbon\Carbon::parse($row->actual_return_date)->format('F d, Y')
+                        : '-';
 
-                // derive return status
-                if ($row->actual_return_date !== '-') {
-                    $row->return_status = 'Returned';
-                } elseif ($row->return_date !== '-') {
-                    $row->return_status = 'Overdue';
-                } else {
-                    $row->return_status = 'Active';
-                }
+                    if ($row->actual_return_date !== '-') {
+                        $row->return_status = 'Returned';
+                    } elseif ($row->return_date !== '-') {
+                        $row->return_status = 'Overdue';
+                    } else {
+                        $row->return_status = 'Active';
+                    }
 
-                return $row;
-            });
+                    return $row;
+                });
 
-        $item = DB::table('items')
-            ->where('serial_no', $serial_no)
-            ->select('item_name', 'property_no')
-            ->first();
+            $item = DB::table('items')
+                ->where('serial_no', $serial_no)
+                ->select('item_name', 'property_no')
+                ->first();
 
-        return response()->json([
-            'success' => true,
-            'item_name' => $item->item_name ?? 'Unknown',
-            'property_no' => $item->property_no ?? 'N/A',
-            'history' => $history,
-            'total' => $history->count(),
-        ]);
+            return response()->json([
+                'success' => true,
+                'item_name' => $item->item_name ?? 'Unknown',
+                'property_no' => $item->property_no ?? 'N/A',
+                'history' => $history,
+                'total' => $history->count(),
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('getItemUsageHistory error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 }

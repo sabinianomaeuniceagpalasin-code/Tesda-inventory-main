@@ -353,11 +353,8 @@ function renderUsagePage() {
                 <tr>
                     <td>${row.issued_date ?? "-"} → ${row.return_date ?? "-"}</td>
                     <td>${row.issued_to ?? "-"}</td>
-                    <td>${row.purpose ?? "-"}</td>
                     <td>${row.issued_by ?? "-"}</td>
                     <td><span class="${statusClass}">${row.return_status ?? "-"}</span></td>
-                    <td>${row.condition_after_use ?? "-"}</td>
-                    <td>${row.remarks ?? "-"}</td>
                 </tr>
             `;
         }).join("");
@@ -484,15 +481,19 @@ window.loadHistoryData = function () {
 window.showUsageHistory = function () {
     const historyModal = document.getElementById("usageHistoryModal");
 
+    const serialNo = window.currentModalSerialNo || window.currentSerialNo || null;
+
+    if (!serialNo || serialNo === "---") {
+        alert("Please click on an item first before viewing its usage history.");
+        return;
+    }
+
+    window.currentModalSerialNo = serialNo;
+
     const itemName = document.getElementById("modal-item")
         ? document.getElementById("modal-item").innerText
         : "---";
 
-    const serialNo = document.getElementById("modal-serial")
-        ? document.getElementById("modal-serial").innerText
-        : "---";
-
-    // Pre-fill the history modal header with what we already know
     if (document.getElementById("history-item-name")) {
         document.getElementById("history-item-name").innerText = itemName;
     }
@@ -504,54 +505,83 @@ window.showUsageHistory = function () {
     if (historyModal) {
         historyModal.style.setProperty("display", "flex", "important");
 
-        // Fetch and render the history rows
         if (typeof loadHistoryData === "function") {
             loadHistoryData();
         }
     }
-};
-
-/**
- * Closes the usage history modal and resets pagination state.
- */
-window.closeUsageHistory = function () {
-    const modal = document.getElementById("usageHistoryModal");
-    if (modal) modal.style.display = "none";
-
-    // Reset state so stale rows are not shown on next open
-    usageAllRows     = [];
-    usageCurrentPage = 1;
-
-    const tbody = document.getElementById("usage-history-body");
-    if (tbody) tbody.innerHTML = "";
-};
+};w
 
 document.addEventListener("DOMContentLoaded", function () {
-    const modalEl = document.getElementById("inventoryModal");
-    if (!modalEl || typeof bootstrap === "undefined") return;
+    const popover = document.createElement("div");
+    popover.classList.add("history-popover");
+    popover.innerHTML = `<p class="loading-text">Loading...</p><div class="history-content"></div>`;
+    document.body.appendChild(popover);
 
-    const inventoryModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    document.querySelectorAll(".serial-cell").forEach((cell) => {
+        let timer;
 
-    // Close when clicking sidebar / module links
-    document.querySelectorAll(".sidebar a, .sidebar button, [data-target]").forEach((el) => {
-        el.addEventListener("click", function () {
-            inventoryModal.hide();
+        cell.addEventListener("mouseenter", function () {
+            const serial = this.dataset.serial;
+            const content = popover.querySelector(".history-content");
+            const loading = popover.querySelector(".loading-text");
+
+            content.innerHTML = "";
+            loading.style.display = "block";
+
+            const rect = this.getBoundingClientRect();
+            popover.style.top = `${window.scrollY + rect.bottom + 5}px`;
+            popover.style.left = `${window.scrollX + rect.left}px`;
+            popover.style.display = "block";
+
+            fetch(`/maintenance/history/${serial}`)
+                .then((res) => res.json())
+                .then((data) => {
+                    loading.style.display = "none";
+
+                    if (data.error) {
+                        content.innerHTML = `<p style="color:red">${data.error}</p>`;
+                        return;
+                    }
+
+                    let html = "<strong>Maintenance History:</strong>";
+                    if (data.maintenance.length) {
+                        data.maintenance.forEach((m) => {
+                            html += `<p>${m.date_reported}: ${m.issue_type} (Status: ${m.status || "N/A"})</p>`;
+                        });
+                    } else {
+                        html += "<p>No maintenance records.</p>";
+                    }
+
+                    html += "<strong>Damage History:</strong>";
+                    if (data.damage.length) {
+                        data.damage.forEach((d) => {
+                            html += `<p>${d.reported_at}: ${d.damage_type || "N/A"}</p>`;
+                        });
+                    } else {
+                        html += "<p>No damage records.</p>";
+                    }
+
+                    content.innerHTML = html;
+                })
+                .catch((err) => {
+                    loading.style.display = "none";
+                    content.innerHTML = `<p style="color:red">Failed to load history.</p>`;
+                    console.error(err);
+                });
         });
-    });
 
-    // Close when clicking anywhere outside the modal panel
-    document.addEventListener("click", function (e) {
-        if (!modalEl.classList.contains("show")) return;
+        cell.addEventListener("mouseleave", function () {
+            timer = setTimeout(() => {
+                popover.style.display = "none";
+            }, 200);
+        });
 
-        const dialog = modalEl.querySelector(".modal-dialog");
-        if (!dialog) return;
+        popover.addEventListener("mouseenter", function () {
+            clearTimeout(timer);
+        });
 
-        const clickedInsideDialog    = dialog.contains(e.target);
-        const clickedInventoryRow    = e.target.closest("#inventoryTable tbody tr.inventory-row");
-        const clickedInventoryButton = e.target.closest("#inventoryTable button");
-
-        if (!clickedInsideDialog && !clickedInventoryRow && !clickedInventoryButton) {
-            inventoryModal.hide();
-        }
+        popover.addEventListener("mouseleave", function () {
+            popover.style.display = "none";
+        });
     });
 });

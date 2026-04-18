@@ -130,6 +130,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::post('/issued/return/{id}', [IssuedReturnController::class, 'returnItem'])->name('issued.return');
     Route::post('/issued/unserviceable/{id}', [IssuedUnserviceableController::class, 'markUnserviceable'])->name('issued.unserviceable');
+    Route::get('/dashboard/item-usage-history/{serial_no}', [DashboardController::class, 'getItemUsageHistory']);
 
     // =========================
     // CHATBOT

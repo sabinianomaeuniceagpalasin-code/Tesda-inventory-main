@@ -391,11 +391,8 @@
                   <tr>
                     <th>Issued Period</th>
                     <th>Issued To</th>
-                    <th>Purpose</th>
                     <th>Issued By</th>
                     <th>Return Status</th>
-                    <th>Condition After Use</th>
-                    <th>Remarks</th>
                   </tr>
                 </thead>
                 <tbody id="usage-history-body">
