@@ -14,6 +14,7 @@
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>TESDA Dashboard</title>
   <link rel="stylesheet" href="{{ asset('css/dashboard.css') }}">
+  <link rel="stylesheet" href="{{ asset('css/maintenance.css') }}">
   <link rel="stylesheet" href="{{ asset('css/scanner.css') }}">
   <link rel="stylesheet" href="{{ asset('css/notification.css') }}">
   <link rel="stylesheet" href="{{ asset('css/profile.css') }}">
@@ -279,12 +280,12 @@
                   <td>{{ \Carbon\Carbon::parse($item->date_acquired)->format('F d, Y') }}</td>
                   <td>
                     <span class="
-                                      @if($item->status === 'Available') text-green
-                                      @elseif($item->status === 'For Repair') text-brown
-                                      @elseif($item->status === 'Issued') text-blue
-                                      @elseif($item->status === 'Unserviceable' || $item->status === 'Damaged' || $item->status === 'Lost' || $item->status === 'Missing') text-red
-                                      @endif
-                                  ">
+                                        @if($item->status === 'Available') text-green
+                                        @elseif($item->status === 'For Repair') text-brown
+                                        @elseif($item->status === 'Issued') text-blue
+                                        @elseif($item->status === 'Unserviceable' || $item->status === 'Damaged' || $item->status === 'Lost' || $item->status === 'Missing') text-red
+                                        @endif
+                                    ">
                       {{ $item->status }}
                     </span>
                   </td>
@@ -571,6 +572,11 @@
             <h2>Maintenance Summary</h2>
 
             <div class="reports-controls">
+              <div class="left-buttons">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="ongoing">Ongoing</button>
+                <button class="filter-btn" data-filter="completed">Completed</button>
+              </div>
               <div class="right-buttons">
                 <input type="text" id="MaintenanceSearchInput" placeholder="Search Item Name...">
               </div>
@@ -953,13 +959,12 @@
                 <option value="BES">BES</option>
                 <option value="OFFICE OF THE ADMINISTRATOR">OFFICE OF THE ADMINISTRATOR</option>
                 <option value="ENGLISH TRAINING">ENGLISH TRAINING</option>
-                <option value="EIM">EIM</option>
                 <option value="DOM. WORK">DOM. WORK</option>
                 <option value="ADMIN">ADMIN</option>
                 <option value="COMMAND CENTER">COMMAND CENTER</option>
                 <option value="CONFERENCE ROOM">CONFERENCE ROOM</option>
                 <option value="FV">FV</option>
-                <option value="TRAINER'S LOUNGE">TRAINER'S LOUNGE</option>
+                <option value="TRAINER LOUNGE">TRAINER'S LOUNGE</option>
                 <option value="ENTRANCE HALLWAY">ENTRANCE HALLWAY</option>
                 <option value="MECHATRONICS">MECHATRONICS</option>
                 <option value="DRV">DRV</option>

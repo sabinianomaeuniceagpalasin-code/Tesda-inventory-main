@@ -14,7 +14,7 @@ class ItemApprovalRequestController extends Controller
             'items.*.name'        => 'required|string|max:150',
             'items.*.type'        => 'required|in:qr,barcode',
             'items.*.serial'      => 'required|string|max:100',
-            'items.*.department'  => 'required|in:ICS,ENGINEERING',
+            'items.*.department'  => 'required|in:ICS,HR,ENGINEERING,REGISTRAR,EIM,CSS,BIOMED,EPAS,FINANCE,BES, OFFICE OF ADMINISTRATOR,ENGLISH TRAINING,DOM. WORK,ADMIN,COMMAND CENTER,CONFERENCE ROOM,FV, TRAINER LOUNGE,ENTRANCE HALLWAY,MECHATRONICS,DRV',
             'items.*.description' => 'required|string|max:255',
         ]);
 

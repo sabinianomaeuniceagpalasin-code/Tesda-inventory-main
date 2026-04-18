@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const costInput = document.getElementById("m_cost");
     const completionInput = document.getElementById("m_completion");
     const remarksInput = document.getElementById("m_remarks");
-    const cancelBtn = form.querySelector(".cancel-btn");
+    const cancelBtn = form?.querySelector(".cancel-btn");
 
     let currentRecordId = null;
 
@@ -20,9 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const closeModal = () => {
         if (modal) modal.style.display = "none";
         if (form) form.reset();
-
         currentRecordId = null;
-
         if (serialInput) serialInput.value = "";
         if (itemNameInput) itemNameInput.value = "";
         if (issueInput) issueInput.value = "";
@@ -37,15 +35,15 @@ document.addEventListener("DOMContentLoaded", () => {
             currentRecordId = maintenanceId;
 
             const res = await fetch(`/maintenance/${maintenanceId}`, {
-                headers: {
-                    Accept: "application/json",
-                },
+                headers: { Accept: "application/json" },
             });
 
             const data = await res.json();
 
             if (!data.success || !data.record) {
-                throw new Error(data.message || "Failed to load maintenance record.");
+                throw new Error(
+                    data.message || "Failed to load maintenance record.",
+                );
             }
 
             const record = data.record;
@@ -55,19 +53,18 @@ document.addEventListener("DOMContentLoaded", () => {
             if (issueInput) issueInput.value = record.observation || "";
             if (dateInput) dateInput.value = record.date_reported || "";
             if (costInput) costInput.value = record.repair_cost ?? "";
-            if (completionInput) completionInput.value = record.expected_completion || "";
+            if (completionInput)
+                completionInput.value = record.expected_completion || "";
             if (remarksInput) remarksInput.value = record.remarks || "";
 
             openModal();
         } catch (err) {
             console.error(err);
-
             Swal.fire(
                 "Error",
                 err.message || "Failed to load maintenance record.",
-                "error"
+                "error",
             );
-
             if (serialInput) serialInput.value = "";
             if (itemNameInput) itemNameInput.value = "";
             if (issueInput) issueInput.value = "";
@@ -88,24 +85,29 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             const payload = {
-                serial_no: serialInput ? serialInput.value : "",
-                observation: issueInput ? issueInput.value : "",
-                date_reported: dateInput ? dateInput.value : "",
-                repair_cost: costInput ? costInput.value : "",
-                expected_completion: completionInput && completionInput.value ? completionInput.value : null,
-                remarks: remarksInput && remarksInput.value ? remarksInput.value : null,
+                serial_no: serialInput?.value ?? "",
+                observation: issueInput?.value ?? "",
+                date_reported: dateInput?.value ?? "",
+                repair_cost: costInput?.value ?? "",
+                expected_completion: completionInput?.value || null,
+                remarks: remarksInput?.value || null,
             };
 
             try {
-                const res = await fetch(`/maintenance/${currentRecordId}/update`, {
-                    method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
-                        Accept: "application/json",
+                const res = await fetch(
+                    `/maintenance/${currentRecordId}/update`,
+                    {
+                        method: "PUT",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRF-TOKEN": document.querySelector(
+                                'meta[name="csrf-token"]',
+                            ).content,
+                            Accept: "application/json",
+                        },
+                        body: JSON.stringify(payload),
                     },
-                    body: JSON.stringify(payload),
-                });
+                );
 
                 const json = await res.json();
 
@@ -127,11 +129,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
             } catch (err) {
                 console.error(err);
-
                 Swal.fire(
                     "Error",
                     err.message || "Failed to update record.",
-                    "error"
+                    "error",
                 );
             }
         });
@@ -142,11 +143,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (editBtn) {
             e.preventDefault();
             e.stopPropagation();
-
             const maintenanceId = editBtn.dataset.id;
-            if (maintenanceId) {
-                fillRecordDetails(maintenanceId);
-            }
+            if (maintenanceId) fillRecordDetails(maintenanceId);
             return;
         }
 
@@ -154,7 +152,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (deleteBtn) {
             e.preventDefault();
             e.stopPropagation();
-
             const recordId = deleteBtn.dataset.id;
 
             Swal.fire({
@@ -172,7 +169,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     const res = await fetch(`/maintenance/${recordId}/delete`, {
                         method: "DELETE",
                         headers: {
-                            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+                            "X-CSRF-TOKEN": document.querySelector(
+                                'meta[name="csrf-token"]',
+                            ).content,
                             Accept: "application/json",
                         },
                     });
@@ -180,7 +179,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     const json = await res.json();
 
                     if (!json.success) {
-                        throw new Error(json.message || "Failed to delete record.");
+                        throw new Error(
+                            json.message || "Failed to delete record.",
+                        );
                     }
 
                     Swal.fire({
@@ -195,28 +196,83 @@ document.addEventListener("DOMContentLoaded", () => {
                     });
                 } catch (err) {
                     console.error(err);
-
                     Swal.fire(
                         "Error",
                         err.message || "Failed to delete record.",
-                        "error"
+                        "error",
                     );
                 }
             });
         }
     });
 
-    if (closeBtn) {
-        closeBtn.addEventListener("click", closeModal);
-    }
-
-    if (cancelBtn) {
-        cancelBtn.addEventListener("click", closeModal);
-    }
+    if (closeBtn) closeBtn.addEventListener("click", closeModal);
+    if (cancelBtn) cancelBtn.addEventListener("click", closeModal);
 
     window.addEventListener("click", (e) => {
-        if (e.target === modal) {
-            closeModal();
-        }
+        if (e.target === modal) closeModal();
     });
+
+    const filterBtns = document.querySelectorAll(".filter-btn");
+
+    const isCompleted = (row) => {
+        const remarks =
+            row
+                .querySelector("td:nth-child(7)")
+                ?.textContent?.trim()
+                .toLowerCase() ?? "";
+        return (
+            remarks.includes("item is now available") ||
+            remarks.includes("complete") ||
+            remarks.includes("done") ||
+            remarks.includes("fixed")
+        );
+    };
+
+    const applyFilters = () => {
+        const activeFilter =
+            document.querySelector(".filter-btn.active")?.dataset.filter ??
+            "all";
+        const keyword =
+            document
+                .getElementById("MaintenanceSearchInput")
+                ?.value.toLowerCase() ?? "";
+
+        document
+            .querySelectorAll("#maintenanceTable tbody tr")
+            .forEach((row) => {
+                const itemName =
+                    row
+                        .querySelector("td:nth-child(2)")
+                        ?.textContent?.toLowerCase() ?? "";
+                const serial =
+                    row
+                        .querySelector("td:nth-child(1)")
+                        ?.textContent?.toLowerCase() ?? "";
+
+                const matchesSearch =
+                    itemName.includes(keyword) || serial.includes(keyword);
+
+                const matchesFilter =
+                    activeFilter === "all" ||
+                    (activeFilter === "completed" && isCompleted(row)) ||
+                    (activeFilter === "ongoing" && !isCompleted(row));
+
+                row.style.display =
+                    matchesSearch && matchesFilter ? "" : "none";
+            });
+    };
+
+    filterBtns.forEach((btn) => {
+        btn.addEventListener("click", function () {
+            filterBtns.forEach((b) => b.classList.remove("active"));
+            this.classList.add("active");
+            applyFilters();
+        });
+    });
+
+    const searchInput = document.getElementById("MaintenanceSearchInput");
+    if (searchInput) {
+        searchInput.addEventListener("input", applyFilters);
+    }
 });
