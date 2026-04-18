@@ -1516,7 +1516,7 @@
   <script src="{{ asset('js/dashboard.js') }}"></script>
   <script src="{{ asset('js/dashboard-modals.js') }}"></script>
   <script src="{{ asset('js/dashboard-calc-total.js') }}"></script>
-  <script src="{{ asset('js/dashboard-fill-prop-num.js') }}"></script>
+  <!-- <script src="{{ asset('js/dashboard-fill-prop-num.js') }}"></script> -->
   <script src="{{ asset('js/dashboard-form-search.js') }}"></script>
   <script src="{{ asset('js/dashboard-load-avail-serials.js') }}"></script>
   <script src="{{ asset('js/dashboard-prop-filter.js') }}"></script>

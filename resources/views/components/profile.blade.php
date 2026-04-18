@@ -2,7 +2,7 @@
     <!-- User Info -->
     <div class="profile-header">
         <div class="profile-avatar">
-            <img src="{{ asset('images/default-avatar.png') }}" alt="User Avatar">
+            <img src="{{ asset('images/avatar.jpg') }}" alt="User Avatar">
         </div>
         <div class="profile-info">
             <div class="profile-name">

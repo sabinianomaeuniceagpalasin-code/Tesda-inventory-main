@@ -509,7 +509,7 @@ window.showUsageHistory = function () {
             loadHistoryData();
         }
     }
-};w
+};
 
 document.addEventListener("DOMContentLoaded", function () {
     const popover = document.createElement("div");
