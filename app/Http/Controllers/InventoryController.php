@@ -26,109 +26,109 @@ class InventoryController extends Controller
     }
 
     private function getGroupedItemContextBySerial(string $serialNo): array
-        {
-            $item = Item::where('serial_no', $serialNo)->firstOrFail();
+    {
+        $item = Item::where('serial_no', $serialNo)->firstOrFail();
 
-           return [
-                'item' => $item,
-                'item_name' => trim((string) $item->item_name),
-                'description' => trim((string) $item->description),
-                'property_no' => trim((string) $item->property_no),
-                'created_at' => optional($item->created_at)->format('Y-m-d H:i:s'),
-            ];
-        }
+        return [
+            'item' => $item,
+            'item_name' => trim((string) $item->item_name),
+            'description' => trim((string) $item->description),
+            'property_no' => trim((string) $item->property_no),
+            'created_at' => optional($item->created_at)->format('Y-m-d H:i:s'),
+        ];
+    }
 
-        public function updateSourceOfFund(Request $request)
-{
-    $request->validate([
-        'serial_no' => 'required|string|exists:items,serial_no',
-        'value' => 'required|string|max:255',
-    ]);
-
-    $ctx = $this->getGroupedItemContextBySerial($request->serial_no);
-    $value = trim((string) $request->value);
-
-    DB::transaction(function () use ($ctx, $value) {
-        Item::whereRaw('TRIM(item_name) = ?', [$ctx['item_name']])
-            ->whereRaw('TRIM(COALESCE(description, "")) = ?', [$ctx['description']])
-            ->whereRaw('DATE_FORMAT(created_at, "%Y-%m-%d %H:%i:%s") = ?', [$ctx['created_at']])
-            ->update([
-                'source_of_fund' => $value,
-                'updated_at' => now(),
-            ]);
-
-        DB::table('propertyinventory')
-            ->where('property_no', $ctx['property_no'])
-            ->update([
-                'sources_of_fund' => $value,
-                'updated_at' => now(),
-            ]);
-    });
-
-    return response()->json([
-        'success' => true,
-        'message' => 'Source of fund updated successfully.',
-        'value' => $value,
-    ]);
-}
-
-public function updateClassification(Request $request)
-{
-    $request->validate([
-        'serial_no' => 'required|string|exists:items,serial_no',
-        'value' => 'required|string|max:255',
-    ]);
-
-    $ctx = $this->getGroupedItemContextBySerial($request->serial_no);
-    $value = trim((string) $request->value);
-
-    DB::transaction(function () use ($ctx, $value) {
-        Item::whereRaw('TRIM(item_name) = ?', [$ctx['item_name']])
-            ->whereRaw('TRIM(COALESCE(description, "")) = ?', [$ctx['description']])
-            ->whereRaw('DATE_FORMAT(created_at, "%Y-%m-%d %H:%i:%s") = ?', [$ctx['created_at']])
-            ->update([
-                'classification' => $value,
-                'updated_at' => now(),
-            ]);
-
-        DB::table('propertyinventory')
-            ->where('property_no', $ctx['property_no'])
-            ->update([
-                'classification' => $value,
-                'updated_at' => now(),
-            ]);
-    });
-
-    return response()->json([
-        'success' => true,
-        'message' => 'Classification updated successfully.',
-        'value' => $value,
-    ]);
-}
-
-public function updateUnitCost(Request $request)
-{
-    $request->validate([
-        'serial_no' => 'required|string|exists:items,serial_no',
-        'value' => 'required|numeric|min:0',
-    ]);
-
-    $ctx = $this->getGroupedItemContextBySerial($request->serial_no);
-    $value = number_format((float) $request->value, 2, '.', '');
-
-    DB::table('propertyinventory')
-        ->where('property_no', $ctx['property_no'])
-        ->update([
-            'unit_cost' => $value,
-            'updated_at' => now(),
+    public function updateSourceOfFund(Request $request)
+    {
+        $request->validate([
+            'serial_no' => 'required|string|exists:items,serial_no',
+            'value' => 'required|string|max:255',
         ]);
 
-    return response()->json([
-        'success' => true,
-        'message' => 'Unit cost updated successfully.',
-        'value' => $value,
-    ]);
-}
+        $ctx = $this->getGroupedItemContextBySerial($request->serial_no);
+        $value = trim((string) $request->value);
+
+        DB::transaction(function () use ($ctx, $value) {
+            Item::whereRaw('TRIM(item_name) = ?', [$ctx['item_name']])
+                ->whereRaw('TRIM(COALESCE(description, "")) = ?', [$ctx['description']])
+                ->whereRaw('DATE_FORMAT(created_at, "%Y-%m-%d %H:%i:%s") = ?', [$ctx['created_at']])
+                ->update([
+                    'source_of_fund' => $value,
+                    'updated_at' => now(),
+                ]);
+
+            DB::table('propertyinventory')
+                ->where('property_no', $ctx['property_no'])
+                ->update([
+                    'sources_of_fund' => $value,
+                    'updated_at' => now(),
+                ]);
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Source of fund updated successfully.',
+            'value' => $value,
+        ]);
+    }
+
+    public function updateClassification(Request $request)
+    {
+        $request->validate([
+            'serial_no' => 'required|string|exists:items,serial_no',
+            'value' => 'required|string|max:255',
+        ]);
+
+        $ctx = $this->getGroupedItemContextBySerial($request->serial_no);
+        $value = trim((string) $request->value);
+
+        DB::transaction(function () use ($ctx, $value) {
+            Item::whereRaw('TRIM(item_name) = ?', [$ctx['item_name']])
+                ->whereRaw('TRIM(COALESCE(description, "")) = ?', [$ctx['description']])
+                ->whereRaw('DATE_FORMAT(created_at, "%Y-%m-%d %H:%i:%s") = ?', [$ctx['created_at']])
+                ->update([
+                    'classification' => $value,
+                    'updated_at' => now(),
+                ]);
+
+            DB::table('propertyinventory')
+                ->where('property_no', $ctx['property_no'])
+                ->update([
+                    'classification' => $value,
+                    'updated_at' => now(),
+                ]);
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Classification updated successfully.',
+            'value' => $value,
+        ]);
+    }
+
+    public function updateUnitCost(Request $request)
+    {
+        $request->validate([
+            'serial_no' => 'required|string|exists:items,serial_no',
+            'value' => 'required|numeric|min:0',
+        ]);
+
+        $ctx = $this->getGroupedItemContextBySerial($request->serial_no);
+        $value = number_format((float) $request->value, 2, '.', '');
+
+        DB::table('propertyinventory')
+            ->where('property_no', $ctx['property_no'])
+            ->update([
+                'unit_cost' => $value,
+                'updated_at' => now(),
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Unit cost updated successfully.',
+            'value' => $value,
+        ]);
+    }
 
     public function checkPropertyNo($property_no)
     {
@@ -339,21 +339,15 @@ public function updateUnitCost(Request $request)
     public function destroy($serial_no)
     {
         DB::transaction(function () use ($serial_no) {
-            $item = DB::table('items')->where('serial_no', $serial_no)->first();
-
-            if (!$item) {
-                throw new \Exception("Item with serial {$serial_no} not found.");
-            }
+            // ✅ Gamitin ang Model para ma-trigger ang SoftDeletes
+            $item = Item::where('serial_no', $serial_no)->firstOrFail();
 
             $property_no = $item->property_no;
 
-            DB::table('items')
-                ->where('serial_no', $serial_no)
-                ->delete();
+            $item->delete(); // ← soft delete na ito, sets deleted_at lang
 
-            $remaining = DB::table('items')
-                ->where('property_no', $property_no)
-                ->count();
+            // Count excluding soft-deleted
+            $remaining = Item::where('property_no', $property_no)->count();
 
             if ($remaining <= 0) {
                 DB::table('propertyinventory')
@@ -562,133 +556,133 @@ public function updateUnitCost(Request $request)
     }
 
     public function updateSpecifications(Request $request)
-{
-    $request->validate([
-        'serial_no' => 'required|string|exists:items,serial_no',
-        'specifications' => 'nullable|string|max:1000',
-    ]);
-
-    $ctx = $this->getGroupedItemContextBySerial($request->serial_no);
-    $specification = trim((string) $request->specifications);
-
-    $updatedCount = Item::whereRaw('TRIM(item_name) = ?', [$ctx['item_name']])
-        ->whereRaw('TRIM(COALESCE(description, "")) = ?', [$ctx['description']])
-        ->whereRaw('DATE_FORMAT(created_at, "%Y-%m-%d %H:%i:%s") = ?', [$ctx['created_at']])
-        ->update([
-            'specification' => $specification,
-            'updated_at' => now(),
+    {
+        $request->validate([
+            'serial_no' => 'required|string|exists:items,serial_no',
+            'specifications' => 'nullable|string|max:1000',
         ]);
 
-    return response()->json([
-        'success' => true,
-        'message' => "Specifications updated successfully for {$updatedCount} matching item(s).",
-        'specifications' => $specification,
-        'matched_item_name' => $ctx['item_name'],
-        'matched_description' => $ctx['description'],
-        'matched_created_at' => $ctx['created_at'],
-        'updated_count' => $updatedCount,
-    ]);
-}
+        $ctx = $this->getGroupedItemContextBySerial($request->serial_no);
+        $specification = trim((string) $request->specifications);
 
-public function exportDamagePdf(Request $request)
-{
-    $search = $request->get('search', '');
+        $updatedCount = Item::whereRaw('TRIM(item_name) = ?', [$ctx['item_name']])
+            ->whereRaw('TRIM(COALESCE(description, "")) = ?', [$ctx['description']])
+            ->whereRaw('DATE_FORMAT(created_at, "%Y-%m-%d %H:%i:%s") = ?', [$ctx['created_at']])
+            ->update([
+                'specification' => $specification,
+                'updated_at' => now(),
+            ]);
 
-    $query = DB::table('damagereports as d')
-        ->leftJoin('items as i', 'd.serial_no', '=', 'i.serial_no')
-        ->select(
-            'd.damage_id',
-            'd.serial_no',
-            'd.observation',
-            'd.borrower_name',
-            'd.reported_at',
-            'i.item_name'
-        );
-
-    if (!empty($search)) {
-        $query->where(function ($q) use ($search) {
-            $q->where('d.serial_no', 'like', '%' . $search . '%')
-              ->orWhere('i.item_name', 'like', '%' . $search . '%')
-              ->orWhere('d.observation', 'like', '%' . $search . '%')
-              ->orWhere('d.borrower_name', 'like', '%' . $search . '%');
-        });
+        return response()->json([
+            'success' => true,
+            'message' => "Specifications updated successfully for {$updatedCount} matching item(s).",
+            'specifications' => $specification,
+            'matched_item_name' => $ctx['item_name'],
+            'matched_description' => $ctx['description'],
+            'matched_created_at' => $ctx['created_at'],
+            'updated_count' => $updatedCount,
+        ]);
     }
 
-    $damageReports = $query->orderByDesc('d.reported_at')->get();
+    public function exportDamagePdf(Request $request)
+    {
+        $search = $request->get('search', '');
 
-    $pdf = Pdf::loadView('exports.damage-report-pdf', [
-        'damageReports' => $damageReports,
-        'search' => $search,
-        'generatedAt' => Carbon::now()->format('F d, Y h:i A'),
-    ])->setPaper('a4', 'landscape');
+        $query = DB::table('damagereports as d')
+            ->leftJoin('items as i', 'd.serial_no', '=', 'i.serial_no')
+            ->select(
+                'd.damage_id',
+                'd.serial_no',
+                'd.observation',
+                'd.borrower_name',
+                'd.reported_at',
+                'i.item_name'
+            );
 
-    $fileName = 'damage_reports_' . now()->format('Ymd_His') . '.pdf';
-
-    return $pdf->download($fileName);
-}
-
-public function exportPdf(Request $request)
-{
-    $status = $request->get('status', 'All');
-    $search = $request->get('search', '');
-
-    $query = DB::table('items as i')
-        ->select(
-            'i.serial_no',
-            'i.item_name',
-            'i.description',
-            'i.source_of_fund',
-            'i.classification',
-            'i.date_acquired',
-            'i.status'
-        );
-
-    if ($status === 'Damaged') {
-        $latestDamage = DB::table('damagereports')
-            ->selectRaw('serial_no, MAX(damage_id) as damage_id')
-            ->groupBy('serial_no');
-
-        $query->leftJoinSub($latestDamage, 'latest_damage', function ($join) {
-            $join->on('i.serial_no', '=', 'latest_damage.serial_no');
-        });
-
-        $query->leftJoin('damagereports as d', 'latest_damage.damage_id', '=', 'd.damage_id');
-
-        $query->addSelect('d.observation', 'd.reported_at');
-    }
-
-    if ($status !== 'All') {
-        if ($status === 'Missing') {
-            $query->whereIn('i.status', ['Missing', 'Lost']);
-        } else {
-            $query->where('i.status', $status);
+        if (!empty($search)) {
+            $query->where(function ($q) use ($search) {
+                $q->where('d.serial_no', 'like', '%' . $search . '%')
+                    ->orWhere('i.item_name', 'like', '%' . $search . '%')
+                    ->orWhere('d.observation', 'like', '%' . $search . '%')
+                    ->orWhere('d.borrower_name', 'like', '%' . $search . '%');
+            });
         }
+
+        $damageReports = $query->orderByDesc('d.reported_at')->get();
+
+        $pdf = Pdf::loadView('exports.damage-report-pdf', [
+            'damageReports' => $damageReports,
+            'search' => $search,
+            'generatedAt' => Carbon::now()->format('F d, Y h:i A'),
+        ])->setPaper('a4', 'landscape');
+
+        $fileName = 'damage_reports_' . now()->format('Ymd_His') . '.pdf';
+
+        return $pdf->download($fileName);
     }
 
-    if (!empty($search)) {
-        $query->where(function ($q) use ($search, $status) {
-            $q->where('i.item_name', 'like', '%' . $search . '%')
-              ->orWhere('i.serial_no', 'like', '%' . $search . '%');
+    public function exportPdf(Request $request)
+    {
+        $status = $request->get('status', 'All');
+        $search = $request->get('search', '');
 
-            if ($status === 'Damaged') {
-                $q->orWhere('d.observation', 'like', '%' . $search . '%');
+        $query = DB::table('items as i')
+            ->select(
+                'i.serial_no',
+                'i.item_name',
+                'i.description',
+                'i.source_of_fund',
+                'i.classification',
+                'i.date_acquired',
+                'i.status'
+            );
+
+        if ($status === 'Damaged') {
+            $latestDamage = DB::table('damagereports')
+                ->selectRaw('serial_no, MAX(damage_id) as damage_id')
+                ->groupBy('serial_no');
+
+            $query->leftJoinSub($latestDamage, 'latest_damage', function ($join) {
+                $join->on('i.serial_no', '=', 'latest_damage.serial_no');
+            });
+
+            $query->leftJoin('damagereports as d', 'latest_damage.damage_id', '=', 'd.damage_id');
+
+            $query->addSelect('d.observation', 'd.reported_at');
+        }
+
+        if ($status !== 'All') {
+            if ($status === 'Missing') {
+                $query->whereIn('i.status', ['Missing', 'Lost']);
+            } else {
+                $query->where('i.status', $status);
             }
-        });
+        }
+
+        if (!empty($search)) {
+            $query->where(function ($q) use ($search, $status) {
+                $q->where('i.item_name', 'like', '%' . $search . '%')
+                    ->orWhere('i.serial_no', 'like', '%' . $search . '%');
+
+                if ($status === 'Damaged') {
+                    $q->orWhere('d.observation', 'like', '%' . $search . '%');
+                }
+            });
+        }
+
+        $items = $query->orderBy('i.item_name', 'asc')->get();
+
+        $pdf = Pdf::loadView('exports.inventory-pdf', [
+            'items' => $items,
+            'status' => $status,
+            'search' => $search,
+            'generatedAt' => Carbon::now()->format('F d, Y h:i A'),
+        ])->setPaper('a4', 'landscape');
+
+        $fileName = 'inventory_' . strtolower(str_replace(' ', '_', $status)) . '_' . now()->format('Ymd_His') . '.pdf';
+
+        return $pdf->download($fileName);
     }
-
-    $items = $query->orderBy('i.item_name', 'asc')->get();
-
-    $pdf = Pdf::loadView('exports.inventory-pdf', [
-        'items' => $items,
-        'status' => $status,
-        'search' => $search,
-        'generatedAt' => Carbon::now()->format('F d, Y h:i A'),
-    ])->setPaper('a4', 'landscape');
-
-    $fileName = 'inventory_' . strtolower(str_replace(' ', '_', $status)) . '_' . now()->format('Ymd_His') . '.pdf';
-
-    return $pdf->download($fileName);
-}
 
     public function receiveBatch(Request $request)
     {
@@ -757,4 +751,122 @@ public function exportPdf(Request $request)
 
         return response()->json(['success' => true]);
     }
+    public function archive($serial_no)
+    {
+        $item = Item::where('serial_no', $serial_no)->firstOrFail();
+        $item->delete(); // sets deleted_at via SoftDeletes
+
+        return response()->json([
+            'success' => true,
+            'message' => "Item {$serial_no} archived successfully.",
+        ]);
+    }
+
+    // ── Restore from archive ──────────────────────────────────
+    public function restore($serial_no)
+    {
+        $item = Item::withTrashed()->where('serial_no', $serial_no)->firstOrFail();
+        $item->restore(); // clears deleted_at
+
+        return response()->json([
+            'success' => true,
+            'message' => "Item {$serial_no} restored successfully.",
+        ]);
+    }
+
+    // ── Permanently delete ────────────────────────────────────
+    public function forceDelete($serial_no)
+    {
+        DB::transaction(function () use ($serial_no) {
+            $item = Item::withTrashed()->where('serial_no', $serial_no)->firstOrFail();
+            $property_no = $item->property_no;
+
+            $item->forceDelete(); // removes the row permanently
+
+            $remaining = Item::withTrashed(false)->where('property_no', $property_no)->count();
+
+            if ($remaining <= 0) {
+                DB::table('propertyinventory')->where('property_no', $property_no)->delete();
+            } else {
+                DB::table('propertyinventory')->where('property_no', $property_no)->update([
+                    'quantity' => $remaining,
+                    'updated_at' => now(),
+                ]);
+            }
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => "Item {$serial_no} permanently deleted.",
+        ]);
+    }
+
+    // ── Get archived items (for the archive modal table) ─────
+    public function getArchivedItems()
+    {
+        $archived = Item::onlyTrashed()
+            ->leftJoin('propertyinventory as pi', 'items.property_no', '=', 'pi.property_no')
+            ->select(
+                'items.serial_no',
+                'items.item_name',
+                'items.description',
+                'items.source_of_fund',
+                'items.classification',
+                'items.department',
+                DB::raw('DATE(items.date_acquired) as date_acquired'),
+                'items.status',
+                'items.deleted_at',
+                'pi.unit_cost'
+            )
+            ->orderByDesc('items.deleted_at')
+            ->get();
+
+        $html = '';
+        foreach ($archived as $item) {
+            $dateAcquired = $item->date_acquired
+                ? \Carbon\Carbon::parse($item->date_acquired)->format('F d, Y') : '-';
+            $archivedOn = $item->deleted_at
+                ? \Carbon\Carbon::parse($item->deleted_at)->format('F d, Y') : '-';
+            $sourceOfFund = $item->source_of_fund ?? '-';
+            $classification = $item->classification ?? '-';
+            $department = $item->department ?? '-';
+            $description = $item->description ?? '-';
+            $serial_no = $item->serial_no ?? '-';
+            $itemName = $item->item_name ?? '-';
+
+            $html .= "
+            <tr>
+                <td>{$serial_no}</td>
+                <td>{$itemName}</td>
+                <td>{$description}</td>
+                <td>{$sourceOfFund}</td>
+                <td>{$classification}</td>
+                <td>{$department}</td>
+                <td>{$dateAcquired}</td>
+                <td>{$archivedOn}</td>
+                <td class='action-buttons'>
+                    <button type='button'
+                        class='restore-item-btn btn-icon-green'
+                        data-serial='{$serial_no}'
+                        title='Restore'>
+                        ♻️
+                    </button>
+                    <button type='button'
+                        class='force-delete-item-btn btn-icon-red'
+                        data-serial='{$serial_no}'
+                        title='Delete permanently'>
+                        🗑️
+                    </button>
+                </td>
+            </tr>
+        ";
+        }
+
+        if ($html === '') {
+            $html = "<tr><td colspan='9' style='text-align:center; padding:20px;'>No archived items.</td></tr>";
+        }
+
+        return response()->json(['html' => $html]);
+    }
+
 }

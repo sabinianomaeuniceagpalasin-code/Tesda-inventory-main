@@ -73,30 +73,44 @@ Route::middleware(['auth'])->group(function () {
 
     //EDIT ITEMS INVENTORY
     Route::post('/inventory/update-specifications', [InventoryController::class, 'updateSpecifications'])
-    ->name('inventory.updateSpecifications');
+        ->name('inventory.updateSpecifications');
     Route::post('/inventory/update-source-of-fund', [InventoryController::class, 'updateSourceOfFund']);
     Route::post('/inventory/update-classification', [InventoryController::class, 'updateClassification']);
     Route::post('/inventory/update-unit-cost', [InventoryController::class, 'updateUnitCost']);
 
     //EXPORT PDF INVENTORY
     Route::get('/inventory/export/pdf', [InventoryController::class, 'exportPdf'])
-    ->name('inventory.export.pdf');
+        ->name('inventory.export.pdf');
 
     //EXPORT PDF DAMAGE REPORT 
     Route::get('/damage-reports/export/pdf', [InventoryController::class, 'exportDamagePdf'])
-    ->name('damage.export.pdf');
-         
+        ->name('damage.export.pdf');
 
+    // Soft delete (archive)
+    Route::patch('/inventory/{serial_no}/archive', [InventoryController::class, 'archive'])
+        ->name('inventory.archive');
+
+    // Restore from archive
+    Route::patch('/inventory/{serial_no}/restore', [InventoryController::class, 'restore'])
+        ->name('inventory.restore');
+
+    // Permanently delete
+    Route::delete('/inventory/{serial_no}/force-delete', [InventoryController::class, 'forceDelete'])
+        ->name('inventory.force-delete');
+
+    // Get archived items table HTML
+    Route::get('/inventory/archived', [InventoryController::class, 'getArchivedItems'])
+        ->name('inventory.archived');
 
     // =========================
     // USER APPROVAL
     // =========================
-        Route::post('/users/{user_id}/approve', [InventorySettingsController::class, 'approve'])
-            ->name('user.approve');
+    Route::post('/users/{user_id}/approve', [InventorySettingsController::class, 'approve'])
+        ->name('user.approve');
 
-        Route::post('/users/{user_id}/reject', [InventorySettingsController::class, 'reject'])
-            ->name('user.reject');
-            
+    Route::post('/users/{user_id}/reject', [InventorySettingsController::class, 'reject'])
+        ->name('user.reject');
+
     // =========================
     // HTML TABLE RELOAD ROUTES (AJAX)
     // =========================
@@ -147,8 +161,8 @@ Route::middleware(['auth'])->group(function () {
     // NOTIFICATIONS
     // =========================
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
-Route::post('/notifications/{recipientId}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
-Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.readAll');
+    Route::post('/notifications/{recipientId}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.readAll');
 
     // =========================
     // ITEM APPROVAL
@@ -158,13 +172,13 @@ Route::post('/notifications/read-all', [NotificationController::class, 'markAllA
     Route::post('/item-approval/{request_id}/reject', [InventorySettingsController::class, 'rejectItem'])->name('item.reject');
 
     Route::post('/item-approval/batch/{batch_id}/approve', [InventorySettingsController::class, 'approveBatch'])
-    ->name('item.batch.approve');
+        ->name('item.batch.approve');
 
     Route::post('/item-approval/batch/{batch_id}/reject', [InventorySettingsController::class, 'rejectBatch'])
         ->name('item.batch.reject');
 
-        Route::put('/inventory/update/{serial_no}', [InventoryController::class, 'update'])->name('inventory.update');
-        Route::delete('/inventory/{serial_no}', [InventoryController::class, 'destroy'])->name('inventory.destroy');
+    Route::put('/inventory/update/{serial_no}', [InventoryController::class, 'update'])->name('inventory.update');
+    Route::delete('/inventory/{serial_no}', [InventoryController::class, 'destroy'])->name('inventory.destroy');
 
 
     // ==========================================================
@@ -198,7 +212,7 @@ Route::post('/notifications/read-all', [NotificationController::class, 'markAllA
 
 
         Route::get('/dashboard/maintenance/export/pdf', [DashboardController::class, 'exportMaintenancePdf'])
-                ->name('maintenance.export.pdf');
+            ->name('maintenance.export.pdf');
         // Optional admin-only analytics in its own group below
     });
 

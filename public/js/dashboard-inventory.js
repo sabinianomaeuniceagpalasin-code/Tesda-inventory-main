@@ -260,7 +260,7 @@ window.addEventListener("click", function (event) {
 });
 
 window.deleteItem = function (serial_no) {
-    if (!confirm("Are you sure you want to delete this item?")) return;
+    if (!confirm("Are you sure you want to archive this item?")) return;
 
     fetch(`/inventory/${encodeURIComponent(serial_no)}`, {
         method: "DELETE",
@@ -278,7 +278,7 @@ window.deleteItem = function (serial_no) {
         })
         .then((data) => {
             if (data.success) {
-                alert("Item deleted successfully!");
+                alert("Item archived successfully!");
                 location.reload();
             } else {
                 alert(data.message || "Failed to delete item.");

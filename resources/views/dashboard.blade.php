@@ -46,36 +46,36 @@
         </a>
 
         @if($isAdmin || $isPropertyCustodian)
-        <a href="{{ route('dashboard', ['section' => 'issued']) }}" data-target="issued">
-          <img src="{{ asset('images/issued.png') }}" class="menu-icon">
-          Issued Item
-        </a>
+          <a href="{{ route('dashboard', ['section' => 'issued']) }}" data-target="issued">
+            <img src="{{ asset('images/issued.png') }}" class="menu-icon">
+            Issued Item
+          </a>
         @endif
 
         <a href="{{ route('dashboard', ['section' => 'form']) }}" data-target="form">
           <img src="{{ asset('images/form.png') }}" class="menu-icon">
           Form Records
         </a>
-        
+
         @if($isAdmin || $isPropertyCustodian)
-        <a href="{{ route('dashboard', ['section' => 'damaged']) }}" data-target="damaged">
-          <img src="{{ asset('images/form.png') }}" class="menu-icon">
-          Damage Report
-        </a>
+          <a href="{{ route('dashboard', ['section' => 'damaged']) }}" data-target="damaged">
+            <img src="{{ asset('images/form.png') }}" class="menu-icon">
+            Damage Report
+          </a>
         @endif
-        
-      @if($isAdmin || $isPropertyCustodian)
-      <a href="{{ route('dashboard', ['section' => 'reports']) }}" data-target="reports">
-        <img src="{{ asset('images/maintenance.png') }}" class="menu-icon">
-        Maintenance
-      </a>
-      @endif
+
+        @if($isAdmin || $isPropertyCustodian)
+          <a href="{{ route('dashboard', ['section' => 'reports']) }}" data-target="reports">
+            <img src="{{ asset('images/maintenance.png') }}" class="menu-icon">
+            Maintenance
+          </a>
+        @endif
 
         <a href="{{ route('dashboard', ['section' => 'generate']) }}" data-target="generate">
           <img src="{{ asset('images/maintenance.png') }}" class="menu-icon">
           QR Generator
         </a>
-        
+
 
       </nav>
 
@@ -103,12 +103,12 @@
         <div class="right-section">
           <div class="icons">
             <div id="notifBellWrap" class="notif-bell-wrap">
-                <button type="button" id="notifBell" class="notif-bell-btn">
-                    <i class="fa-regular fa-bell"></i>
-                    @if($unreadCount > 0)
-                        <span class="notif-badge">{{ $unreadCount > 99 ? '99+' : $unreadCount }}</span>
-                    @endif
-                </button>
+              <button type="button" id="notifBell" class="notif-bell-btn">
+                <i class="fa-regular fa-bell"></i>
+                @if($unreadCount > 0)
+                  <span class="notif-badge">{{ $unreadCount > 99 ? '99+' : $unreadCount }}</span>
+                @endif
+              </button>
             </div>
             <span id="profileIcon" style="cursor:pointer;">👤</span>
           </div>
@@ -209,50 +209,51 @@
         <!-- ======================
               INVENTORY SECTION
           ======================= -->
-<div id="inventory" class="content-section">
-    <div class="inventory-summary">
-        <div class="summary-box">
-            <p>Total Items & Equipment</p>
-            <h2>{{ $totalItems }}</h2>
-        </div>
-        <div class="summary-box">
-            <p>Available Items</p>
-            <h2>{{ $availableItems }}</h2>
-        </div>
-        <div class="summary-box">
-            <p>Issued Items</p>
-            <h2>{{ $issuedItems }}</h2>
-        </div>
-        <div class="summary-box">
-            <p>Unserviceable/For Repair</p>
-            <h2>{{ $forRepair }}</h2>
-        </div>
-    </div>
+        <div id="inventory" class="content-section">
+          <div class="inventory-summary">
+            <div class="summary-box">
+              <p>Total Items & Equipment</p>
+              <h2>{{ $totalItems }}</h2>
+            </div>
+            <div class="summary-box">
+              <p>Available Items</p>
+              <h2>{{ $availableItems }}</h2>
+            </div>
+            <div class="summary-box">
+              <p>Issued Items</p>
+              <h2>{{ $issuedItems }}</h2>
+            </div>
+            <div class="summary-box">
+              <p>Unserviceable/For Repair</p>
+              <h2>{{ $forRepair }}</h2>
+            </div>
+          </div>
 
-    <div class="inventory-controls">
-        <div class="left-buttons">
-            <select id="inventoryStatusFilter" class="filter-select">
+          <div class="inventory-controls">
+            <div class="left-buttons">
+              <select id="inventoryStatusFilter" class="filter-select">
                 <option value="All">All</option>
                 <option value="Available">Available</option>
                 <option value="Damaged">Damaged</option>
                 <option value="Unserviceable">Unserviceable</option>
                 <option value="Missing">Missing</option>
-            </select>
-            <button type="button" id="exportInventoryBtn">+ Export</button>
-            <button type="button" id="clearInventoryFiltersBtn">Clear filters</button>
-        </div>
-        
-        <div class="right-buttons">
-            <input type="text" id="inventorySearchInput" placeholder="Search Item Name...">
-            @if($isAdmin || $isPropertyCustodian)
-            <button id="addItemBtn">+ Add new item</button>
-            @endif
-        </div>
-    </div>
+              </select>
+              <button type="button" id="exportInventoryBtn">+ Export</button>
+              <button type="button" id="clearInventoryFiltersBtn">Clear filters</button>
+              <button type="button" id="archiveInventoryBtn">Archive</button>
+            </div>
 
-    <table id="inventoryTable">
-        <thead>
-            <tr>
+            <div class="right-buttons">
+              <input type="text" id="inventorySearchInput" placeholder="Search Item Name...">
+              @if($isAdmin || $isPropertyCustodian)
+                <button id="addItemBtn">+ Add new item</button>
+              @endif
+            </div>
+          </div>
+
+          <table id="inventoryTable">
+            <thead>
+              <tr>
                 <th>Serial #</th>
                 <th>Item</th>
                 <th>Description</th>
@@ -262,75 +263,67 @@
                 <th>Date Acquired</th>
                 <th>Status</th>
                 @if($isAdmin || $isPropertyCustodian)
-                    <th>Actions</th>
+                  <th>Actions</th>
                 @endif
-            </tr>
-        </thead>
-        <tbody>
-            @foreach ($inventory as $item)
+              </tr>
+            </thead>
+            <tbody>
+              @foreach ($inventory as $item)
                 <tr class="inventory-row" data-item='@json($item)' style="cursor:pointer;">
-                    <td>{{ $item->serial_no }}</td>
-                    <td>{{ $item->item_name }}</td>
-                    <td>{{ $item->description ?? '-' }}</td>
-                    <td>{{ $item->source_of_fund }}</td>
-                    <td>{{ $item->department }}</td>
-                    <td>{{ $item->classification }}</td>
-                    <td>{{ \Carbon\Carbon::parse($item->date_acquired)->format('F d, Y') }}</td>
-                    <td>
-                        <span
-                            class="
-                                @if($item->status === 'Available') text-green
-                                @elseif($item->status === 'For Repair') text-brown
-                                @elseif($item->status === 'Issued') text-blue
-                                @elseif($item->status === 'Unserviceable' || $item->status === 'Damaged' || $item->status === 'Lost' || $item->status === 'Missing') text-red
-                                @endif
-                            "
-                        >
-                            {{ $item->status }}
-                        </span>
-                    </td>
-                    @if($isAdmin || $isPropertyCustodian)
+                  <td>{{ $item->serial_no }}</td>
+                  <td>{{ $item->item_name }}</td>
+                  <td>{{ $item->description ?? '-' }}</td>
+                  <td>{{ $item->source_of_fund }}</td>
+                  <td>{{ $item->department }}</td>
+                  <td>{{ $item->classification }}</td>
+                  <td>{{ \Carbon\Carbon::parse($item->date_acquired)->format('F d, Y') }}</td>
+                  <td>
+                    <span class="
+                                      @if($item->status === 'Available') text-green
+                                      @elseif($item->status === 'For Repair') text-brown
+                                      @elseif($item->status === 'Issued') text-blue
+                                      @elseif($item->status === 'Unserviceable' || $item->status === 'Damaged' || $item->status === 'Lost' || $item->status === 'Missing') text-red
+                                      @endif
+                                  ">
+                      {{ $item->status }}
+                    </span>
+                  </td>
+                  @if($isAdmin || $isPropertyCustodian)
                     <td class="action-buttons">
-                        <button
-                            type="button"
-                            class="inventory-edit-btn"
-                            onclick="event.stopPropagation(); openInventoryEditModal(this)"
-                        >
-                            ✏️
-                        </button>
+                      <button type="button" class="inventory-edit-btn"
+                        onclick="event.stopPropagation(); openInventoryEditModal(this)">
+                        ✏️
+                      </button>
 
-                        <button
-                            type="button"
-                            class="inventory-delete-btn"
-                            onclick="event.stopPropagation(); deleteItem('{{ $item->serial_no }}')"
-                        >
-                            🗑️
-                        </button>
+                      <button type="button" class="inventory-archive-btn"
+                        onclick="event.stopPropagation(); archiveItem('{{ $item->serial_no }}')" title="Archive item">
+                        🗄️
+                      </button>
                     </td>
-                    @endif
+                  @endif
                 </tr>
-            @endforeach
-        </tbody>
-    </table>
+              @endforeach
+            </tbody>
+          </table>
 
-    <div style="margin-top: 20px;">
-        <button type="button" class="view-btn" onclick="showUsageHistory()">
-            View Usage History
-        </button>
-    </div>
+          <div style="margin-top: 20px;">
+            <button type="button" class="view-btn" onclick="showUsageHistory()">
+              View Usage History
+            </button>
+          </div>
 
-    
 
-    <!-- INVENTORY EDIT MODAL -->
-    <div id="inventoryEditModal" class="inventory-modal">
-        <div class="inventory-modal-content">
-            <span class="inventory-close-modal" onclick="closeInventoryEditModal()">
+
+          <!-- INVENTORY EDIT MODAL -->
+          <div id="inventoryEditModal" class="inventory-modal">
+            <div class="inventory-modal-content">
+              <span class="inventory-close-modal" onclick="closeInventoryEditModal()">
                 &times;
-            </span>
+              </span>
 
-            <h2>Edit Inventory Item</h2>
+              <h2>Edit Inventory Item</h2>
 
-            <form id="inventoryEditForm" method="POST">
+              <form id="inventoryEditForm" method="POST">
                 @csrf
                 @method('PUT')
 
@@ -353,73 +346,114 @@
 
                 <label>Status</label>
                 <select id="edit_status" name="status">
-                    <option value="Available">Available</option>
-                    <option value="Issued">Issued</option>
-                    <option value="For Repair">For Repair</option>
-                    <option value="Damaged">Damaged</option>
-                    <option value="Unserviceable">Unserviceable</option>
-                    <option value="Missing">Missing</option>
+                  <option value="Available">Available</option>
+                  <option value="Issued">Issued</option>
+                  <option value="For Repair">For Repair</option>
+                  <option value="Damaged">Damaged</option>
+                  <option value="Unserviceable">Unserviceable</option>
+                  <option value="Missing">Missing</option>
                 </select>
 
                 <button type="submit" class="inventory-save-btn">
-                    Save Changes
+                  Save Changes
                 </button>
-            </form>
-        </div>
-    </div>
+              </form>
+            </div>
+          </div>
 
-    <!-- USAGE HISTORY MODAL -->
-    <div id="usageHistoryModal" class="usage-modal-overlay" style="display: none;">
-        <div class="usage-history-content">
-            <div class="usage-header">
+          <!-- USAGE HISTORY MODAL -->
+          <div id="usageHistoryModal" class="usage-modal-overlay" style="display: none;">
+            <div class="usage-history-content">
+              <div class="usage-header">
                 <button type="button" class="back-btn" onclick="closeUsageHistory()">
-                    <i class="bi bi-arrow-left"></i> <span>&#8592;</span>
+                  <i class="bi bi-arrow-left"></i> <span>&#8592;</span>
                 </button>
                 <h1 class="usage-title">Usage History</h1>
-            </div>
+              </div>
 
-            <div class="usage-item-info">
+              <div class="usage-item-info">
                 Item: <span id="history-item-name" style="font-weight:bold;">Printer</span><br>
                 Property No.: <span id="history-property-no" style="font-weight:bold;">00001</span>
-            </div>
+              </div>
 
-            <div class="usage-filters">
+              <div class="usage-filters">
                 <select class="filter-select">
-                    <option>All Statuses</option>
+                  <option>All Statuses</option>
                 </select>
 
                 <select class="filter-select">
-                    <option>Latest - Oldest</option>
+                  <option>Latest - Oldest</option>
                 </select>
-            </div>
+              </div>
 
-            <table class="usage-table">
+              <table class="usage-table">
                 <thead>
-                    <tr>
-                        <th>Issued Period</th>
-                        <th>Issued To</th>
-                        <th>Purpose</th>
-                        <th>Issued By</th>
-                        <th>Return Status</th>
-                        <th>Condition After Use</th>
-                        <th>Remarks</th>
-                    </tr>
+                  <tr>
+                    <th>Issued Period</th>
+                    <th>Issued To</th>
+                    <th>Purpose</th>
+                    <th>Issued By</th>
+                    <th>Return Status</th>
+                    <th>Condition After Use</th>
+                    <th>Remarks</th>
+                  </tr>
                 </thead>
                 <tbody id="usage-history-body">
                 </tbody>
-            </table>
+              </table>
 
-            <div class="usage-footer">
+              <div class="usage-footer">
                 <span class="entries-count">Showing 1-3 of 42 entries</span>
                 <div class="pagination-controls">
-                    <button class="pag-btn"><i class="bi bi-chevron-left"></i></button>
-                    <button class="pag-num active">1</button>
-                    <button class="pag-num">2</button>
-                    <button class="pag-btn"><i class="bi bi-chevron-right"></i></button>
+                  <button class="pag-btn"><i class="bi bi-chevron-left"></i></button>
+                  <button class="pag-num active">1</button>
+                  <button class="pag-num">2</button>
+                  <button class="pag-btn"><i class="bi bi-chevron-right"></i></button>
                 </div>
+              </div>
             </div>
-        </div>
-    </div>
+          </div>
+
+          <!-- ARCHIVE MODAL -->
+          <div id="archiveModal" class="usage-modal-overlay" style="display:none;">
+            <div class="usage-history-content" style="max-width:960px; width:95%;">
+
+              <div class="usage-header">
+                <button type="button" class="back-btn" onclick="closeArchiveModal()">
+                  <span>&#8592;</span>
+                </button>
+                <h1 class="usage-title">Archived Items</h1>
+              </div>
+
+              <p style="color:var(--bs-secondary-color, #6c757d); font-size:14px; margin-bottom:16px;">
+                Items listed here are soft-deleted. You can restore them or delete them permanently.
+              </p>
+
+              <div style="overflow-x:auto;">
+                <table class="usage-table" id="archiveTable">
+                  <thead>
+                    <tr>
+                      <th>Serial #</th>
+                      <th>Item</th>
+                      <th>Description</th>
+                      <th>Source of Fund</th>
+                      <th>Classification</th>
+                      <th>Department</th>
+                      <th>Date Acquired</th>
+                      <th>Archived On</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="archive-table-body">
+                    <tr>
+                      <td colspan="9" style="text-align:center; padding:20px;">Loading…</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+          </div>
 
           <!-- SCANNER MODAL -->
           <div id="scannerModal" class="scanner-modal hidden">
@@ -429,14 +463,8 @@
                 <button class="scanner-modal__close">&times;</button>
               </div>
               <div class="scanner-modal__body">
-                <input
-                  id="scannerInput"
-                  type="text"
-                  placeholder="Scan QR/Barcode here"
-                  autocomplete="off"
-                  autocapitalize="off"
-                  spellcheck="false"
-                >
+                <input id="scannerInput" type="text" placeholder="Scan QR/Barcode here" autocomplete="off"
+                  autocapitalize="off" spellcheck="false">
                 <p class="scanner-instruction">Scanned items will appear below</p>
                 <div id="scanned-items-list" class="scanned-items-container"></div>
               </div>
@@ -449,7 +477,7 @@
         </div>
 
 
-          <div id="issued" class="content-section">
+        <div id="issued" class="content-section">
           <div class="issued-header">
             <h2>Analytics Overview</h2>
           </div>
@@ -478,19 +506,12 @@
               </div>
 
               <div class="table-search">
-              <input
-                type="text"
-                id="issuedSearchInput"
-                placeholder="Scan or type Serial # / Borrower name"
-                autofocus
-                autocomplete="off"
-                oninput="filterIssuedTable()"
-                onkeydown="handleScanEnter(event)"
-              />
+                <input type="text" id="issuedSearchInput" placeholder="Scan or type Serial # / Borrower name" autofocus
+                  autocomplete="off" oninput="filterIssuedTable()" onkeydown="handleScanEnter(event)" />
               </div>
 
               <!-- Issued Table -->
-              <div class="issued-table-section" >
+              <div class="issued-table-section">
                 <div class="table-header">
                   <h4>Issued item list</h4>
                 </div>
@@ -522,21 +543,19 @@
                             data-id="{{ $item->issue_id }}">
                             <i class="fas fa-undo"></i>
                           </button>
-                          <button class="action-btn-issued damaged-btn-issued" 
-                                  data-id="{{ $item->serial_no }}" title="Damaged">
+                          <button class="action-btn-issued damaged-btn-issued" data-id="{{ $item->serial_no }}"
+                            title="Damaged">
                             <i class="fas fa-exclamation-triangle"></i>
                           </button>
                           <button class="action-btn-issued unserviceable-btn-issued" title="Unserviceable">
                             <i class="fas fa-times-circle"></i>
                           </button>
-                          <button class="action-btn-issued missing-btn-issued"
-                              data-serial="{{ $item->serial_no }}"
-                              data-borrower="{{ $item->issued_to }}"
-                              title="Missing">
+                          <button class="action-btn-issued missing-btn-issued" data-serial="{{ $item->serial_no }}"
+                            data-borrower="{{ $item->issued_to }}" title="Missing">
 
-                          <i class="fas fa-question-circle"></i>
+                            <i class="fas fa-question-circle"></i>
 
-                      </button>
+                          </button>
                         </td>
                       </tr>
                     @endforeach
@@ -561,7 +580,7 @@
             </div>
           </div>
 
-         <div class="form-summary">
+          <div class="form-summary">
             <div class="summary-card">
               <p>Items Under Repair</p>
               <h2>{{ $maintenanceCounts['total'] ?? 0 }}</h2>
@@ -616,7 +635,7 @@
                   </svg>
                   Print
                 </button>
-            </div>
+              </div>
             </div>
           </div>
 
@@ -649,16 +668,15 @@
                     <td>
                       {{ $record->expected_completion ? \Carbon\Carbon::parse($record->expected_completion)->format('M d, Y') : '-' }}
                     </td>
-                    <td>{{ $record->remarks ?? '-' }}</td>                            
+                    <td>{{ $record->remarks ?? '-' }}</td>
                     <td class="action-buttons-issued">
-                        <button class="edit-btn" data-id="{{ $record->maintenance_id }}"
-                          data-serial="{{ $record->serial_no }}">
-                          <i class="fa fa-pen-to-square"></i>
-                        </button>
-                          <button class="make-available-btn" data-serial="{{ $record->serial_no }}"
-                            title="Make Available">
-                            <i class="fa-solid fa-check"></i>
-                          </button>
+                      <button class="edit-btn" data-id="{{ $record->maintenance_id }}"
+                        data-serial="{{ $record->serial_no }}">
+                        <i class="fa fa-pen-to-square"></i>
+                      </button>
+                      <button class="make-available-btn" data-serial="{{ $record->serial_no }}" title="Make Available">
+                        <i class="fa-solid fa-check"></i>
+                      </button>
                     </td>
                   </tr>
                 @empty
@@ -680,7 +698,7 @@
             <h2>Damage Records History</h2>
             <div class="right-buttons">
               <input type="text" id="damageSearchInput" placeholder="Search Item Name...">
-            <!--  <button type="button" id="exportDamageBtn">Export to PDF</button> -->
+              <!--  <button type="button" id="exportDamageBtn">Export to PDF</button> -->
             </div>
           </div>
 
@@ -727,11 +745,8 @@
                         <td>
                           @if(!empty($report->image_path))
                             <a href="{{ asset('storage/' . $report->image_path) }}" target="_blank">
-                              <img
-                                src="{{ asset('storage/' . $report->image_path) }}"
-                                alt="Damage Image"
-                                style="width:50px; height:50px; object-fit:cover; border-radius:4px; cursor:pointer;"
-                              >
+                              <img src="{{ asset('storage/' . $report->image_path) }}" alt="Damage Image"
+                                style="width:50px; height:50px; object-fit:cover; border-radius:4px; cursor:pointer;">
                             </a>
                           @else
                             -
@@ -742,8 +757,7 @@
                         <td>
                           <div class="button-container">
                             <button class="action-btn-issued maintenance-btn-issued"
-                              data-damage-id="{{ $report->damage_id }}"
-                              data-serial="{{ $report->serial_no }}"
+                              data-damage-id="{{ $report->damage_id }}" data-serial="{{ $report->serial_no }}"
                               title="Maintenance">
                               <i class="fas fa-exclamation-triangle"></i>
                             </button>
@@ -801,7 +815,7 @@
 
             <button class="sort-btn"><i class="fas fa-filter"></i> Sort by field</button>
             @if($isAdmin || $isPropertyCustodian)
-            <button id="addFormBtn" class="add-btn"><i class="fas fa-plus"></i> Add New Form</button>
+              <button id="addFormBtn" class="add-btn"><i class="fas fa-plus"></i> Add New Form</button>
             @endif
           </div>
 
@@ -867,20 +881,15 @@
                 <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 12px;">
                   <div class="full-width" style="position:relative;">
                     <label>Borrower Name</label>
-                          <input
-                            type="text"
-                            name="borrower_name"
-                            id="borrowerName"
-                            placeholder="Enter borrower name"
-                            required
-                          >
+                    <input type="text" name="borrower_name" id="borrowerName" placeholder="Enter borrower name"
+                      required>
                     <div id="studentSuggestion" class="suggestion-box"></div>
                   </div>
 
                   <div class="full-width">
                     <label>Reference No.</label>
                     <input type="text" id="referenceNo" name="reference_no" value="[ Auto-generated ]" disabled
-                          style="background-color: #f0f0f0; cursor: not-allowed; font-weight: bold; color: #555;">
+                      style="background-color: #f0f0f0; cursor: not-allowed; font-weight: bold; color: #555;">
                   </div>
 
                   <div class="full-width">
@@ -898,12 +907,8 @@
                     <label>Scan or Enter Serial / QR / Barcode</label>
 
                     <div class="scan-input-wrap">
-                      <input
-                        type="text"
-                        id="serialScannerInput"
-                        placeholder="Scan here then press Enter..."
-                        autocomplete="off"
-                      />
+                      <input type="text" id="serialScannerInput" placeholder="Scan here then press Enter..."
+                        autocomplete="off" />
                       <button type="button" class="scan-add-btn" onclick="handleScanAdd()">Add</button>
                     </div>
 
@@ -1022,7 +1027,7 @@
             </div>
           </div>
         </div>
-        
+
   </div>
   <!-- ===============================
      ISSUED ITEMS MODAL
@@ -1100,7 +1105,7 @@
 
         <div class="form-group">
           <label>Issue / Problem*</label>
-         <input type="text" id="m_issue" name="observation" required>
+          <input type="text" id="m_issue" name="observation" required>
         </div>
 
         <div class="form-group">
@@ -1142,9 +1147,9 @@
     <!-- HEADER -->
     <div class="chat-header">
       <div class="chat-title">
-          TESDA Inventory Assistant
-          <div style="font-size:11px;font-weight:400;opacity:.85;">Property and inventory support</div>
-        </div>
+        TESDA Inventory Assistant
+        <div style="font-size:11px;font-weight:400;opacity:.85;">Property and inventory support</div>
+      </div>
       <button id="chat-close" class="chat-close">&times;</button>
     </div>
 
@@ -1168,271 +1173,239 @@
 
   <div id="idleLockOverlay" style="display:none;">
     <div class="idle-lock-box">
-        <h2>Session Locked</h2>
-        <p>Enter your password to continue</p>
+      <h2>Session Locked</h2>
+      <p>Enter your password to continue</p>
 
-        <form id="unlockForm">
-            @csrf
-            <input type="password" id="unlockPassword" name="password" placeholder="Enter password" required>
-            <div id="unlockError" style="color:#ffb3b3; font-size:14px; margin-bottom:10px;"></div>
-            <button type="submit">Unlock</button>
-        </form>
+      <form id="unlockForm">
+        @csrf
+        <input type="password" id="unlockPassword" name="password" placeholder="Enter password" required>
+        <div id="unlockError" style="color:#ffb3b3; font-size:14px; margin-bottom:10px;"></div>
+        <button type="submit">Unlock</button>
+      </form>
     </div>
-</div>
+  </div>
 
-<!-- INVENTORY VIEW MODAL -->
-<div class="modal fade" id="inventoryModal" tabindex="-1"
-     data-bs-backdrop="true"
-     data-bs-keyboard="true">
+  <!-- INVENTORY VIEW MODAL -->
+  <div class="modal fade" id="inventoryModal" tabindex="-1" data-bs-backdrop="true" data-bs-keyboard="true">
     <div class="modal-dialog modal-md modal-side-right">
-        <div class="modal-content item-detail-modal">
-            <div class="modal-header-custom">
-                <button type="button" class="btn-action" data-bs-dismiss="modal">
-                    <i class="bi bi-x-lg"></i>
-                </button>
+      <div class="modal-content item-detail-modal">
+        <div class="modal-header-custom">
+          <button type="button" class="btn-action" data-bs-dismiss="modal">
+            <i class="bi bi-x-lg"></i>
+          </button>
 
-                <h5 class="modal-title-custom">Item detail</h5>
+          <h5 class="modal-title-custom">Item detail</h5>
 
-                <button type="button" class="btn-action" onclick="saveItemChanges()">
-                    <i class="bi bi-check-lg"></i>
-                </button>
-            </div>
-
-            <div class="modal-body p-0">
-                <div class="detail-row">
-                    <div class="detail-info">
-                        <label>Item name</label>
-                        <div id="modal-item" class="detail-value"></div>
-                    </div>
-                    @if($isAdmin || $isPropertyCustodian)
-                    <a href="#" class="detail-action">Rename <i class="bi bi-pencil"></i></a>
-                    @endif
-                </div>
-
-                <div class="detail-row">
-                    <div class="detail-info">
-                        <label>Serial No.</label>
-                        <div id="modal-serial" class="detail-value"></div>
-                    </div>
-                </div>
-
-                <div class="detail-row">
-                    <div class="detail-info">
-                        <label>Condition</label>
-                        <div id="modal-status" class="detail-value"></div>
-                    </div>
-                </div>
-
-                <div class="detail-row">
-                    <div class="detail-info">
-                        <label>Date Acquired</label>
-                        <div id="modal-date" class="detail-value"></div>
-                    </div>
-                    @if($isAdmin || $isPropertyCustodian)
-                    <a href="#" class="detail-action">Change</a>
-                    @endif
-                </div>
-
-                <!-- SOURCE OF FUND -->
-                <div class="detail-row">
-                    <div class="detail-info">
-                        <label>Source of Fund</label>
-                        <div id="modal-source-of-fund" class="detail-value text-muted">Not set</div>
-
-                        
-                        <div id="modal-source-of-fund-editor" class="detail-editor d-none">
-                            <input
-                                type="text"
-                                id="modal-source-of-fund-input"
-                                class="detail-input"
-                                placeholder="Enter source of fund"
-                                maxlength="255"
-                            >
-                        </div>
-                    </div>
-                    @if($isAdmin || $isPropertyCustodian)
-                    <a href="javascript:void(0)"
-                       class="detail-action"
-                       id="sourceOfFundEditBtn"
-                       onclick="toggleSingleFieldEdit('source_of_fund')">
-                        Edit
-                    </a>
-                    @endif
-                </div>
-
-                <!-- CLASSIFICATION -->
-                <div class="detail-row">
-                    <div class="detail-info">
-                        <label>Classification</label>
-                        <div id="modal-classification" class="detail-value text-muted">Not set</div>
-
-                        <div id="modal-classification-editor" class="detail-editor d-none">
-                            <input
-                                type="text"
-                                id="modal-classification-input"
-                                class="detail-input"
-                                placeholder="Enter classification"
-                                maxlength="255"
-                            >
-                        </div>
-                    </div>
-                    @if($isAdmin || $isPropertyCustodian)
-                    <a href="javascript:void(0)"
-                       class="detail-action"
-                       id="classificationEditBtn"
-                       onclick="toggleSingleFieldEdit('classification')">
-                        Edit
-                    </a>
-                    @endif
-                </div>
-
-                <!-- UNIT COST -->
-                <div class="detail-row">
-                    <div class="detail-info">
-                        <label>Unit Cost</label>
-                        <div id="modal-unit-cost" class="detail-value text-muted">Not set</div>
-
-                        <div id="modal-unit-cost-editor" class="detail-editor d-none">
-                            <input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                id="modal-unit-cost-input"
-                                class="detail-input"
-                                placeholder="Enter unit cost"
-                            >
-                        </div>
-                    </div>
-                    @if($isAdmin || $isPropertyCustodian)
-                    <a href="javascript:void(0)"
-                       class="detail-action"
-                       id="unitCostEditBtn"
-                       onclick="toggleSingleFieldEdit('unit_cost')">
-                        Edit
-                    </a>
-                    @endif
-                </div>
-
-                <!-- SPECIFICATIONS -->
-                <div class="detail-row">
-                    <div class="detail-info">
-                        <label>Specifications</label>
-
-                        <div id="modal-specifications" class="detail-value text-muted">
-                            Not set
-                        </div>
-
-                        <div id="modal-specifications-editor" class="detail-editor d-none">
-                            <textarea
-                                id="modal-specifications-input"
-                                class="detail-textarea"
-                                placeholder="Enter specifications here..."
-                                rows="4"
-                                maxlength="1000"
-                            ></textarea>
-
-                            <div class="detail-editor-footer">
-                                <span id="specifications-counter" class="char-counter">0 / 1000</span>
-                            </div>
-                        </div>
-                    </div>
-                    @if($isAdmin || $isPropertyCustodian)
-                    <a href="javascript:void(0)"
-                       class="detail-action"
-                       id="specsEditBtn"
-                       onclick="toggleSpecificationsEdit()">
-                        Edit
-                    </a>
-                    @endif
-                </div>
-
-                <div class="detail-row">
-                    <div class="detail-info">
-                        <label>Expected Lifespan Year</label>
-                        <div id="modal-lifespan" class="detail-value text-muted">Not set</div>
-                    </div>
-                </div>
-
-                @if($isAdmin || $isPropertyCustodian)
-                <div class="status-marking">
-                    <p class="section-title">Quick Status Update</p>
-                    <div class="marking-options">
-                        <span class="mark-label">Mark as:</span>
-
-                        <a href="javascript:void(0)" class="mark-link text-danger" onclick="markInventoryDamage()">
-                            [ Damaged ]
-                        </a>
-
-                        <a href="javascript:void(0)" class="mark-link text-repair" onclick="updateStatus('For Repair')">
-                            [ For repair ]
-                        </a>
-
-                        <a href="javascript:void(0)" class="mark-link text-unserviceable" onclick="updateStatus('Unserviceable')">
-                            [ Unserviceable ]
-                        </a>
-
-                        <a href="javascript:void(0)" class="mark-link text-missing" onclick="updateStatus('Missing')">
-                            [ Missing ]
-                        </a>
-
-                        <a href="javascript:void(0)" class="mark-link text-maintenance" onclick="updateStatus('Maintenance')">
-                            [ Schedule maintenance ]
-                        </a>
-                    </div>
-                </div>
-                @endif
-
-                <div class="footer-links">
-                    <a href="javascript:void(0)" class="usage-history" onclick="showUsageHistory()">
-                        View item usage history
-                    </a>
-                </div>
-
-                <div class="tesda-custom-footer-group">
-                    <button type="button" class="tesda-btn-off" data-bs-dismiss="modal">
-                        Back
-                    </button>
-                </div>
-            </div>
+          <button type="button" class="btn-action" onclick="saveItemChanges()">
+            <i class="bi bi-check-lg"></i>
+          </button>
         </div>
+
+        <div class="modal-body p-0">
+          <div class="detail-row">
+            <div class="detail-info">
+              <label>Item name</label>
+              <div id="modal-item" class="detail-value"></div>
+            </div>
+            @if($isAdmin || $isPropertyCustodian)
+              <a href="#" class="detail-action">Rename <i class="bi bi-pencil"></i></a>
+            @endif
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-info">
+              <label>Serial No.</label>
+              <div id="modal-serial" class="detail-value"></div>
+            </div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-info">
+              <label>Condition</label>
+              <div id="modal-status" class="detail-value"></div>
+            </div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-info">
+              <label>Date Acquired</label>
+              <div id="modal-date" class="detail-value"></div>
+            </div>
+            @if($isAdmin || $isPropertyCustodian)
+              <a href="#" class="detail-action">Change</a>
+            @endif
+          </div>
+
+          <!-- SOURCE OF FUND -->
+          <div class="detail-row">
+            <div class="detail-info">
+              <label>Source of Fund</label>
+              <div id="modal-source-of-fund" class="detail-value text-muted">Not set</div>
+
+
+              <div id="modal-source-of-fund-editor" class="detail-editor d-none">
+                <input type="text" id="modal-source-of-fund-input" class="detail-input"
+                  placeholder="Enter source of fund" maxlength="255">
+              </div>
+            </div>
+            @if($isAdmin || $isPropertyCustodian)
+              <a href="javascript:void(0)" class="detail-action" id="sourceOfFundEditBtn"
+                onclick="toggleSingleFieldEdit('source_of_fund')">
+                Edit
+              </a>
+            @endif
+          </div>
+
+          <!-- CLASSIFICATION -->
+          <div class="detail-row">
+            <div class="detail-info">
+              <label>Classification</label>
+              <div id="modal-classification" class="detail-value text-muted">Not set</div>
+
+              <div id="modal-classification-editor" class="detail-editor d-none">
+                <input type="text" id="modal-classification-input" class="detail-input"
+                  placeholder="Enter classification" maxlength="255">
+              </div>
+            </div>
+            @if($isAdmin || $isPropertyCustodian)
+              <a href="javascript:void(0)" class="detail-action" id="classificationEditBtn"
+                onclick="toggleSingleFieldEdit('classification')">
+                Edit
+              </a>
+            @endif
+          </div>
+
+          <!-- UNIT COST -->
+          <div class="detail-row">
+            <div class="detail-info">
+              <label>Unit Cost</label>
+              <div id="modal-unit-cost" class="detail-value text-muted">Not set</div>
+
+              <div id="modal-unit-cost-editor" class="detail-editor d-none">
+                <input type="number" step="0.01" min="0" id="modal-unit-cost-input" class="detail-input"
+                  placeholder="Enter unit cost">
+              </div>
+            </div>
+            @if($isAdmin || $isPropertyCustodian)
+              <a href="javascript:void(0)" class="detail-action" id="unitCostEditBtn"
+                onclick="toggleSingleFieldEdit('unit_cost')">
+                Edit
+              </a>
+            @endif
+          </div>
+
+          <!-- SPECIFICATIONS -->
+          <div class="detail-row">
+            <div class="detail-info">
+              <label>Specifications</label>
+
+              <div id="modal-specifications" class="detail-value text-muted">
+                Not set
+              </div>
+
+              <div id="modal-specifications-editor" class="detail-editor d-none">
+                <textarea id="modal-specifications-input" class="detail-textarea"
+                  placeholder="Enter specifications here..." rows="4" maxlength="1000"></textarea>
+
+                <div class="detail-editor-footer">
+                  <span id="specifications-counter" class="char-counter">0 / 1000</span>
+                </div>
+              </div>
+            </div>
+            @if($isAdmin || $isPropertyCustodian)
+              <a href="javascript:void(0)" class="detail-action" id="specsEditBtn" onclick="toggleSpecificationsEdit()">
+                Edit
+              </a>
+            @endif
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-info">
+              <label>Expected Lifespan Year</label>
+              <div id="modal-lifespan" class="detail-value text-muted">Not set</div>
+            </div>
+          </div>
+
+          @if($isAdmin || $isPropertyCustodian)
+            <div class="status-marking">
+              <p class="section-title">Quick Status Update</p>
+              <div class="marking-options">
+                <span class="mark-label">Mark as:</span>
+
+                <a href="javascript:void(0)" class="mark-link text-danger" onclick="markInventoryDamage()">
+                  [ Damaged ]
+                </a>
+
+                <a href="javascript:void(0)" class="mark-link text-repair" onclick="updateStatus('For Repair')">
+                  [ For repair ]
+                </a>
+
+                <a href="javascript:void(0)" class="mark-link text-unserviceable" onclick="updateStatus('Unserviceable')">
+                  [ Unserviceable ]
+                </a>
+
+                <a href="javascript:void(0)" class="mark-link text-missing" onclick="updateStatus('Missing')">
+                  [ Missing ]
+                </a>
+
+                <a href="javascript:void(0)" class="mark-link text-maintenance" onclick="updateStatus('Maintenance')">
+                  [ Schedule maintenance ]
+                </a>
+              </div>
+            </div>
+          @endif
+
+          <div class="footer-links">
+            <a href="javascript:void(0)" class="usage-history" onclick="showUsageHistory()">
+              View item usage history
+            </a>
+          </div>
+
+          <div class="tesda-custom-footer-group">
+            <button type="button" class="tesda-btn-off" data-bs-dismiss="modal">
+              Back
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
-</div>
+  </div>
 
   <script>
-  function escapeHtml(str) {
-    return String(str || '')
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#039;');
-  }
-
-  function printFormModal() {
-    const modal = document.getElementById('viewFormModal');
-    if (!modal) {
-      alert("Print modal not found.");
-      return;
+    function escapeHtml(str) {
+      return String(str || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
     }
 
-    const bodyEl = modal.querySelector('.modal-body');
-    if (!bodyEl) {
-      alert("Nothing to print.");
-      return;
-    }
+    function printFormModal() {
+      const modal = document.getElementById('viewFormModal');
+      if (!modal) {
+        alert("Print modal not found.");
+        return;
+      }
 
-    const modalContent = bodyEl.cloneNode(true);
+      const bodyEl = modal.querySelector('.modal-body');
+      if (!bodyEl) {
+        alert("Nothing to print.");
+        return;
+      }
 
-    const borrowerName = modal.dataset.borrowerName || modal.dataset.borrower || '';
-    const issuedByName = modal.dataset.issuedBy || '';
-    let formType = modal.dataset.formType || '';
+      const modalContent = bodyEl.cloneNode(true);
 
-    let formTypeLabel = '';
-    if (formType === 'ICS') formTypeLabel = 'Inventory Custodian Slip (ICS)';
-    else if (formType === 'PAR') formTypeLabel = 'Property Acknowledgement Receipt (PAR)';
-    else formTypeLabel = formType;
+      const borrowerName = modal.dataset.borrowerName || modal.dataset.borrower || '';
+      const issuedByName = modal.dataset.issuedBy || '';
+      let formType = modal.dataset.formType || '';
 
-    const printHTML = `
+      let formTypeLabel = '';
+      if (formType === 'ICS') formTypeLabel = 'Inventory Custodian Slip (ICS)';
+      else if (formType === 'PAR') formTypeLabel = 'Property Acknowledgement Receipt (PAR)';
+      else formTypeLabel = formType;
+
+      const printHTML = `
       <html>
       <head>
         <title>TESDA Form</title>
@@ -1503,29 +1476,29 @@
       </html>
     `;
 
-    const printWindow = window.open('', 'TESDA_PRINT', 'width=900,height=700');
+      const printWindow = window.open('', 'TESDA_PRINT', 'width=900,height=700');
 
-    if (!printWindow) {
-      alert("Popup blocked. Please allow popups for this site.");
-      return;
+      if (!printWindow) {
+        alert("Popup blocked. Please allow popups for this site.");
+        return;
+      }
+
+      printWindow.document.open();
+      printWindow.document.write(printHTML);
+      printWindow.document.close();
+
+      printWindow.onload = function () {
+        setTimeout(() => {
+          printWindow.focus();
+          printWindow.print();
+
+          printWindow.onafterprint = function () {
+            printWindow.close();
+          };
+        }, 300);
+      };
     }
-
-    printWindow.document.open();
-    printWindow.document.write(printHTML);
-    printWindow.document.close();
-
-    printWindow.onload = function () {
-      setTimeout(() => {
-        printWindow.focus();
-        printWindow.print();
-
-        printWindow.onafterprint = function () {
-          printWindow.close();
-        };
-      }, 300);
-    };
-  }
-</script>
+  </script>
 
   <script>
     // Usage Data
@@ -1560,7 +1533,7 @@
   <script src="{{ asset('js/profile.js') }}"></script>
   <script src="{{ asset('js/return-item.js') }}"></script>
   <script src="{{ asset('js/issued-unserviceable.js') }}"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>  
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="{{ asset('js/damage.js') }}"></script>
   <script src="{{ asset('js/maintenance.js') }}"></script>
   <script src="{{ asset('js/maintenance-report.js') }}"></script>
@@ -1579,7 +1552,9 @@
   <script src="{{ asset('js/DashboardMissing.js') }}"></script>
   <script src="{{ asset('js/dashboard-specification.js') }}"></script>
   <script src="{{ asset('js/inventory-modal-damage.js') }}"></script>
+  <script src="{{ asset('js/dashboard-archive.js') }}"></script>
 
 
 </body>
+
 </html>

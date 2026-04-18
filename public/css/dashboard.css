@@ -2692,10 +2692,13 @@ td {
 
 .usage-history-content {
     width: 90%;
+    height: 90vh;
     max-width: 1100px;
     border-radius: 25px;
     padding: 30px;
     background: #fff;
+
+    overflow-y: auto; 
 }
 
 .usage-header {
@@ -2747,11 +2750,28 @@ td {
 .usage-table th {
     text-align: left;
     padding: 10px;
-    color: #888;
+    color: black;
     font-weight: normal;
     font-size: 0.9rem;
     border-bottom: 1px solid #eee;
 }
+/* /* Header (th) */
+.usage-table th:nth-child(odd) {
+    background-color: #27c0d2;
+}
+
+.usage-table th:nth-child(even) {
+    background-color: #99c665;
+}
+
+/* Body (td) para match sa header */
+/* .usage-table td:nth-child(odd) {
+    background-color: #27c0d2;
+}
+
+.usage-table td:nth-child(even) {
+    background-color: #99c665;
+} */ */
 
 .usage-table td {
     padding: 15px 10px;
@@ -3802,4 +3822,54 @@ td {
 
 .chat-bubble.you-bubble {
     box-shadow: 0 8px 18px rgba(0, 74, 173, 0.18);
+}
+
+/* ============================================================
+   Add these styles to your existing dashboard.css
+   ============================================================ */
+
+/* Archive button in inventory table */
+.inventory-archive-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    transition: background 0.15s;
+    line-height: 1;
+}
+
+.inventory-archive-btn:hover {
+    background: rgba(230, 126, 34, 0.12);
+}
+
+/* Restore / force-delete in archive table */
+.btn-icon-green,
+.btn-icon-red {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    transition: background 0.15s;
+    line-height: 1;
+}
+
+.btn-icon-green:hover { background: rgba(39, 174, 96, 0.12); }
+.btn-icon-red:hover   { background: rgba(192, 57, 43, 0.12); }
+
+/* Archive modal overlay — reuses the usage-modal-overlay style
+   but we want it to cover and center */
+#archiveModal.usage-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 1050;
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto;
+    padding: 24px 16px;
 }

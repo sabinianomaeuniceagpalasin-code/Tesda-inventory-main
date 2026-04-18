@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Item extends Model
 {
+    use SoftDeletes;
     protected $table = 'items';
 
     protected $primaryKey = 'item_id';
@@ -14,21 +16,23 @@ class Item extends Model
 
     protected $fillable = [
         'item_name',
+        'description',
         'classification',
-        'specification',
         'source_of_fund',
         'date_acquired',
         'property_no',
         'serial_no',
         'stock',
-        'usage_count',
-        'remarks',
         'status',
-        'last_maintenance_date',
+        'remarks',
         'maintenance_interval_days',
         'maintenance_threshold_usage',
         'expected_life_hours',
-        'total_usage_hours',
+        'department',
+        'specification',
+        'unit_cost',
+        'expected_life_years',
+        'usage_count',
     ];
 
     protected $dates = [
@@ -36,5 +40,11 @@ class Item extends Model
         'last_maintenance_date',
         'created_at',
         'updated_at',
+        'deleted_at'
     ];
+
+    public function damageReports()
+    {
+        return $this->hasMany(DamageReport::class, 'serial_no', 'serial_no');
+    }
 }
