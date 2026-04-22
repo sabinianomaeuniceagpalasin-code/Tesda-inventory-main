@@ -1242,10 +1242,6 @@ class DashboardController extends Controller
 
     public function issuedTableHtml()
     {
-        $issuedItemsList = $this->getListofIssuedItemsTable()->getData(true)['html'] ?? '';
-        // BUT your getListofIssuedItemsTable returns JSON, not html string directly.
-        // Better: replicate query here:
-
         $latest = DB::table('issuedlog')
             ->selectRaw('MAX(issue_id) as issue_id')
             ->groupBy('serial_no');
@@ -1261,7 +1257,7 @@ class DashboardController extends Controller
                 'i.issue_id',
                 'i.serial_no',
                 'i.issued_date',
-                'i.return_date',
+                'i.return_date',          // ✅ add this
                 'it.item_name as item',
                 DB::raw("COALESCE(i.borrower_name, 'N/A') as issued_to"),
                 DB::raw("COALESCE(CONCAT(u.first_name, ' ', u.last_name, ' (', UPPER(u.role), ')'), 'N/A') as issued_by")
@@ -1271,14 +1267,19 @@ class DashboardController extends Controller
 
         $html = '';
         foreach ($items as $item) {
-            $returnDate = $item->return_date ? Carbon::parse($item->return_date)->format('F d, Y') : '-';
+            $issuedDate = Carbon::parse($item->issued_date)->format('F d, Y');
+            $returnDate = $item->return_date
+                ? Carbon::parse($item->return_date)->format('F d, Y')
+                : '-';                                                
+
             $html .= "
             <tr>
               <td>{$item->serial_no}</td>
               <td>{$item->issued_to}</td>
               <td>{$item->issued_by}</td>
-              <td>" . Carbon::parse($item->issued_date)->format('F d, Y') . "</td>
-              <td>{$returnDate}</td>
+              <td>{$issuedDate}</td>
+              <td>{$issuedDate}</td>      
+              <td>{$returnDate}</td>      
               <td>{$item->item}</td>
               <td class='action-buttons-issued'>
                 <button class='action-btn-issued return-btn-issued' title='Return' data-id='{$item->issue_id}'>
@@ -1290,52 +1291,16 @@ class DashboardController extends Controller
                 <button class='action-btn-issued unserviceable-btn-issued' title='Unserviceable'>
                   <i class='fas fa-times-circle'></i>
                 </button>
+                <button class='action-btn-issued missing-btn-issued' data-serial='{$item->serial_no}'
+                  data-borrower='{$item->issued_to}' title='Missing'>
+                  <i class='fas fa-question-circle'></i>
+                </button>
               </td>
             </tr>
         ";
         }
 
         return response($html, 200)->header('Content-Type', 'text/html');
-    }
-
-    public function getLowStockItems()
-    {
-        $minimumQty = 10;
-
-        $items = DB::table('propertyinventory as pi')
-            ->select(
-                'pi.property_no',
-                'pi.item_name',
-                'pi.classification',
-                'pi.quantity',
-                DB::raw("$minimumQty as minimum_quantity"),
-                DB::raw("GREATEST($minimumQty - pi.quantity, 0) as needed_quantity")
-            )
-            ->where('pi.quantity', '<', $minimumQty)
-            ->orderBy('pi.quantity', 'asc')
-            ->orderBy('pi.item_name', 'asc')
-            ->get();
-
-        $html = '';
-
-        foreach ($items as $item) {
-            $html .= "
-            <tr>
-                <td>{$item->property_no}</td>
-                <td>{$item->item_name}</td>
-                <td>{$item->classification}</td>
-                <td>{$item->quantity}</td>
-                <td>{$item->minimum_quantity}</td>
-                <td>{$item->needed_quantity}</td>
-            </tr>
-        ";
-        }
-
-        if ($html === '') {
-            $html = "<tr><td colspan='6' style='text-align:center; padding:20px;'>No low stock items found.</td></tr>";
-        }
-
-        return response()->json(['html' => $html]);
     }
 
     public function maintenanceTableHtml()
