@@ -12,8 +12,12 @@ window.showItemDetails = function (item) {
     const unitCostEl = document.getElementById("modal-unit-cost");
 
     // EDITOR INPUTS
-    const sourceOfFundInput = document.getElementById("modal-source-of-fund-input");
-    const classificationInput = document.getElementById("modal-classification-input");
+    const sourceOfFundInput = document.getElementById(
+        "modal-source-of-fund-input",
+    );
+    const classificationInput = document.getElementById(
+        "modal-classification-input",
+    );
     const unitCostInput = document.getElementById("modal-unit-cost-input");
 
     if (elItem) elItem.innerText = item.item_name || "---";
@@ -99,11 +103,18 @@ window.showItemDetails = function (item) {
     const rawUnitCost = item.unit_cost;
 
     if (unitCostEl) {
-        if (rawUnitCost !== null && rawUnitCost !== undefined && rawUnitCost !== "") {
-            unitCostEl.textContent = `₱${Number(rawUnitCost).toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            })}`;
+        if (
+            rawUnitCost !== null &&
+            rawUnitCost !== undefined &&
+            rawUnitCost !== ""
+        ) {
+            unitCostEl.textContent = `₱${Number(rawUnitCost).toLocaleString(
+                undefined,
+                {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                },
+            )}`;
             unitCostEl.classList.remove("text-muted");
         } else {
             unitCostEl.textContent = "Not set";
@@ -115,7 +126,9 @@ window.showItemDetails = function (item) {
 
     if (unitCostInput) {
         unitCostInput.value =
-            rawUnitCost !== null && rawUnitCost !== undefined && rawUnitCost !== ""
+            rawUnitCost !== null &&
+            rawUnitCost !== undefined &&
+            rawUnitCost !== ""
                 ? Number(rawUnitCost).toFixed(2)
                 : "";
         unitCostInput.classList.remove("input-error");
@@ -194,15 +207,15 @@ window.showItemDetails = function (item) {
     }
 
     const modalEl = document.getElementById("inventoryModal");
-        if (modalEl && typeof bootstrap !== "undefined") {
-            const myModal = bootstrap.Modal.getOrCreateInstance(modalEl, {
-                backdrop: true,
-                keyboard: true
-            });
-            myModal.show();
-        } else if (modalEl) {
-            modalEl.style.display = "flex";
-        }
+    if (modalEl && typeof bootstrap !== "undefined") {
+        const myModal = bootstrap.Modal.getOrCreateInstance(modalEl, {
+            backdrop: true, 
+            keyboard: true,
+        });
+        myModal.show();
+    } else if (modalEl) {
+        modalEl.style.display = "flex";
+    }
 };
 
 window.openInventoryEditModal = function (button) {
@@ -241,7 +254,8 @@ window.openInventoryEditModal = function (button) {
 
     const form = document.getElementById("inventoryEditForm");
     if (form) {
-        form.action = "/inventory/update/" + encodeURIComponent(item.serial_no || "");
+        form.action =
+            "/inventory/update/" + encodeURIComponent(item.serial_no || "");
     }
 };
 
@@ -252,23 +266,17 @@ window.closeInventoryEditModal = function () {
     }
 };
 
-window.addEventListener("click", function (event) {
-    const modal = document.getElementById("inventoryEditModal");
-    if (modal && event.target === modal) {
-        modal.classList.remove("active");
-    }
-});
-
 window.deleteItem = function (serial_no) {
     if (!confirm("Are you sure you want to archive this item?")) return;
 
     fetch(`/inventory/${encodeURIComponent(serial_no)}`, {
         method: "DELETE",
         headers: {
-            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
-            "Accept": "application/json",
-            "Content-Type": "application/json"
-        }
+            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')
+                .content,
+            Accept: "application/json",
+            "Content-Type": "application/json",
+        },
     })
         .then((res) => {
             if (!res.ok) {
@@ -331,7 +339,7 @@ function renderUsagePage() {
     const tbody = document.getElementById("usage-history-body");
     if (!tbody) return;
 
-    const totalRows  = usageAllRows.length;
+    const totalRows = usageAllRows.length;
     const totalPages = Math.max(1, Math.ceil(totalRows / USAGE_ROWS_PER_PAGE));
 
     // Clamp current page within valid range
@@ -343,13 +351,17 @@ function renderUsagePage() {
     if (slice.length === 0) {
         tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:20px;">No usage history found.</td></tr>`;
     } else {
-        tbody.innerHTML = slice.map(function (row) {
-            // Colour-code the return status badge
-            const statusClass =
-                row.return_status === "Returned" ? "text-green"  :
-                row.return_status === "Overdue"  ? "text-red"    : "text-blue";
+        tbody.innerHTML = slice
+            .map(function (row) {
+                // Colour-code the return status badge
+                const statusClass =
+                    row.return_status === "Returned"
+                        ? "text-green"
+                        : row.return_status === "Overdue"
+                          ? "text-red"
+                          : "text-blue";
 
-            return `
+                return `
                 <tr>
                     <td>${row.issued_date ?? "-"} → ${row.return_date ?? "-"}</td>
                     <td>${row.issued_to ?? "-"}</td>
@@ -357,7 +369,8 @@ function renderUsagePage() {
                     <td><span class="${statusClass}">${row.return_status ?? "-"}</span></td>
                 </tr>
             `;
-        }).join("");
+            })
+            .join("");
     }
 
     // Update "Showing X–Y of Z entries" label
@@ -421,7 +434,7 @@ window.changeUsagePage = function (page) {
  */
 window.loadHistoryData = function () {
     const serialNo = window.currentModalSerialNo || null;
-    const tbody    = document.getElementById("usage-history-body");
+    const tbody = document.getElementById("usage-history-body");
 
     if (!serialNo || serialNo === "---") {
         if (tbody) {
@@ -438,38 +451,38 @@ window.loadHistoryData = function () {
     fetch(`/item/usage-history/${encodeURIComponent(serialNo)}`, {
         headers: {
             "X-Requested-With": "XMLHttpRequest",
-            "Accept": "application/json",
-        }
+            Accept: "application/json",
+        },
     })
-    .then(function (res) {
-        if (!res.ok) throw new Error("Server returned " + res.status);
-        return res.json();
-    })
-    .then(function (data) {
-        if (!data.success) {
-            if (tbody) {
-                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:red;padding:20px;">Failed to load history.</td></tr>`;
+        .then(function (res) {
+            if (!res.ok) throw new Error("Server returned " + res.status);
+            return res.json();
+        })
+        .then(function (data) {
+            if (!data.success) {
+                if (tbody) {
+                    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:red;padding:20px;">Failed to load history.</td></tr>`;
+                }
+                return;
             }
-            return;
-        }
 
-        // Update the item info header inside the history modal
-        const nameEl = document.getElementById("history-item-name");
-        const propEl = document.getElementById("history-property-no");
-        if (nameEl) nameEl.innerText = data.item_name   || "---";
-        if (propEl) propEl.innerText = data.property_no || "---";
+            // Update the item info header inside the history modal
+            const nameEl = document.getElementById("history-item-name");
+            const propEl = document.getElementById("history-property-no");
+            if (nameEl) nameEl.innerText = data.item_name || "---";
+            if (propEl) propEl.innerText = data.property_no || "---";
 
-        // Store rows and render the first page
-        usageAllRows     = data.history || [];
-        usageCurrentPage = 1;
-        renderUsagePage();
-    })
-    .catch(function (err) {
-        console.error("Usage history fetch error:", err);
-        if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:red;padding:20px;">An error occurred while loading history.</td></tr>`;
-        }
-    });
+            // Store rows and render the first page
+            usageAllRows = data.history || [];
+            usageCurrentPage = 1;
+            renderUsagePage();
+        })
+        .catch(function (err) {
+            console.error("Usage history fetch error:", err);
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:red;padding:20px;">An error occurred while loading history.</td></tr>`;
+            }
+        });
 };
 
 /**
@@ -481,10 +494,13 @@ window.loadHistoryData = function () {
 window.showUsageHistory = function () {
     const historyModal = document.getElementById("usageHistoryModal");
 
-    const serialNo = window.currentModalSerialNo || window.currentSerialNo || null;
+    const serialNo =
+        window.currentModalSerialNo || window.currentSerialNo || null;
 
     if (!serialNo || serialNo === "---") {
-        alert("Please click on an item first before viewing its usage history.");
+        alert(
+            "Please click on an item first before viewing its usage history.",
+        );
         return;
     }
 
@@ -584,4 +600,15 @@ document.addEventListener("DOMContentLoaded", function () {
             popover.style.display = "none";
         });
     });
+
+    const modalEl = document.getElementById("inventoryModal");
+    if (modalEl) {
+        modalEl.addEventListener("click", function (e) {
+            const dialog = modalEl.querySelector(".modal-dialog");
+            if (dialog && !dialog.contains(e.target)) {
+                const instance = bootstrap.Modal.getInstance(modalEl);
+                if (instance) instance.hide();
+            }
+        });
+    }
 });

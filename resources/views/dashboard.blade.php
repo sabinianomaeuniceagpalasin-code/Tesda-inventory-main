@@ -280,12 +280,12 @@
                   <td>{{ \Carbon\Carbon::parse($item->date_acquired)->format('F d, Y') }}</td>
                   <td>
                     <span class="
-                                        @if($item->status === 'Available') text-green
-                                        @elseif($item->status === 'For Repair') text-brown
-                                        @elseif($item->status === 'Issued') text-blue
-                                        @elseif($item->status === 'Unserviceable' || $item->status === 'Damaged' || $item->status === 'Lost' || $item->status === 'Missing') text-red
-                                        @endif
-                                    ">
+                                          @if($item->status === 'Available') text-green
+                                          @elseif($item->status === 'For Repair') text-brown
+                                          @elseif($item->status === 'Issued') text-blue
+                                          @elseif($item->status === 'Unserviceable' || $item->status === 'Damaged' || $item->status === 'Lost' || $item->status === 'Missing') text-red
+                                          @endif
+                                      ">
                       {{ $item->status }}
                     </span>
                   </td>
@@ -1188,7 +1188,9 @@
   </div>
 
   <!-- INVENTORY VIEW MODAL -->
-  <div class="modal fade" id="inventoryModal" tabindex="-1" data-bs-backdrop="true" data-bs-keyboard="true">
+<div class="modal fade" id="inventoryModal" tabindex="-1" 
+     data-bs-backdrop="true" 
+     data-bs-keyboard="false">
     <div class="modal-dialog modal-md modal-side-right">
       <div class="modal-content item-detail-modal">
         <div class="modal-header-custom">
